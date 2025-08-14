@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # PDF to Markdown API
+  api:
+    build: .
+    container_name: pdf-markdown-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Playwrightテスト環境
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.40.0-focal
+    container_name: playwright-tests
+    working_dir: /app
+    volumes:
+      - ./tests/playwright:/app
+      - ./data:/app/data
+      - ./sample.pdf:/app/sample.pdf
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    depends_on:
+      api:
+        condition: service_healthy
+    command: >
+      sh -c "
+        npm install -g pnpm &&
+        pnpm install &&
+        pnpm exec playwright install &&
+        pnpm test
+      "
+
+  # Pythonテスト環境
+  pytest:
+    build: .
+    container_name: pytest-tests
+    working_dir: /app
+    volumes:
+      - ./tests/pytest:/app/tests
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./sample.pdf:/app/sample.pdf
+    environment:
+      - PYTHONPATH=/app
+      - PYTHON_VERSION=3.10
+    depends_on:
+      api:
+        condition: service_healthy
+    command: >
+      sh -c "
+        source .venv/bin/activate &&
+        python --version &&
+        pytest tests/ -v --cov=src
+      "
+
+volumes:
+  data:
+
+networks:
+  default:
+    name: pdf-markdown-network

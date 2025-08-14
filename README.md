@@ -103,7 +103,7 @@ api-test-automation-samples/
 ## 使用技術
 
 ### **バックエンド**
-- **言語**: Python3
+- **言語**: Python3.10以上
 - **フレームワーク**: FastAPI
 - **変換ライブラリ**: MarkItDown
 - **DB**: SQLite
@@ -336,6 +336,58 @@ uvicorn main:app --reload --port 8001
 ### **パッケージ管理**
 - [uv公式ドキュメント](https://docs.astral.sh/uv/)
 - [pnpm公式ドキュメント](https://pnpm.io/)
+
+---
+
+## 🐳 Docker環境での実行
+
+> **⚠️ 注意**: Python 3.10以上が必要です（markitdownライブラリの要件）
+
+### **本番環境での実行**
+```bash
+# 全サービスを起動（API + テスト実行）
+docker-compose up --build
+
+# バックグラウンドで実行
+docker-compose up -d --build
+
+# ログの確認
+docker-compose logs -f api
+
+# サービスの停止
+docker-compose down
+```
+
+### **開発環境での実行**
+```bash
+# 開発用サービスを起動（ホットリロード対応）
+docker-compose -f docker-compose.dev.yml up --build
+
+# APIのみ起動
+docker-compose -f docker-compose.dev.yml up api-dev
+
+# Playwright UIモードでテスト実行
+docker-compose -f docker-compose.dev.yml up playwright-dev
+```
+
+### **個別のサービス実行**
+```bash
+# APIのみビルド・起動（Python 3.10以上）
+docker build -t pdf-markdown-api .
+docker run -p 8000:8000 -v $(pwd)/src:/app/src pdf-markdown-api
+
+# Playwrightテストのみ実行
+docker run --rm -v $(pwd)/tests/playwright:/app mcr.microsoft.com/playwright:v1.40.0-focal
+
+# Pythonバージョン確認
+docker run --rm pdf-markdown-api python --version
+```
+
+### **Docker環境の利点**
+- **環境の統一**: 開発・本番・CIで同じ環境を保証
+- **依存関係の管理**: システムライブラリの自動インストール
+- **分離**: ホスト環境に影響を与えない
+- **スケーラビリティ**: 複数インスタンスの簡単な起動
 
 ---
 

@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # 開発用API（ホットリロード対応）
+  api-dev:
+    build: .
+    container_name: pdf-markdown-api-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+      - ./pyproject.toml:/app/pyproject.toml
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=development
+      - PYTHON_VERSION=3.10
+    command: >
+      sh -c "
+        source .venv/bin/activate &&
+        python --version &&
+        uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # 開発用Playwright（対話的テスト実行）
+  playwright-dev:
+    image: mcr.microsoft.com/playwright:v1.40.0-focal
+    container_name: playwright-dev
+    working_dir: /app
+    ports:
+      - "9323:9323"  # Playwright UI用ポート
+    volumes:
+      - ./tests/playwright:/app
+      - ./data:/app/data
+      - ./sample.pdf:/app/sample.pdf
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    depends_on:
+      api-dev:
+        condition: service_healthy
+    command: >
+      sh -c "
+        npm install -g pnpm &&
+        pnpm install &&
+        pnpm exec playwright install &&
+        pnpm test:ui --host 0.0.0.0
+      "
+
+volumes:
+  data:
+
+networks:
+  default:
+    name: pdf-markdown-network-dev
