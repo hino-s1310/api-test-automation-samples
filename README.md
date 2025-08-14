@@ -89,7 +89,7 @@ api-test-automation-samples/
 │   ├── markdown/          # 変換されたMarkdown
 │   └── database.db        # SQLiteデータベース
 ├── docs/                  # ドキュメント
-│   └── BRANCH-RULES.md # ブランチ戦略・ルール
+│   └── BRANCH_RULES.md # ブランチ戦略・ルール
 └── sample.pdf             # テスト用サンプルPDF
 ```
 
@@ -306,12 +306,7 @@ uvicorn main:app --reload --port 8001
 
 ### **機能拡張**
 - 認証機能の追加（JWT）
-- OCR機能追加（画像PDF対応）
-- 複数ファイル一括変換
-- 変換履歴の管理
-- ファイルのバージョン管理
 - 外部ストレージ（S3等）への対応
-- 変換品質の向上（レイアウト保持）
 - リアルタイム変換進捗の表示
 
 ### **テストツールの拡張**
@@ -341,7 +336,7 @@ uvicorn main:app --reload --port 8001
 
 ---
 
-## 🐳 Docker環境での実行
+## Docker環境での実行
 
 > **⚠️ 注意**: Python 3.10以上が必要です（markitdownライブラリの要件）
 
@@ -385,25 +380,12 @@ docker run --rm -v $(pwd)/tests/playwright:/app mcr.microsoft.com/playwright:v1.
 docker run --rm pdf-markdown-api python --version
 ```
 
-### **Docker環境の利点**
-- **環境の統一**: 開発・本番・CIで同じ環境を保証
-- **依存関係の管理**: システムライブラリの自動インストール
-- **分離**: ホスト環境に影響を与えない
-- **スケーラビリティ**: 複数インスタンスの簡単な起動
-
 ---
 
-## 🤝 コントリビューション
+## 開発ルール関連
 
 ### **ブランチ戦略**
-詳細なブランチ作成ルールは [ブランチ戦略ドキュメント](docs/BRANCH-RULES.md) を参照してください。
-
-### **基本的な手順**
-1. このリポジトリをフォーク
-2. 適切なブランチを作成（例: `feature/implement-new-api`, `test/add-playwright-tests`）
-3. 変更をコミット（Conventional Commits形式を使用）
-4. ブランチにプッシュ
-5. プルリクエストを作成（テンプレートを使用）
+詳細なブランチ作成ルールは [ブランチ戦略ドキュメント](docs/BRANCH_RULES.md) を参照してください。
 
 ### **GitHubテンプレート**
 - **Pull Request**: `.github/PULL_REQUEST_TEMPLATE.md` を使用
