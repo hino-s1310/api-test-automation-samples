@@ -88,6 +88,8 @@ api-test-automation-samples/
 │   ├── uploads/           # アップロードされたPDF
 │   ├── markdown/          # 変換されたMarkdown
 │   └── database.db        # SQLiteデータベース
+├── docs/                  # ドキュメント
+│   └── BRANCH-RULES.md # ブランチ戦略・ルール
 └── sample.pdf             # テスト用サンプルPDF
 ```
 
@@ -388,6 +390,41 @@ docker run --rm pdf-markdown-api python --version
 - **依存関係の管理**: システムライブラリの自動インストール
 - **分離**: ホスト環境に影響を与えない
 - **スケーラビリティ**: 複数インスタンスの簡単な起動
+
+---
+
+## 🤝 コントリビューション
+
+### **ブランチ戦略**
+詳細なブランチ作成ルールは [ブランチ戦略ドキュメント](docs/BRANCH-RULES.md) を参照してください。
+
+### **基本的な手順**
+1. このリポジトリをフォーク
+2. 適切なブランチを作成（例: `feature/implement-new-api`, `test/add-playwright-tests`）
+3. 変更をコミット（Conventional Commits形式を使用）
+4. ブランチにプッシュ
+5. プルリクエストを作成（テンプレートを使用）
+
+### **GitHubテンプレート**
+- **Pull Request**: `.github/PULL_REQUEST_TEMPLATE.md` を使用
+- **Issue**: `.github/ISSUE_TEMPLATE/` 内のテンプレートを使用
+  - バグ報告: `BUG_REPORT.md`
+  - 機能要求: `FEATURE_REQUEST.md`
+
+### **ブランチ命名例**
+```bash
+# 新機能実装
+git checkout -b feature/implement-pdf-upload
+
+# テスト追加
+git checkout -b test/add-playwright-e2e-tests
+
+# バグ修正
+git checkout -b bugfix/123-pdf-conversion-error
+
+# リファクタリング
+git checkout -b refactor/services-extract-common
+```
 
 ---
 
