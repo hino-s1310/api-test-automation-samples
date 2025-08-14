@@ -357,14 +357,14 @@ docker-compose down
 
 ### **開発環境での実行**
 ```bash
-# 開発用サービスを起動（ホットリロード対応）
+# 開発用APIを起動（ホットリロード対応）
 docker-compose -f docker-compose.dev.yml up --build
 
-# APIのみ起動
-docker-compose -f docker-compose.dev.yml up api-dev
+# バックグラウンドで起動
+docker-compose -f docker-compose.dev.yml up -d api-dev
 
-# Playwright UIモードでテスト実行
-docker-compose -f docker-compose.dev.yml up playwright-dev
+# ログの確認
+docker-compose -f docker-compose.dev.yml logs -f api-dev
 ```
 
 ### **個別のサービス実行**
