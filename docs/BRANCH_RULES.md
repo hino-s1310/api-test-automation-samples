@@ -1,6 +1,6 @@
 # ブランチ戦略・ブランチ作成ルール
 
-## 📋 概要
+## 概要
 
 このドキュメントでは、PDF to Markdown APIのテスト自動化サンプルプロジェクトにおけるブランチ戦略とブランチ作成ルールを定義します。
 
@@ -14,7 +14,6 @@
 - `feature/*` - 新機能開発用
 - `test/*` - テスト追加・改善用
 - `bugfix/*` - バグ修正用
-- `hotfix/*` - 緊急修正用
 - `refactor/*` - リファクタリング用
 
 ## ブランチ作成ルール
@@ -114,7 +113,7 @@ git checkout -b refactor/api-error-handling
 - [ ] 作業内容をissueやコメントに記録
 - [ ] チームメンバーに作業開始を通知（必要に応じて）
 
-## 🔄 ブランチのライフサイクル
+## ブランチのライフサイクル
 
 ### **1. 開発フェーズ**
 ```bash
@@ -171,7 +170,7 @@ git commit -m "fix: resolve memory leak in large file processing"
 git commit -m "refactor: extract common validation logic to utils"
 ```
 
-## ⚠️ 注意事項
+## 注意事項
 
 ### **ブランチ名の制約**
 - 小文字とハイフンのみ使用
@@ -190,7 +189,7 @@ git commit -m "refactor: extract common validation logic to utils"
 - リモートブランチも削除
 - 古いブランチは定期的にクリーンアップ
 
-## 📚 参考資料
+## 参考資料
 
 - [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/)
 - [Conventional Commits](https://www.conventionalcommits.org/)
