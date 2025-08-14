@@ -89,7 +89,8 @@ api-test-automation-samples/
 │   ├── markdown/          # 変換されたMarkdown
 │   └── database.db        # SQLiteデータベース
 ├── docs/                  # ドキュメント
-│   └── BRANCH_RULES.md # ブランチ戦略・ルール
+│   ├── BRANCH_RULES.md    # ブランチ戦略・ルール
+│   └── API_SPECIFICATION.md # API仕様書
 └── sample.pdf             # テスト用サンプルPDF
 ```
 
