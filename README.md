@@ -89,7 +89,8 @@ api-test-automation-samples/
 │   ├── markdown/          # 変換されたMarkdown
 │   └── database.db        # SQLiteデータベース
 ├── docs/                  # ドキュメント
-│   └── BRANCH_RULES.md # ブランチ戦略・ルール
+│   ├── BRANCH_RULES.md    # ブランチ戦略・ルール
+│   └── API_SPECIFICATION.md # API仕様書
 └── sample.pdf             # テスト用サンプルPDF
 ```
 
@@ -176,7 +177,7 @@ mkdir -p data/uploads data/markdown
 
 ### 5. 開発サーバーの起動
 ```bash
-uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 
@@ -357,14 +358,14 @@ docker-compose down
 
 ### **開発環境での実行**
 ```bash
-# 開発用サービスを起動（ホットリロード対応）
+# 開発用APIを起動（ホットリロード対応）
 docker-compose -f docker-compose.dev.yml up --build
 
-# APIのみ起動
-docker-compose -f docker-compose.dev.yml up api-dev
+# バックグラウンドで起動
+docker-compose -f docker-compose.dev.yml up -d api-dev
 
-# Playwright UIモードでテスト実行
-docker-compose -f docker-compose.dev.yml up playwright-dev
+# ログの確認
+docker-compose -f docker-compose.dev.yml logs -f api-dev
 ```
 
 ### **個別のサービス実行**
@@ -425,7 +426,7 @@ uv sync
 source .venv/bin/activate
 
 # 開発サーバー起動
-uvicorn src.main:app --reload
+uv run uvicorn src.main:app --reload
 
 # 動作確認
 curl -F "file=@sample.pdf" http://localhost:8000/upload
