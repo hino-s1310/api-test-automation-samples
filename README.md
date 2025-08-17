@@ -177,7 +177,7 @@ mkdir -p data/uploads data/markdown
 
 ### 5. 開発サーバーの起動
 ```bash
-uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 
@@ -426,7 +426,7 @@ uv sync
 source .venv/bin/activate
 
 # 開発サーバー起動
-uv run uvicorn src.main:app --reload
+uv run uvicorn src.api.main:app --reload
 
 # 動作確認
 curl -F "file=@sample.pdf" http://localhost:8000/upload

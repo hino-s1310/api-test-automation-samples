@@ -9,7 +9,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import Optional, Dict, Any
-import PyPDF2
+import pypdf
 import pdfplumber
 import markitdown
 from datetime import datetime
@@ -44,7 +44,7 @@ class PDFService:
         
         # PDFファイルの内容チェック
         try:
-            PyPDF2.PdfReader(file_content)
+            pypdf.PdfReader(file_content)
             return True, "OK"
         except Exception:
             return False, "無効なPDFファイルです"
@@ -99,11 +99,11 @@ class PDFService:
             except Exception as e:
                 print(f"pdfplumberでの変換に失敗: {e}")
             
-            # フォールバック2: PyPDF2を使用
+            # フォールバック2: pypdfを使用
             if not markdown_content or all(not line.strip() for line in markdown_content):
                 try:
                     with open(file_path, 'rb') as f:
-                        pdf_reader = PyPDF2.PdfReader(f)
+                        pdf_reader = pypdf.PdfReader(f)
                         for page_num, page in enumerate(pdf_reader.pages, 1):
                             text = page.extract_text()
                             if text:
@@ -112,7 +112,7 @@ class PDFService:
                                 markdown_content.append(text)
                                 markdown_content.append("")
                 except Exception as e:
-                    print(f"PyPDF2での変換に失敗: {e}")
+                    print(f"pypdfでの変換に失敗: {e}")
             
             return "\n".join(markdown_content) if markdown_content else "# PDF変換結果\n\nテキストを抽出できませんでした。"
             
