@@ -44,9 +44,10 @@ class PDFService:
         
         # PDFファイルの内容チェック
         try:
-            pypdf.PdfReader(file_content)
+            from io import BytesIO
+            pypdf.PdfReader(BytesIO(file_content))
             return True, "OK"
-        except Exception:
+        except Exception as e:
             return False, "無効なPDFファイルです"
     
     def _save_uploaded_file(self, file_content: bytes, filename: str) -> str:
@@ -65,10 +66,11 @@ class PDFService:
         
         try:
             try:
-                with open(file_path, 'rb') as f:
-                    markdown_content = markitdown.convert(f)
-                    if markdown_content and markdown_content.strip():
-                        return markdown_content
+                from markitdown import MarkItDown
+                markitdown_converter = MarkItDown()
+                result = markitdown_converter.convert(file_path)
+                if result and result.text_content and result.text_content.strip():
+                    return result.text_content
             except Exception as e:
                 print(f"MarkItDownでの変換に失敗: {e}")
             

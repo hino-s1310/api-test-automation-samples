@@ -41,7 +41,7 @@ class ErrorResponse(BaseModel):
     error_code: Optional[str] = Field(None, description="エラーコード")
     timestamp: datetime = Field(default_factory=datetime.now, description="エラー発生時刻")
 
-
+# APIが正常に起動しているかをチェックするためのレスポンス
 class HealthResponse(BaseModel):
     """ヘルスチェックレスポンス"""
     status: str = Field(..., description="サービス状態")
@@ -49,20 +49,20 @@ class HealthResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now, description="チェック時刻")
     uptime: Optional[float] = Field(None, description="稼働時間（秒）")
 
-
+# PDFファイルをMarkdownに変換するAPIのレスポンス
 class UploadResponse(BaseModel):
     """アップロードレスポンス"""
     message: str = Field(..., description="メッセージ")
     file_id: str = Field(..., description="ファイルID")
     status: FileStatus = Field(..., description="処理状態")
 
-
+# PDFファイルをMarkdownに変換するAPIのリクエスト
 class ConversionRequest(BaseModel):
     """変換リクエスト"""
     file_id: str = Field(..., description="ファイルID")
     options: Optional[dict] = Field(default_factory=dict, description="変換オプション")
 
-
+# PDFファイルをMarkdownに変換するAPIのレスポンス
 class ConversionResponse(BaseModel):
     """変換レスポンス"""
     file_id: str = Field(..., description="ファイルID")
