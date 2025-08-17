@@ -108,26 +108,49 @@ jobs:
       - name: Coverage Summary (fallback)
         if: always() && matrix.python-version == '3.11'
         run: |
-          if [ -f coverage.xml ]; then
-            echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Test & Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # パーサースクリプトを使用して情報を抽出
+          if [ -f ".github/scripts/parse_coverage.py" ]; then
+            # 専用スクリプトを使用（推奨）
+            eval $(python .github/scripts/parse_coverage.py)
+            
+            echo "### Coverage Report" >> $GITHUB_STEP_SUMMARY
+            echo "- **Line Coverage**: ${LINE_COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Branch Coverage**: ${BRANCH_COVERAGE}%" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             
-            # カバレッジ情報を抽出
-            COVERAGE=$(python -c "
-            import xml.etree.ElementTree as ET
-            try:
-                tree = ET.parse('coverage.xml')
-                root = tree.getroot()
-                line_rate = root.get('line-rate', '0')
-                coverage_percent = round(float(line_rate) * 100, 1)
-                print(f'{coverage_percent}%')
-            except:
-                print('N/A')
-            ")
-            
-            echo "📊 **Total Coverage**: $COVERAGE" >> $GITHUB_STEP_SUMMARY
+            echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total Tests**: ${TOTAL_TESTS}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Passed**: ${PASSED_TESTS}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Failed**: ${FAILED_TESTS}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Skipped**: ${SKIPPED_TESTS}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Success Rate**: ${SUCCESS_RATE}%" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "📁 Detailed HTML report available in artifacts" >> $GITHUB_STEP_SUMMARY
+            
+            # ステータスバッジ風の表示
+            if [ "${FAILED_TESTS}" -eq 0 ]; then
+              echo "🟢 **Status**: All tests passed!" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "🔴 **Status**: ${FAILED_TESTS} test(s) failed" >> $GITHUB_STEP_SUMMARY
+            fi
+            
           else
-            echo "⚠️ Coverage report not found" >> $GITHUB_STEP_SUMMARY
+            # フォールバック: 単行Pythonコマンド使用
+            if [ -f coverage.xml ]; then
+              COVERAGE=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); line_rate = root.get('line-rate', '0'); coverage_percent = round(float(line_rate) * 100, 1); print(f'{coverage_percent}%')" 2>/dev/null || echo "N/A")
+              echo "📊 **Total Coverage**: $COVERAGE" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️ Coverage report not found" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if [ -f test-results.xml ]; then
+              TESTS=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('test-results.xml'); root = tree.getroot(); print(root.get('tests', '0'))" 2>/dev/null || echo "N/A")
+              echo "🧪 **Test Results**: $TESTS tests" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📁 **Detailed Reports**: Available in artifacts section" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **Local Testing**: Run \`make coverage\` for detailed HTML report" >> $GITHUB_STEP_SUMMARY
