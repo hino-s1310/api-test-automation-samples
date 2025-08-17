@@ -39,8 +39,13 @@ test-ci: ## Run tests like CI (with coverage)
 		-v
 
 coverage: ## Generate coverage report
-	uv run pytest tests/unit/ --cov=src --cov-report=html
+	uv run pytest tests/unit/ --cov=src --cov-report=html --cov-report=xml --cov-report=term-missing
 	@echo "Coverage report generated in htmlcov/index.html"
+	@echo "XML coverage report generated as coverage.xml"
+	@if command -v open >/dev/null 2>&1; then \
+		echo "Opening coverage report..."; \
+		open htmlcov/index.html; \
+	fi
 
 # Code quality
 lint: ## Run linting
