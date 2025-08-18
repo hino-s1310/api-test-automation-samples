@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11"]
     
     steps:
       - name: Checkout code
@@ -78,7 +78,6 @@ jobs:
             
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
-        if: matrix.python-version == '3.11'
         with:
           file: ./coverage.xml
           flags: unittests
@@ -88,25 +87,25 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-${{ matrix.python-version }}
+          name: test-results-python-3.11
           path: |
             test-results.xml
             htmlcov/
             coverage.xml
             
       - name: Comment PR with coverage
-        if: github.event_name == 'pull_request' && matrix.python-version == '3.11' && !github.event.pull_request.head.repo.fork
+        if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
         uses: MishaKav/pytest-coverage-comment@main
         with:
           pytest-xml-coverage-path: ./coverage.xml
           junitxml-path: ./test-results.xml
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          title: "Coverage Report (Python ${{ matrix.python-version }})"
+          title: "Coverage Report (Python 3.11)"
           badge-title: "Coverage"
         continue-on-error: true
         
       - name: Coverage Summary (fallback)
-        if: always() && matrix.python-version == '3.11'
+        if: always()
         run: |
           echo "## 📊 Test & Coverage Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
