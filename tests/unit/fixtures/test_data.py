@@ -184,6 +184,128 @@ class DatabaseTestResponses:
         return False
 
 
+class ConversionLogTestData:
+    """変換ログ関連のテストデータ"""
+    
+    @staticmethod
+    def success_log_data() -> Dict[str, Any]:
+        """成功ログデータ"""
+        return {
+            "id": "log-success-1",
+            "file_id": "12345678-1234-5678-9abc-123456789def",
+            "operation": "upload_and_convert",
+            "status": "success",
+            "message": "Conversion completed successfully",
+            "processing_time": 2.5,
+            "timestamp": "2024-01-01T00:00:00Z"
+        }
+    
+    @staticmethod
+    def failure_log_data() -> Dict[str, Any]:
+        """失敗ログデータ"""
+        return {
+            "id": "log-failure-1",
+            "file_id": "12345678-1234-5678-9abc-123456789def",
+            "operation": "upload_and_convert",
+            "status": "failed",
+            "message": "PDF parsing failed",
+            "processing_time": 1.2,
+            "timestamp": "2024-01-01T00:00:00Z"
+        }
+    
+    @staticmethod
+    def reconvert_log_data() -> Dict[str, Any]:
+        """再変換ログデータ"""
+        return {
+            "id": "log-reconvert-1",
+            "file_id": "12345678-1234-5678-9abc-123456789def",
+            "operation": "reconvert",
+            "status": "success",
+            "message": "Reconversion completed",
+            "processing_time": 1.8,
+            "timestamp": "2024-01-01T01:00:00Z"
+        }
+    
+    @staticmethod
+    def multiple_logs_data() -> List[Dict[str, Any]]:
+        """複数ログデータ"""
+        return [
+            ConversionLogTestData.success_log_data(),
+            ConversionLogTestData.reconvert_log_data(),
+            ConversionLogTestData.failure_log_data()
+        ]
+
+
+class PDFTestData:
+    """PDF関連のテストデータ"""
+    
+    @staticmethod
+    def valid_pdf_bytes() -> bytes:
+        """有効なPDFバイト（簡易版）"""
+        # 実際のテストでは本物のPDFバイナリを使用することを推奨
+        return b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj\nxref\n0 4\n0000000000 65535 f \n0000000010 00000 n \n0000000053 00000 n \n0000000125 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n193\n%%EOF"
+    
+    @staticmethod
+    def invalid_pdf_bytes() -> bytes:
+        """無効なPDFバイト"""
+        return b"This is not a PDF file content"
+    
+    @staticmethod
+    def large_pdf_bytes() -> bytes:
+        """サイズ制限を超えるPDFバイト（11MB）"""
+        return b"x" * (11 * 1024 * 1024)
+    
+    @staticmethod
+    def small_pdf_bytes() -> bytes:
+        """小さなPDFバイト（テスト用）"""
+        return b"x" * 1024  # 1KB
+    
+    @staticmethod
+    def valid_markdown_content() -> str:
+        """有効なMarkdownコンテンツ"""
+        return """# Document Title
+
+This is a test document converted from PDF.
+
+## Section 1
+
+Some content here.
+
+### Subsection 1.1
+
+More detailed content.
+
+## Section 2
+
+Another section with different content.
+
+---
+
+End of document."""
+    
+    @staticmethod
+    def pdf_upload_response_success() -> Dict[str, Any]:
+        """PDFアップロード成功レスポンス"""
+        return {
+            "success": True,
+            "file_id": "12345678-1234-5678-9abc-123456789def",
+            "filename": "test_document.pdf",
+            "markdown": PDFTestData.valid_markdown_content(),
+            "file_size": 2048,
+            "processing_time": 2.5,
+            "status": "completed"
+        }
+    
+    @staticmethod
+    def pdf_upload_response_failure() -> Dict[str, Any]:
+        """PDFアップロード失敗レスポンス"""
+        return {
+            "success": False,
+            "error": "無効なPDFファイルです",
+            "file_id": None
+        }
+
+
 class ErrorTestData:
     """エラー関連のテストデータ"""
     
@@ -201,6 +323,21 @@ class ErrorTestData:
     def validation_error():
         """バリデーションエラー"""
         return ValueError("Invalid file format")
+    
+    @staticmethod
+    def pdf_processing_error():
+        """PDF処理エラー"""
+        return Exception("PDF processing failed")
+    
+    @staticmethod
+    def file_system_error():
+        """ファイルシステムエラー"""
+        return OSError("File system error")
+    
+    @staticmethod
+    def network_timeout_error():
+        """ネットワークタイムアウトエラー"""
+        return ConnectionError("Network timeout")
 
 
 class ValidationTestData:
