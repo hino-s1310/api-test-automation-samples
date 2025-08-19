@@ -6,16 +6,27 @@ export interface UploadResponse {
 
 export interface FileInfo {
   id: string;
+  filename?: string;
   markdown: string;
   created_at: string;
   updated_at?: string;
 }
 
+export interface FileListItem {
+  id: string;
+  filename: string;
+  status: 'processing' | 'completed' | 'failed';
+  created_at: string;
+  updated_at?: string;
+  file_size: number;
+  processing_time?: number;
+}
+
 export interface FileListResponse {
-  files: Array<{
-    id: string;
-    created_at: string;
-  }>;
+  files: FileListItem[];
+  total_count: number;
+  page: number;
+  per_page: number;
 }
 
 export interface ApiError {
