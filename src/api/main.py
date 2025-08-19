@@ -135,7 +135,7 @@ async def list_files(
     )
 
 
-@app.put("/files/{file_id}", response_model=ConversionResponse, tags=["Files"])
+@app.put("/files/{file_id}", response_model=FileResponse, tags=["Files"])
 async def update_file(
     file_id: str = Path(..., description="ファイルID"),
     file: UploadFile = File(...)
@@ -156,11 +156,23 @@ async def update_file(
         result = await pdf_service.reconvert_pdf(file_id, file_content, file.filename)
         
         if result["success"]:
-            return ConversionResponse(
-                file_id=result["file_id"],
-                markdown=result["markdown"],
-                status=result["status"],
-                processing_time=result["processing_time"]
+            # 更新後のファイル情報を取得
+            file_data = file_service.get_file(file_id)
+            if not file_data:
+                raise HTTPException(
+                    status_code=404,
+                    detail="更新されたファイルが見つかりません"
+                )
+            
+            return FileResponse(
+                id=file_data["id"],
+                filename=file_data["filename"],
+                markdown=file_data["markdown"],
+                status=file_data["status"],
+                created_at=file_data["created_at"],
+                updated_at=file_data["updated_at"],
+                file_size=file_data["file_size"],
+                processing_time=file_data.get("processing_time")
             )
         else:
             raise HTTPException(

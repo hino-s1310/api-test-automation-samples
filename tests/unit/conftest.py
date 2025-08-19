@@ -80,7 +80,7 @@ def sample_file_id(test_client):
     """
     # テスト用PDFをアップロードしてファイルIDを取得
     data = upload_test_pdf(test_client)
-    return data["file_id"]
+    return data["id"]
 
 
 # ===========================

@@ -79,7 +79,7 @@ def create_test_file(client: TestClient = None) -> str:
         client = get_test_client()
         
     data = upload_test_pdf(client)
-    return data["file_id"]
+    return data["id"]
 
 
 def create_invalid_file_content(size_mb: int = None) -> bytes:
@@ -105,12 +105,13 @@ def assert_upload_response(data: dict, expected_status: str = "completed"):
     """
     # レスポンスの型をチェック
     assert isinstance(data["status"], str)
-    assert isinstance(data["file_id"], str) 
+    assert isinstance(data["id"], str)  # file_id -> id に変更
     assert isinstance(data["message"], str)
+    assert isinstance(data["markdown"], str)  # markdown フィールドも追加
     
     # レスポンスの内容をチェック
     assert data["status"] == expected_status
-    assert data["file_id"] is not None
+    assert data["id"] is not None  # file_id -> id に変更
     
     if expected_status == "completed":
         assert data["message"] == "PDFファイルのアップロードと変換が完了しました"
@@ -142,14 +143,17 @@ def assert_file_response(data: dict, expected_file_id: str, expected_filename: s
 
 def assert_update_response(data: dict, expected_file_id: str, expected_filename: str = "test_markdown.pdf"):
     """ファイル更新レスポンスの共通アサーション"""
-    assert isinstance(data["file_id"], str)
+    # FileResponseの形式でチェック（更新はFileResponseを返すように変更したため）
+    assert isinstance(data["id"], str)
+    assert isinstance(data["filename"], str)
     assert isinstance(data["markdown"], str)
     assert isinstance(data["status"], str)
-    assert isinstance(data["processing_time"], float)
+    assert isinstance(data["created_at"], str)
+    assert isinstance(data["updated_at"], str)
     
-    assert data["file_id"] == expected_file_id
+    assert data["id"] == expected_file_id
+    assert data["filename"] == expected_filename
     assert data["status"] == "completed"
-    assert data["processing_time"] > 0
 
 
 def assert_error_response(data: dict, expected_status_code: int, expected_message: str):
