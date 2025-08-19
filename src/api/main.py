@@ -71,7 +71,8 @@ async def upload_pdf(file: UploadFile = File(...)):
         if result["success"]:
             return UploadResponse(
                 message="PDFファイルのアップロードと変換が完了しました",
-                file_id=result["file_id"],
+                id=result["file_id"],
+                markdown=result["markdown"],
                 status=result["status"]
             )
         else:

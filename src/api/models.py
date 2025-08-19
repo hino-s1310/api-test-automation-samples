@@ -53,7 +53,8 @@ class HealthResponse(BaseModel):
 class UploadResponse(BaseModel):
     """アップロードレスポンス"""
     message: str = Field(..., description="メッセージ")
-    file_id: str = Field(..., description="ファイルID")
+    id: str = Field(..., description="ファイルID")  # フロントエンドに合わせてfile_id -> id
+    markdown: str = Field(..., description="変換されたMarkdown")  # フロントエンドが期待するmarkdownフィールドを追加
     status: FileStatus = Field(..., description="処理状態")
 
 # PDFファイルをMarkdownに変換するAPIのリクエスト
