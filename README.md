@@ -231,8 +231,12 @@ source .venv/bin/activate  # macOS/Linux
 # pnpmがインストールされていない場合は先にインストール
 npm install -g pnpm
 
+# UIの依存関係をインストール
+cd src/ui
+pnpm install
+
 # Playwrightディレクトリに移動
-cd tests/playwright
+cd ../../tests/e2e
 
 # Node.js依存関係のインストール
 pnpm install
@@ -505,16 +509,15 @@ curl -F "file=@sample.pdf" http://localhost:8000/upload
 
 ### **Node.js環境での動作確認**
 ```bash
-# Playwrightディレクトリに移動
-cd tests/playwright
-
-# 依存関係のインストール
+# UIの動作確認
+cd src/ui
 pnpm install
+pnpm dev
 
-# Playwrightブラウザのインストール
+# Playwrightテストの実行
+cd ../../tests/e2e
+pnpm install
 pnpm exec playwright install
-
-# テストの実行
 pnpm playwright test
 
 # UIモードでのテスト実行
