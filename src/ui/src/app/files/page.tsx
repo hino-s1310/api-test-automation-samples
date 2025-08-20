@@ -33,7 +33,15 @@ export default function FilesPage() {
       // APIレスポンスのページ番号とローカル状態の整合性チェック
       if (response.page !== page) {
         console.warn(`Page mismatch: requested ${page}, got ${response.page}`);
-        setCurrentPage(response.page);
+        // APIから返されたページ番号が要求したページ番号と異なる場合は、
+        // 要求したページ番号が有効な範囲内であれば、それを維持する
+        const maxPage = Math.ceil(response.total_count / itemsPerPage);
+        if (page >= 1 && page <= maxPage) {
+          // 再度同じページを要求
+          const retryResponse = await api.getFileList(page, itemsPerPage);
+          setFiles(retryResponse);
+          return;
+        }
       }
       
       setFiles(response);
