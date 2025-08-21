@@ -19,7 +19,7 @@ export interface FileListItem {
   created_at: string;
   updated_at?: string;
   file_size: number;
-  processing_time?: number;
+  processing_time?: number | null;
 }
 
 export interface FileListResponse {

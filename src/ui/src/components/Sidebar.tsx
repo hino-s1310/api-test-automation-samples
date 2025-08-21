@@ -5,12 +5,16 @@ import Link from 'next/link';
 
 interface SidebarProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
+  onToggle?: () => void;
   isMobile?: boolean;
 }
 
-export default function Sidebar({ isOpen, onClose, isMobile = false }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, onToggle, isMobile = false }: SidebarProps) {
   const pathname = usePathname();
+  
+  // onClose と onToggle のどちらか利用可能な方を使用
+  const handleClose = onClose || onToggle;
 
   const menuItems = [
     {
@@ -41,7 +45,7 @@ export default function Sidebar({ isOpen, onClose, isMobile = false }: SidebarPr
       {isOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={onClose}
+          onClick={handleClose}
         />
       )}
 
@@ -72,7 +76,7 @@ export default function Sidebar({ isOpen, onClose, isMobile = false }: SidebarPr
           {/* 閉じるボタン（モバイルのみ） */}
           {isMobile && (
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1 rounded-md text-gray-500 hover:text-gray-700 lg:hidden"
               aria-label="サイドバーを閉じる"
             >
@@ -93,8 +97,8 @@ export default function Sidebar({ isOpen, onClose, isMobile = false }: SidebarPr
                   <Link
                     href={item.href}
                     onClick={() => {
-                      if (isMobile) {
-                        onClose();
+                      if (isMobile && handleClose) {
+                        handleClose();
                       }
                     }}
                     className={`
