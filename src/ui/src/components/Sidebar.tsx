@@ -5,10 +5,11 @@ import Link from 'next/link';
 
 interface SidebarProps {
   isOpen: boolean;
-  onToggle: () => void;
+  onClose: () => void;
+  isMobile?: boolean;
 }
 
-export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, isMobile = false }: SidebarProps) {
   const pathname = usePathname();
 
   const menuItems = [
@@ -40,7 +41,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       {isOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={onToggle}
+          onClick={onClose}
         />
       )}
 
@@ -69,14 +70,17 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           </div>
           
           {/* 閉じるボタン（モバイルのみ） */}
-          <button
-            onClick={onToggle}
-            className="p-1 rounded-md text-gray-500 hover:text-gray-700 lg:hidden"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          {isMobile && (
+            <button
+              onClick={onClose}
+              className="p-1 rounded-md text-gray-500 hover:text-gray-700 lg:hidden"
+              aria-label="サイドバーを閉じる"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* メニューアイテム */}
@@ -89,8 +93,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   <Link
                     href={item.href}
                     onClick={() => {
-                      if (window.innerWidth < 1024) {
-                        onToggle();
+                      if (isMobile) {
+                        onClose();
                       }
                     }}
                     className={`

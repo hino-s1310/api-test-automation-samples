@@ -194,6 +194,7 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
                 accept=".pdf"
                 onChange={handleFileUpdate}
                 className="hidden"
+                data-testid="file-input"
               />
             </div>
           </div>
@@ -268,7 +269,7 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
           <div className="px-4 py-5 sm:p-6">
             <div className="max-h-96 overflow-y-auto">
               {activeTab === 'preview' ? (
-                <div className="prose max-w-none">
+                <div className="prose max-w-none" role="article" aria-label="markdown-content">
                   <ReactMarkdown>{currentFile.markdown}</ReactMarkdown>
                 </div>
               ) : (
