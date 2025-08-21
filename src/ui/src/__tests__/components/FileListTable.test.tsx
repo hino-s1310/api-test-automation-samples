@@ -30,7 +30,7 @@ describe('FileListTable', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     // タイムゾーンを一定にするためのモック
-    jest.spyOn(Date.prototype, 'toLocaleString').mockImplementation(function(locale, options) {
+    jest.spyOn(Date.prototype, 'toLocaleString').mockImplementation(function(this: Date, locale, options) {
       // UTC時間として固定表示
       if (locale === 'ja-JP' && options) {
         const isoString = this.toISOString()
