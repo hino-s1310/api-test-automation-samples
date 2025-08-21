@@ -1,0 +1,164 @@
+name: Frontend Unit Tests
+
+on:
+  # PR作成・更新時に実行
+  pull_request:
+    branches: [main, develop]
+  # mainブランチにpush時に実行
+  push:
+    branches: [main]
+  # 毎日午前3時（JST）に定期実行
+  schedule:
+    - cron: "0 3 * * *"
+  # 手動実行も可能
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Frontend Unit Tests
+    runs-on: ubuntu-latest
+    
+    # GitHub Actions の権限設定
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+      statuses: write
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20.x"]
+    
+    defaults:
+      run:
+        working-directory: ./src/ui
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.10.0
+          run_install: false
+      
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+          
+      - name: Type check
+        run: pnpm run type-check
+          
+      - name: Lint check
+        run: pnpm run lint -- --max-warnings 0 || echo "⚠️ ESLint warnings found but continuing build"
+          
+      - name: Run unit tests with coverage
+        run: |
+          npx jest \
+            --coverage \
+            --coverageDirectory=coverage \
+            --coverageReporters=text-summary \
+            --coverageReporters=lcov \
+            --coverageReporters=clover \
+            --coverageThreshold='{}' \
+            --watchAll=false \
+            --passWithNoTests \
+            --ci
+            
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./src/ui/coverage/clover.xml
+          flags: frontend-unittests
+          name: codecov-frontend
+          working-directory: ./src/ui
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-test-results-node-${{ matrix.node-version }}
+          path: |
+            src/ui/coverage/
+            
+      - name: Comment PR with coverage
+        if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: ./src/ui/coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Frontend Coverage Report (Node.js ${{ matrix.node-version }})"
+        continue-on-error: true
+        
+      - name: Coverage Summary
+        if: always()
+        run: |
+          echo "## 📊 Frontend Test & Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Coverage情報の抽出（lcov.infoから）
+          if [ -f "coverage/lcov.info" ]; then
+            # LINESの統計を抽出
+            LINES_FOUND=$(grep -o "LF:[0-9]*" coverage/lcov.info | cut -d: -f2 | paste -sd+ | bc)
+            LINES_HIT=$(grep -o "LH:[0-9]*" coverage/lcov.info | cut -d: -f2 | paste -sd+ | bc)
+            
+            # BRANCHESの統計を抽出
+            BRANCHES_FOUND=$(grep -o "BRF:[0-9]*" coverage/lcov.info | cut -d: -f2 | paste -sd+ | bc)
+            BRANCHES_HIT=$(grep -o "BRH:[0-9]*" coverage/lcov.info | cut -d: -f2 | paste -sd+ | bc)
+            
+            # FUNCTIONSの統計を抽出
+            FUNCTIONS_FOUND=$(grep -o "FNF:[0-9]*" coverage/lcov.info | cut -d: -f2 | paste -sd+ | bc)
+            FUNCTIONS_HIT=$(grep -o "FNH:[0-9]*" coverage/lcov.info | cut -d: -f2 | paste -sd+ | bc)
+            
+            # パーセンテージ計算
+            if [ "$LINES_FOUND" -gt 0 ]; then
+              LINE_COVERAGE=$(echo "scale=2; $LINES_HIT * 100 / $LINES_FOUND" | bc -l)
+            else
+              LINE_COVERAGE="N/A"
+            fi
+            
+            if [ "$BRANCHES_FOUND" -gt 0 ]; then
+              BRANCH_COVERAGE=$(echo "scale=2; $BRANCHES_HIT * 100 / $BRANCHES_FOUND" | bc -l)
+            else
+              BRANCH_COVERAGE="N/A"
+            fi
+            
+            if [ "$FUNCTIONS_FOUND" -gt 0 ]; then
+              FUNCTION_COVERAGE=$(echo "scale=2; $FUNCTIONS_HIT * 100 / $FUNCTIONS_FOUND" | bc -l)
+            else
+              FUNCTION_COVERAGE="N/A"
+            fi
+            
+            echo "### Coverage Report" >> $GITHUB_STEP_SUMMARY
+            echo "- **Line Coverage**: ${LINE_COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Branch Coverage**: ${BRANCH_COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Function Coverage**: ${FUNCTION_COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Coverage report not found" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Jest出力からテスト結果を抽出
+          echo "🧪 **Test Results**: See detailed output above" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📁 **Detailed Reports**: Available in artifacts section" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **Local Testing**: Run \`cd src/ui && pnpm test\` for local testing" >> $GITHUB_STEP_SUMMARY

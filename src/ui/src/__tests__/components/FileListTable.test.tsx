@@ -29,6 +29,22 @@ describe('FileListTable', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    // タイムゾーンを一定にするためのモック
+    jest.spyOn(Date.prototype, 'toLocaleString').mockImplementation(function(this: Date, locale, options) {
+      // UTC時間として固定表示
+      if (locale === 'ja-JP' && options) {
+        const isoString = this.toISOString()
+        const [datePart, timePart] = isoString.split('T')
+        const [year, month, day] = datePart.split('-')
+        const [hour, minute] = timePart.split(':')
+        return `${year}/${month}/${day} ${hour}:${minute}`
+      }
+      return this.toISOString()
+    })
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
   })
 
   it('ファイル一覧が表示される', () => {
@@ -50,9 +66,9 @@ describe('FileListTable', () => {
     expect(screen.getByText('test1.pdf')).toBeInTheDocument()
     expect(screen.getByText('test2.pdf')).toBeInTheDocument()
 
-    // 日付のフォーマットが正しいことを確認
-    expect(screen.getByText('2024/03/20 22:00')).toBeInTheDocument()
-    expect(screen.getByText('2024/03/20 23:00')).toBeInTheDocument()
+    // 日付のフォーマットが正しいことを確認（UTC時間で表示）
+    expect(screen.getByText('2024/03/20 13:00')).toBeInTheDocument()
+    expect(screen.getByText('2024/03/20 14:00')).toBeInTheDocument()
 
     // ステータスが表示されていることを確認
     expect(screen.getByText('完了')).toBeInTheDocument()

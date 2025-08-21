@@ -1,4 +1,4 @@
-name: Unit Tests
+name: Backend Unit Tests
 
 on:
   # PR作成・更新時に実行

@@ -15,7 +15,6 @@ describe('Pagination', () => {
     render(
       <Pagination
         currentPage={1}
-        totalPages={5}
         onPageChange={mockOnPageChange}
         totalItems={50}
         itemsPerPage={10}
@@ -38,7 +37,7 @@ describe('Pagination', () => {
     render(
       <Pagination
         currentPage={3}
-        totalPages={5}
+
         onPageChange={mockOnPageChange}
         totalItems={50}
         itemsPerPage={10}
@@ -54,7 +53,7 @@ describe('Pagination', () => {
     render(
       <Pagination
         currentPage={3}
-        totalPages={5}
+
         onPageChange={mockOnPageChange}
         totalItems={50}
         itemsPerPage={10}
@@ -71,7 +70,7 @@ describe('Pagination', () => {
     render(
       <Pagination
         currentPage={3}
-        totalPages={5}
+
         onPageChange={mockOnPageChange}
         totalItems={50}
         itemsPerPage={10}
@@ -88,7 +87,7 @@ describe('Pagination', () => {
     render(
       <Pagination
         currentPage={1}
-        totalPages={5}
+
         onPageChange={mockOnPageChange}
         totalItems={50}
         itemsPerPage={10}
@@ -103,7 +102,7 @@ describe('Pagination', () => {
     render(
       <Pagination
         currentPage={5}
-        totalPages={5}
+
         onPageChange={mockOnPageChange}
         totalItems={50}
         itemsPerPage={10}
@@ -118,7 +117,7 @@ describe('Pagination', () => {
     render(
       <Pagination
         currentPage={1}
-        totalPages={5}
+
         onPageChange={mockOnPageChange}
         totalItems={50}
         itemsPerPage={10}
@@ -135,7 +134,7 @@ describe('Pagination', () => {
     render(
       <Pagination
         currentPage={5}
-        totalPages={10}
+
         onPageChange={mockOnPageChange}
         totalItems={100}
         itemsPerPage={10}

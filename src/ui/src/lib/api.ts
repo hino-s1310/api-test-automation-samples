@@ -64,6 +64,19 @@ export const api = {
     return response.data;
   },
 
+  // 個別ファイル取得
+  async getFile(id: string): Promise<FileInfo> {
+    try {
+      const response = await apiClient.get<FileInfo>(`/files/${id}`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  },
+
   // ファイル削除
   async deleteFile(id: string): Promise<{ message: string }> {
     const response = await apiClient.delete<{ message: string }>(`/files/${id}`);
