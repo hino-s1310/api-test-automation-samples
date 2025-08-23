@@ -30,6 +30,16 @@ export const API_ENDPOINTS: ApiEndpoints = {
 };
 
 /**
+ * 各テストで一意のデータを生成するヘルパー関数
+ */
+export const generateUniqueTestData = (): UploadTestData => ({
+  id: `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  filename: `test-${Date.now()}.pdf`,
+  markdown: 'test',
+  status: 'completed',
+});
+
+/**
  * PDFアップロード用の正常系テストデータ
  */
 export const VALID_UPLOAD_DATA: UploadTestData = {

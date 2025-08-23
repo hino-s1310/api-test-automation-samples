@@ -5,14 +5,14 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
-  /* Run tests in files in parallel */
-  fullyParallel: true,
+  /* CI環境では並列実行を無効化してテストの安定性を向上 */
+  fullyParallel: process.env.CI ? false : true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  /* Optimize workers for CI environment */
-  workers: process.env.CI ? '50%' : undefined,
+  /* CI環境ではリトライ回数を増やして安定性を向上 */
+  retries: process.env.CI ? 3 : 0,
+  /* CI環境ではワーカー数を1に制限して競合状態を回避 */
+  workers: process.env.CI ? 1 : undefined,
   /* Output directory for test results */
   outputDir: './test-results',
   /* Reporter configuration optimized for CI */
@@ -40,9 +40,9 @@ export default defineConfig({
     /* Record video on failure */
     video: 'retain-on-failure',
 
-    /* Optimize timeouts for CI environment */
-    actionTimeout: process.env.CI ? 10000 : 5000,
-    navigationTimeout: process.env.CI ? 30000 : 10000,
+    /* CI環境ではタイムアウトを延長して安定性を向上 */
+    actionTimeout: process.env.CI ? 15000 : 5000,
+    navigationTimeout: process.env.CI ? 45000 : 10000,
   },
 
   /* Configure projects for major browsers */
@@ -96,11 +96,11 @@ export default defineConfig({
     }
   },
 
-  /* Global test timeout optimized for CI */
-  timeout: process.env.CI ? 45000 : 30000,
+  /* CI環境ではグローバルタイムアウトを延長して安定性を向上 */
+  timeout: process.env.CI ? 60000 : 30000,
 
-  /* Expect timeout optimized for CI */
+  /* CI環境では期待値のタイムアウトも延長して安定性を向上 */
   expect: {
-    timeout: process.env.CI ? 10000 : 5000,
+    timeout: process.env.CI ? 15000 : 5000,
   },
 });

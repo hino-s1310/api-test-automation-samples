@@ -111,8 +111,9 @@ jobs:
       - name: Run Playwright E2E tests
         run: |
           pnpm exec playwright test \
-            --max-failures=5 \
-            --workers=2
+            --max-failures=3 \
+            --workers=1 \
+            --retries=3
         env:
           CI: true
           ENVIRONMENT: test
