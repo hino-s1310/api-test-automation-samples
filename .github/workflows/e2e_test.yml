@@ -17,6 +17,7 @@ jobs:
   e2e-tests:
     name: Run E2E Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 60  # タイムアウト設定を追加
     
     # GitHub Actions の権限設定
     permissions:
@@ -66,12 +67,20 @@ jobs:
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
       
       - name: Setup pnpm cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ env.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
+      
+      - name: Setup UV cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
       
       - name: Install Python dependencies
         run: |
@@ -81,65 +90,93 @@ jobs:
       - name: Install E2E test dependencies
         run: pnpm install --frozen-lockfile
       
+      - name: Verify API health before tests
+        run: |
+          cd ../../
+          timeout 60s bash -c 'until curl -f http://localhost:8000/health 2>/dev/null; do sleep 2; done' || echo "Health check timeout - will rely on webServer"
+      
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('tests/e2e/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+      
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install chromium --with-deps
           
       - name: Run Playwright E2E tests
         run: |
           pnpm exec playwright test \
-            --reporter=html,json,junit \
-            --output-dir=test-results
+            --max-failures=5 \
+            --workers=2
         env:
           CI: true
           ENVIRONMENT: test
+          PWTEST_SKIP_TEST_OUTPUT: 1
+          # Playwright最適化
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
             
       - name: Upload test results and reports
         uses: actions/upload-artifact@v4
-        if: always()
+        if: ${{ !cancelled() }}  # キャンセル以外は常にアップロード
         with:
           name: e2e-test-results-node-${{ matrix.node-version }}
           path: |
             tests/e2e/test-results/
             tests/e2e/playwright-report/
-          retention-days: 10
+          retention-days: 14
             
       - name: Upload Playwright HTML Report
         uses: actions/upload-artifact@v4
-        if: always()
+        if: ${{ !cancelled() }}
         with:
           name: playwright-report-node-${{ matrix.node-version }}
           path: tests/e2e/playwright-report/
-          retention-days: 10
+          retention-days: 14
             
       - name: Comment PR with test results
-        if: github.event_name == 'pull_request' && always()
+        if: github.event_name == 'pull_request' && !cancelled()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
             const path = './tests/e2e/test-results/results.json';
             
+            let body = `## 🎭 Playwright E2E Test Results (Node.js ${{ matrix.node-version }})\n\n`;
+            
             if (fs.existsSync(path)) {
-              const results = JSON.parse(fs.readFileSync(path, 'utf8'));
-              const { stats } = results;
-              
-              const body = `## 🎭 Playwright E2E Test Results (Node.js ${{ matrix.node-version }})
-              
-              - **Tests**: ${stats.total}
-              - **Passed**: ${stats.passed} ✅
-              - **Failed**: ${stats.failed} ❌
-              - **Skipped**: ${stats.skipped} ⏭️
-              - **Duration**: ${Math.round(stats.duration / 1000)}s
-              
-              ${stats.failed > 0 ? '❌ Some tests failed. Please check the detailed report.' : '✅ All tests passed!'}
-              
-              📊 [View detailed HTML report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
-              
-              github.rest.issues.createComment({
+              try {
+                const results = JSON.parse(fs.readFileSync(path, 'utf8'));
+                const { stats } = results;
+                
+                body += `- **Tests**: ${stats.total}
+                - **Passed**: ${stats.passed} ✅
+                - **Failed**: ${stats.failed} ❌
+                - **Skipped**: ${stats.skipped} ⏭️
+                - **Duration**: ${Math.round(stats.duration / 1000)}s
+                
+                ${stats.failed > 0 ? '❌ Some tests failed. Please check the detailed report.' : '✅ All tests passed!'}`;
+              } catch (error) {
+                body += '⚠️ Could not parse test results. Check the workflow logs for details.';
+              }
+            } else {
+              body += '⚠️ Test results file not found. The tests may have failed to complete.';
+            }
+            
+            body += `\n\n📊 [View detailed HTML report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            try {
+              await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 body: body
               });
+            } catch (error) {
+              console.error('Failed to create comment:', error);
             }
         continue-on-error: true
