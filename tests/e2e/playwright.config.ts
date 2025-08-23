@@ -11,10 +11,17 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: [
+  /* Optimize workers for CI environment */
+  workers: process.env.CI ? '50%' : undefined,
+  /* Output directory for test results */
+  outputDir: './test-results',
+  /* Reporter configuration optimized for CI */
+  reporter: process.env.CI ? [
+    ['github'],  // GitHub Actions integration
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['junit', { outputFile: 'test-results/results.xml' }],
+    ['html', { outputFolder: 'playwright-report', open: 'never' }]
+  ] : [
     ['html'],
     ['json', { outputFile: 'test-results/results.json' }],
     ['junit', { outputFile: 'test-results/results.xml' }]
@@ -25,13 +32,17 @@ export default defineConfig({
     baseURL: 'http://localhost:8000',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
 
     /* Take screenshot on failure */
     screenshot: 'only-on-failure',
 
     /* Record video on failure */
     video: 'retain-on-failure',
+
+    /* Optimize timeouts for CI environment */
+    actionTimeout: process.env.CI ? 10000 : 5000,
+    navigationTimeout: process.env.CI ? 30000 : 10000,
   },
 
   /* Configure projects for major browsers */
@@ -74,7 +85,9 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
+    command: process.env.CI 
+      ? 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000'
+      : 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
     url: 'http://localhost:8000/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
@@ -83,11 +96,11 @@ export default defineConfig({
     }
   },
 
-  /* Global test timeout */
-  timeout: 30000,
+  /* Global test timeout optimized for CI */
+  timeout: process.env.CI ? 45000 : 30000,
 
-  /* Expect timeout */
+  /* Expect timeout optimized for CI */
   expect: {
-    timeout: 5000,
+    timeout: process.env.CI ? 10000 : 5000,
   },
 });
