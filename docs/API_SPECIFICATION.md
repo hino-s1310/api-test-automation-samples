@@ -2,7 +2,7 @@
 
 ## 概要
 
-PDFファイルをMarkdown形式に変換するRESTful APIです。
+PDFファイルをMarkdown形式に変換するRESTful APIです。FastAPIで実装されており、包括的なテスト自動化サンプルプロジェクトの一部として提供されています。
 
 ## 基本情報
 
@@ -10,6 +10,8 @@ PDFファイルをMarkdown形式に変換するRESTful APIです。
 - **API バージョン**: 1.0.0
 - **データ形式**: JSON
 - **認証**: なし（開発版）
+- **フレームワーク**: FastAPI
+- **ドキュメント**: `/docs` (Swagger UI), `/redoc` (ReDoc)
 
 ## エンドポイント一覧
 
@@ -41,7 +43,8 @@ PDFファイルをアップロードしてMarkdownに変換
 ```json
 {
   "message": "PDFファイルのアップロードと変換が完了しました",
-  "file_id": "uuid-string",
+  "id": "uuid-string",
+  "markdown": "# 見出し\n\n本文...",
   "status": "completed"
 }
 ```
@@ -115,9 +118,13 @@ PDFファイルをアップロードしてMarkdownに変換
 **レスポンス**
 ```json
 {
-  "file_id": "uuid-string",
+  "id": "uuid-string",
+  "filename": "updated_sample.pdf",
   "markdown": "# 更新された見出し\n\n更新された本文...",
   "status": "completed",
+  "created_at": "2024-01-01T00:00:00",
+  "updated_at": "2024-01-01T00:00:00",
+  "file_size": 1024000,
   "processing_time": 1.8
 }
 ```
@@ -194,6 +201,20 @@ PDFファイルをアップロードしてMarkdownに変換
 }
 ```
 
+### テスト用エンドポイント
+
+#### POST /test/reset-db
+テスト用：データベースをリセット（テスト環境のみ）
+
+**注意**: このエンドポイントは `ENVIRONMENT=test` の環境でのみ利用可能
+
+**レスポンス**
+```json
+{
+  "message": "テストデータベースがリセットされました"
+}
+```
+
 ## データモデル
 
 ### FileStatus
@@ -204,12 +225,45 @@ class FileStatus(str, Enum):
     FAILED = "failed"           # 失敗
 ```
 
+### レスポンスモデル
+
+#### FileResponse
+```python
+class FileResponse(BaseModel):
+    id: str                      # ファイルID
+    filename: str                # ファイル名
+    markdown: str                # 変換されたMarkdown
+    status: FileStatus           # 処理状態
+    created_at: datetime         # 作成日時
+    updated_at: Optional[datetime] # 更新日時
+    file_size: int               # ファイルサイズ（バイト）
+    processing_time: Optional[float] # 処理時間（秒）
+```
+
+#### UploadResponse
+```python
+class UploadResponse(BaseModel):
+    message: str                 # メッセージ
+    id: str                      # ファイルID
+    markdown: str                # 変換されたMarkdown
+    status: FileStatus           # 処理状態
+```
+
+#### FileListResponse
+```python
+class FileListResponse(BaseModel):
+    files: List[dict]            # ファイル一覧
+    total_count: int             # 総ファイル数
+    page: int                    # 現在のページ
+    per_page: int                # 1ページあたりの件数
+```
+
 ### エラーレスポンス
 ```json
 {
   "detail": "エラーの詳細",
-  "error_code": "ERROR_CODE",  # オプション
-  "timestamp": "2024-01-01T00:00:00"
+  "timestamp": "2024-01-01T00:00:00",
+  "path": "/api/endpoint"
 }
 ```
 
@@ -231,6 +285,7 @@ class FileStatus(str, Enum):
 | HTTPステータス | 説明 |
 |---------------|------|
 | 400 | リクエストが不正（ファイルサイズ超過、形式不正など） |
+| 403 | アクセス拒否（テスト環境以外でのDBリセットなど） |
 | 404 | リソースが見つからない |
 | 500 | 内部サーバーエラー |
 
@@ -272,7 +327,34 @@ curl -X DELETE "http://localhost:8000/files/{file_id}" \
      -H "accept: application/json"
 ```
 
+#### 統計情報取得
+```bash
+curl -X GET "http://localhost:8000/statistics" \
+     -H "accept: application/json"
+```
+
+#### 古いファイルクリーンアップ
+```bash
+curl -X POST "http://localhost:8000/cleanup?days=30" \
+     -H "accept: application/json"
+```
+
 ## 開発者向け情報
+
+### 技術スタック
+
+#### バックエンド
+- **フレームワーク**: FastAPI 0.104.1+
+- **Python バージョン**: 3.10+
+- **パッケージマネージャー**: uv
+- **データベース**: SQLite
+- **PDF処理**: markitdown, pypdf, pdfplumber
+
+#### フロントエンド
+- **フレームワーク**: Next.js 14
+- **言語**: TypeScript 5.2+
+- **パッケージマネージャー**: pnpm 8.10+
+- **スタイリング**: Tailwind CSS 3.3+
 
 ### データベーススキーマ
 
@@ -318,3 +400,54 @@ CREATE TABLE conversion_logs (
 - Markdown出力ディレクトリ
 - ファイルサイズ制限
 - ページネーション設定
+
+### 開発環境セットアップ
+
+#### バックエンド
+```bash
+# 依存関係のインストール
+make install
+
+# 開発サーバー起動
+make dev
+
+# テスト実行
+make test
+```
+
+#### フロントエンド
+```bash
+cd src/ui
+
+# 依存関係のインストール
+pnpm install
+
+# 開発サーバー起動
+pnpm dev
+
+# テスト実行
+pnpm test
+```
+
+### テスト戦略
+
+#### テスト構成
+- **ユニットテスト**: pytest (Python), Jest (TypeScript)
+- **E2Eテスト**: Playwright
+- **CI/CD**: GitHub Actions
+- **カバレッジ**: pytest-cov, Jest coverage
+
+#### テスト実行
+```bash
+# 全テスト実行
+make test-all
+
+# バックエンドテスト
+make test-unit
+
+# フロントエンドテスト
+cd src/ui && pnpm test
+
+# E2Eテスト
+cd tests/e2e && pnpm test
+```
