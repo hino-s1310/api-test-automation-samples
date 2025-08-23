@@ -1,0 +1,145 @@
+name: E2E Tests
+
+on:
+  # PR作成・更新時に実行
+  pull_request:
+    branches: [main, develop]
+  # mainブランチにpush時に実行
+  push:
+    branches: [main]
+  # 毎日午前3時（JST）に定期実行
+  schedule:
+    - cron: "0 18 * * *"  # UTC 18:00 = JST 3:00
+  # 手動実行も可能
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+    
+    # GitHub Actions の権限設定
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+      statuses: write
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20.x"]
+        python-version: ["3.11"]
+    
+    defaults:
+      run:
+        working-directory: ./tests/e2e
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v2
+        with:
+          version: "0.4.30"
+      
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.0
+          run_install: false
+      
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      
+      - name: Install Python dependencies
+        run: |
+          cd ../../
+          uv sync
+      
+      - name: Install E2E test dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+          
+      - name: Run Playwright E2E tests
+        run: |
+          pnpm exec playwright test \
+            --reporter=html,json,junit \
+            --output-dir=test-results
+        env:
+          CI: true
+          ENVIRONMENT: test
+            
+      - name: Upload test results and reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results-node-${{ matrix.node-version }}
+          path: |
+            tests/e2e/test-results/
+            tests/e2e/playwright-report/
+          retention-days: 10
+            
+      - name: Upload Playwright HTML Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-node-${{ matrix.node-version }}
+          path: tests/e2e/playwright-report/
+          retention-days: 10
+            
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = './tests/e2e/test-results/results.json';
+            
+            if (fs.existsSync(path)) {
+              const results = JSON.parse(fs.readFileSync(path, 'utf8'));
+              const { stats } = results;
+              
+              const body = `## 🎭 Playwright E2E Test Results (Node.js ${{ matrix.node-version }})
+              
+              - **Tests**: ${stats.total}
+              - **Passed**: ${stats.passed} ✅
+              - **Failed**: ${stats.failed} ❌
+              - **Skipped**: ${stats.skipped} ⏭️
+              - **Duration**: ${Math.round(stats.duration / 1000)}s
+              
+              ${stats.failed > 0 ? '❌ Some tests failed. Please check the detailed report.' : '✅ All tests passed!'}
+              
+              📊 [View detailed HTML report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
+        continue-on-error: true
