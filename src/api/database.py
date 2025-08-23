@@ -13,7 +13,16 @@ import json
 class DatabaseManager:
     """SQLiteデータベース管理クラス"""
     
-    def __init__(self, db_path: str = "data/database.db"):
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            # 環境変数でテスト用DBパスを指定可能
+            import os
+            environment = os.getenv("ENVIRONMENT", "development")
+            if environment == "test":
+                db_path = "data/test_database.db"
+            else:
+                db_path = "data/database.db"
+        
         self.db_path = db_path
         self._ensure_db_directory()
         self._init_database()
@@ -215,6 +224,25 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting conversion logs: {e}")
             return []
+    
+    def clear_all_data(self) -> bool:
+        """テスト用：全データを削除"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                # 外部キー制約を一時的に無効化
+                conn.execute("PRAGMA foreign_keys = OFF")
+                
+                # 全テーブルのデータを削除
+                conn.execute("DELETE FROM conversion_logs")
+                conn.execute("DELETE FROM files")
+                
+                # 外部キー制約を再有効化
+                conn.execute("PRAGMA foreign_keys = ON")
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Error clearing all data: {e}")
+            return False
 
 
 # グローバルインスタンス

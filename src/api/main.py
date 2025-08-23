@@ -261,6 +261,25 @@ async def cleanup_old_files(days: int = Query(30, ge=1, le=365, description="削
     }
 
 
+@app.post("/test/reset-db", tags=["Testing"])
+async def reset_test_database():
+    """テスト用：データベースをリセット（テスト環境のみ）"""
+    import os
+    if os.getenv("ENVIRONMENT") != "test":
+        raise HTTPException(
+            status_code=403,
+            detail="この操作はテスト環境でのみ利用可能です"
+        )
+    
+    if db_manager.clear_all_data():
+        return {"message": "テストデータベースがリセットされました"}
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="データベースのリセットに失敗しました"
+        )
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
     """HTTP例外のハンドラー"""

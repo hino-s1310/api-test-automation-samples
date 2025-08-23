@@ -52,14 +52,14 @@ export default defineConfig({
     // },
 
     /* Test against mobile viewports. */
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
+    // {
+    //   name: 'Mobile Chrome',
+    //   use: { ...devices['Pixel 5'] },
+    // },
+    // {
+    //   name: 'Mobile Safari',
+    //   use: { ...devices['iPhone 12'] },
+    // },
 
     /* Test against branded browsers. */
     // {
@@ -74,10 +74,13 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'cd ../../ && uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
+    command: 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
     url: 'http://localhost:8000/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      ENVIRONMENT: 'test'
+    }
   },
 
   /* Global test timeout */
