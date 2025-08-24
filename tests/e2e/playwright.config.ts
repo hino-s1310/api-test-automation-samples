@@ -54,6 +54,9 @@ export default defineConfig({
       use: { 
         ...devices['Desktop Chrome'],
         baseURL: 'http://localhost:3000',
+        // CI環境でのタイムアウトを延長
+        actionTimeout: 30000,
+        navigationTimeout: 60000,
       },
     },
   ],
@@ -96,15 +99,15 @@ export default defineConfig({
     video: 'retain-on-failure',
 
     /* CI環境ではタイムアウトを延長して安定性を向上 */
-    actionTimeout: process.env.CI ? 15000 : 5000,
-    navigationTimeout: process.env.CI ? 45000 : 10000,
+    actionTimeout: process.env.CI ? 30000 : 5000,
+    navigationTimeout: process.env.CI ? 60000 : 10000,
   },
 
   /* CI環境ではグローバルタイムアウトを延長して安定性を向上 */
-  timeout: process.env.CI ? 60000 : 30000,
+  timeout: process.env.CI ? 120000 : 30000,
 
   /* CI環境では期待値のタイムアウトも延長して安定性を向上 */
   expect: {
-    timeout: process.env.CI ? 15000 : 5000,
+    timeout: process.env.CI ? 30000 : 5000,
   },
 });

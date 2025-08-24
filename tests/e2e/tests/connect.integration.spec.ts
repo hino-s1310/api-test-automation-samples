@@ -73,7 +73,9 @@ test.describe('フロント→API→DB統合テスト', () => {
     });
 
     // ページ読み込み
-    await page.goto('/');
+    await page.goto('http://localhost:3000/');
+    await page.waitForLoadState('domcontentloaded');
+    console.log(page.url());
     
     // ファイル一覧画面に遷移
     await page.getByRole('link', { name: 'ファイル一覧' }).click();
