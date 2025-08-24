@@ -164,7 +164,7 @@ jobs:
           echo "API server health check:"
           curl -v http://localhost:8000/health
       
-      - name: Build and start UI server
+      - name: Build and start UI server (optimized)
         run: |
           cd ../../
           echo "Building UI application..."
@@ -182,8 +182,12 @@ jobs:
           echo "Checking Next.js installation..."
           pnpm list next
           
+          # ビルド実行（最適化オプション付き）
+          echo "Building Next.js application with optimizations..."
+          export NEXT_TELEMETRY_DISABLED=1
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          
           # ビルド実行
-          echo "Building Next.js application..."
           pnpm build
           
           echo "Starting UI server with built files..."
@@ -202,27 +206,30 @@ jobs:
             exit 1
           fi
           
-          nohup python3 -m http.server 3000 > ui_server.log 2>&1 &
-          echo $! > ui_server.pid
+          # ログファイルをワークスペースルートに保存（パス問題を回避）
+          nohup python3 -m http.server 3000 > ../../ui_server.log 2>&1 &
+          echo $! > ../../ui_server.pid
           
           # サーバー起動を待機
           sleep 10
           
           # ログを確認
           echo "UI server log:"
-          cat ui_server.log
+          cat ../../ui_server.log
         env:
           NODE_ENV: production
           CI: true
+          NEXT_TELEMETRY_DISABLED: 1
+          NODE_OPTIONS: "--max-old-space-size=4096"
       
-      - name: Verify UI server is running
+      - name: Verify UI server is running (enhanced)
         run: |
           cd ../../
           echo "Checking UI server..."
           
-          # UIサーバーの起動確認
-          for i in {1..20}; do
-            echo "Attempt $i/20: Checking UI server..."
+          # UIサーバーの起動確認（より詳細な確認）
+          for i in {1..30}; do
+            echo "Attempt $i/30: Checking UI server..."
             
             # プロセス状態確認
             if [ -f ui_server.pid ]; then
@@ -236,17 +243,21 @@ jobs:
               fi
             fi
             
-            # HTTP接続確認
+            # HTTP接続確認（より詳細なチェック）
             if curl -f http://localhost:3000 > /dev/null 2>&1; then
               echo "UI server is responding successfully!"
+              
+              # レスポンスの詳細確認
+              echo "UI server response details:"
+              curl -I http://localhost:3000
               break
             fi
             
             echo "UI server not ready yet, waiting..."
-            sleep 3
+            sleep 2
             
             # タイムアウトチェック
-            if [ $i -eq 20 ]; then
+            if [ $i -eq 30 ]; then
               echo "UI server failed to start within 60 seconds"
               echo "Final UI server log:"
               if [ -f ui_server.log ]; then
@@ -254,6 +265,8 @@ jobs:
               fi
               echo "Process status:"
               ps aux | grep "python3.*http.server" | grep -v grep || echo "No UI server process found"
+              echo "Port 3000 status:"
+              lsof -i :3000 || echo "Port 3000 is not in use"
               exit 1
             fi
           done
@@ -264,7 +277,7 @@ jobs:
           echo "UI server check:"
           curl -v http://localhost:3000
       
-      - name: Run API tests only
+      - name: Run comprehensive E2E tests
         run: |
           # テスト用の環境変数を設定
           export CI=true
@@ -272,14 +285,56 @@ jobs:
           export PWTEST_SKIP_TEST_OUTPUT=1
           export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
           
-          # APIテストのみを実行（UIサーバーが不安定な場合の安全策）
-          echo "Running API tests only..."
+          # 全テストを実行（API、UI、統合テスト）
+          echo "Running comprehensive E2E tests..."
+          
+          # テストの実行順序を制御
+          echo "Phase 1: Running API tests..."
           pnpm exec playwright test \
+            --project=api-tests \
             --max-failures=3 \
             --workers=1 \
             --retries=3 \
-            --timeout=60000 \
-            --project=api-tests
+            --timeout=60000
+          
+          echo "Phase 2: Running UI tests..."
+          pnpm exec playwright test \
+            --project=ui-tests \
+            --max-failures=3 \
+            --workers=1 \
+            --retries=3 \
+            --timeout=60000
+          
+          echo "Phase 3: Running integration tests..."
+          pnpm exec playwright test \
+            --project=integration-tests \
+            --max-failures=3 \
+            --workers=1 \
+            --retries=3 \
+            --timeout=60000
+      
+      - name: Aggregate test results
+        run: |
+          echo "=== Test Results Summary ==="
+          
+          # テスト結果ファイルの確認
+          if [ -d "test-results" ]; then
+            echo "Test results directory contents:"
+            ls -la test-results/
+            
+            # 結果ファイルの解析
+            if [ -f "test-results/results.json" ]; then
+              echo "Test results summary:"
+              cat test-results/results.json | jq '.stats' || echo "Could not parse test results"
+            fi
+          fi
+          
+          # Playwrightレポートの確認
+          if [ -d "playwright-report" ]; then
+            echo "Playwright report generated successfully"
+          else
+            echo "Playwright report not found"
+          fi
       
       - name: Stop servers
         if: always()
@@ -330,20 +385,14 @@ jobs:
           path: tests/e2e/playwright-report/
           retention-days: 14
       
-      - name: Upload API server logs
+      - name: Upload server logs
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: api-server-logs-node-${{ matrix.node-version }}
-          path: api_server.log
-          retention-days: 14
-      
-      - name: Upload UI server logs
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: ui-server-logs-node-${{ matrix.node-version }}
-          path: src/ui/ui_server.log
+          name: server-logs-node-${{ matrix.node-version }}
+          path: |
+            api_server.log
+            ui_server.log
           retention-days: 14
             
       - name: Comment PR with test results
@@ -354,17 +403,19 @@ jobs:
           script: |
             const body = `## 🎭 Playwright E2E Tests Completed (Node.js ${{ matrix.node-version }})
             
-            ✅ **API tests have been completed successfully!**
+            ✅ **Comprehensive E2E tests have been completed successfully!**
             
             **Test Results:**
-            - **Status**: API tests completed
+            - **Status**: All tests completed
             - **Node.js**: ${{ matrix.node-version }}
             - **Python**: ${{ matrix.python-version }}
             
             **What was tested:**
             - ✅ API endpoints and health checks
+            - ✅ Frontend UI components
+            - ✅ UI-API integration and communication
             - ✅ File upload and processing workflows
-            - ✅ Database operations and data validation
+            - ✅ End-to-end user experience
             
             📊 **Reports & Logs:**
             - [View HTML Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
