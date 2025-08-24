@@ -1,4 +1,4 @@
-name: E2E Tests
+name: E2E Tests (Next.js Dev Server)
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   e2e-tests:
-    name: Run E2E Tests
+    name: Run E2E Tests with Next.js Dev Server
     runs-on: ubuntu-latest
     timeout-minutes: 60
     
@@ -92,6 +92,14 @@ jobs:
           echo "Installing UI dependencies..."
           pnpm install --frozen-lockfile
           echo "UI dependencies installed successfully"
+          
+          # Next.jsの確認
+          echo "Checking Next.js installation..."
+          pnpm list next
+          
+          # package.jsonの確認
+          echo "Package.json scripts:"
+          cat package.json | grep -A 5 -B 5 "scripts"
         env:
           NODE_ENV: development
           CI: true
@@ -164,89 +172,63 @@ jobs:
           echo "API server health check:"
           curl -v http://localhost:8000/health
       
-      - name: Build and start UI server (fixed)
+      - name: Start UI server with Next.js dev server
         run: |
           cd ../../
-          echo "Building UI application..."
+          echo "Starting UI server with Next.js development server..."
           
-          # UIアプリケーションをビルド
+          # UIサーバーを起動
           cd src/ui
           
           # 依存関係の確認
           echo "Checking UI dependencies..."
-          ls -la
-          echo "Node version: $(node --version)"
-          echo "pnpm version: $(pnpm --version)"
+          if [ ! -d "node_modules" ]; then
+            echo "Installing UI dependencies..."
+            pnpm install --frozen-lockfile
+          fi
           
           # Next.jsの確認
           echo "Checking Next.js installation..."
           pnpm list next
           
-          # ビルド実行（最適化オプション付き）
-          echo "Building Next.js application with optimizations..."
+          # 開発サーバーを起動
+          echo "Starting Next.js development server..."
           export NEXT_TELEMETRY_DISABLED=1
           export NODE_OPTIONS="--max-old-space-size=4096"
+          export CI=true
           
-          # ビルド実行
-          echo "Starting build process..."
-          pnpm build
-          
-          # ビルド結果の確認
-          echo "Build completed. Checking output directories..."
-          ls -la
-          
-          # Next.jsの出力ディレクトリを確認
-          if [ -d "dist" ]; then
-            echo "Found 'dist' directory"
-            cd dist
-          elif [ -d "out" ]; then
-            echo "Found 'out' directory"
-            cd out
-          elif [ -d ".next" ]; then
-            echo "Found '.next' directory"
-            cd .next
-          elif [ -d "build" ]; then
-            echo "Found 'build' directory"
-            cd build
-          else
-            echo "Build output directory not found. Available directories:"
-            ls -la
-            echo "Checking package.json for build configuration..."
-            cat package.json | grep -A 10 -B 10 "build"
-            exit 1
-          fi
-          
-          # ビルドファイルの内容を確認
-          echo "Build output contents:"
-          ls -la
-          
-          # index.htmlの存在確認
-          if [ -f "index.html" ]; then
-            echo "index.html found - static build successful"
-          else
-            echo "index.html not found - checking for other entry points"
-            find . -name "*.html" -o -name "*.js" | head -10
-          fi
-          
-          echo "Starting UI server with built files..."
-          
-          # ログファイルをワークスペースルートに保存（パス問題を回避）
-          nohup python3 -m http.server 3000 > ../../ui_server.log 2>&1 &
+          # 開発サーバーを起動（バックグラウンドで実行）
+          echo "Starting Next.js dev server in background..."
+          nohup pnpm dev > ../../ui_server.log 2>&1 &
           echo $! > ../../ui_server.pid
           
+          # プロセスIDの確認
+          echo "UI server PID: $(cat ../../ui_server.pid)"
+          
           # サーバー起動を待機
-          sleep 10
+          echo "Waiting for Next.js dev server to start..."
+          sleep 60
           
           # ログを確認
           echo "UI server log:"
           cat ../../ui_server.log
+          
+          # プロセス状態の確認
+          if [ -f ../../ui_server.pid ]; then
+            if kill -0 $(cat ../../ui_server.pid) 2>/dev/null; then
+              echo "UI server process is running"
+            else
+              echo "UI server process is not running"
+              exit 1
+            fi
+          fi
         env:
-          NODE_ENV: production
+          NODE_ENV: development
           CI: true
           NEXT_TELEMETRY_DISABLED: 1
           NODE_OPTIONS: "--max-old-space-size=4096"
       
-      - name: Verify UI server is running (enhanced)
+      - name: Verify UI server is running
         run: |
           cd ../../
           echo "Checking UI server..."
@@ -274,21 +256,25 @@ jobs:
               # レスポンスの詳細確認
               echo "UI server response details:"
               curl -I http://localhost:3000
+              
+              # ページの内容を確認
+              echo "Page content preview:"
+              curl -s http://localhost:3000 | head -20
               break
             fi
             
             echo "UI server not ready yet, waiting..."
-            sleep 2
+            sleep 3
             
             # タイムアウトチェック
             if [ $i -eq 30 ]; then
-              echo "UI server failed to start within 60 seconds"
+              echo "UI server failed to start within 90 seconds"
               echo "Final UI server log:"
               if [ -f ui_server.log ]; then
                 cat ui_server.log
               fi
               echo "Process status:"
-              ps aux | grep "python3.*http.server" | grep -v grep || echo "No UI server process found"
+              ps aux | grep "next\|pnpm" | grep -v grep || echo "No Next.js process found"
               echo "Port 3000 status:"
               lsof -i :3000 || echo "Port 3000 is not in use"
               exit 1
@@ -321,7 +307,15 @@ jobs:
             --retries=3 \
             --timeout=60000
           
-          echo "Phase 2: Running integration tests..."
+          echo "Phase 2: Running UI tests..."
+          pnpm exec playwright test \
+            --project=ui-tests \
+            --max-failures=3 \
+            --workers=1 \
+            --retries=3 \
+            --timeout=60000
+          
+          echo "Phase 3: Running integration tests..."
           pnpm exec playwright test \
             --project=integration-tests \
             --max-failures=3 \
@@ -417,7 +411,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const body = `## 🎭 Playwright E2E Tests Completed (Node.js ${{ matrix.node-version }})
+            const body = `## 🎭 Playwright E2E Tests Completed (Next.js Dev Server)
             
             ✅ **Comprehensive E2E tests have been completed successfully!**
             
@@ -425,10 +419,11 @@ jobs:
             - **Status**: All tests completed
             - **Node.js**: ${{ matrix.node-version }}
             - **Python**: ${{ matrix.python-version }}
+            - **UI Server**: Next.js Development Server
             
             **What was tested:**
             - ✅ API endpoints and health checks
-            - ✅ Frontend UI components
+            - ✅ Frontend UI components (Next.js Dev Server)
             - ✅ UI-API integration and communication
             - ✅ File upload and processing workflows
             - ✅ End-to-end user experience

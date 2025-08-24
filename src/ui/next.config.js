@@ -2,7 +2,7 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 静的エクスポートの設定
+  // 静的エクスポートの設定（必須）
   output: 'export',
   
   // 画像最適化を無効化（静的エクスポートでは使用できない）
@@ -23,6 +23,11 @@ const nextConfig = {
   
   typescript: {
     ignoreBuildErrors: true,
+  },
+  
+  // 静的エクスポート用の設定
+  experimental: {
+    appDir: true,
   },
 }
 
