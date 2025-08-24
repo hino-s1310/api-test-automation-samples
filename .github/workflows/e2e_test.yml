@@ -330,14 +330,20 @@ jobs:
           path: tests/e2e/playwright-report/
           retention-days: 14
       
-      - name: Upload server logs
+      - name: Upload API server logs
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: server-logs-node-${{ matrix.node-version }}
-          path: |
-            ../../api_server.log
-            ../../ui_server.log
+          name: api-server-logs-node-${{ matrix.node-version }}
+          path: api_server.log
+          retention-days: 14
+      
+      - name: Upload UI server logs
+        uses: actions/upload-artifact@v4
+        if: ${{ !carncelled() }}
+        with:
+          name: ui-server-logs-node-${{ matrix.node-version }}
+          path: src/ui/ui_server.log
           retention-days: 14
             
       - name: Comment PR with test results
