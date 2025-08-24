@@ -22,12 +22,22 @@ export interface ApiEndpoints {
  * テスト用のAPIエンドポイント
  */
 export const API_ENDPOINTS: ApiEndpoints = {
-  upload: '/upload',
-  files: '/files',
-  fileDetail: (id: string) => `/files/${id}`,
-  fileLogs: (id: string) => `/files/${id}/logs`,
-  statistics: '/statistics'
+  upload: 'http://localhost:8000/upload',
+  files: 'http://localhost:8000/files',
+  fileDetail: (id: string) => `http://localhost:8000/files/${id}`,
+  fileLogs: (id: string) => `http://localhost:8000/files/${id}/logs`,
+  statistics: 'http://localhost:8000/statistics'
 };
+
+/**
+ * 各テストで一意のデータを生成するヘルパー関数
+ */
+export const generateUniqueTestData = (): UploadTestData => ({
+  id: `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  filename: `test-${Date.now()}.pdf`,
+  markdown: 'test',
+  status: 'completed',
+});
 
 /**
  * PDFアップロード用の正常系テストデータ

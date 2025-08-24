@@ -3,7 +3,7 @@ import { FileInfo, FileListResponse, UploadResponse } from '@/types';
 
 // APIクライアントの作成
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '/api',
   headers: {
     'Content-Type': 'application/json',
   },

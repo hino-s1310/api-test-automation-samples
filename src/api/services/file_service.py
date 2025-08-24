@@ -104,29 +104,46 @@ class FileService:
             total_size = 0
             total_processing_time = 0
             
-            for file_info in all_files["files"]:
-                status = file_info["status"]
-                if status in status_counts:
-                    status_counts[status] += 1
-                
-                total_size += file_info.get("file_size", 0)
-                if file_info.get("processing_time"):
-                    total_processing_time += file_info["processing_time"]
+            # ファイルリストが存在する場合のみ処理
+            if all_files["files"]:
+                for file_info in all_files["files"]:
+                    status = file_info.get("status", "unknown")
+                    if status in status_counts:
+                        status_counts[status] += 1
+                    
+                    # ファイルサイズの安全な取得
+                    file_size = file_info.get("file_size", 0)
+                    if isinstance(file_size, (int, float)) and file_size >= 0:
+                        total_size += file_size
+                    
+                    # 処理時間の安全な取得
+                    processing_time = file_info.get("processing_time")
+                    if isinstance(processing_time, (int, float)) and processing_time >= 0:
+                        total_processing_time += processing_time
+            
+            # 平均処理時間の安全な計算
+            average_processing_time = 0
+            if total_files > 0 and total_processing_time > 0:
+                average_processing_time = round(total_processing_time / total_files, 2)
             
             return {
                 "total_files": total_files,
                 "status_counts": status_counts,
                 "total_size_bytes": total_size,
-                "total_size_mb": round(total_size / (1024 * 1024), 2),
+                "total_size_mb": round(total_size / (1024 * 1024), 2) if total_size > 0 else 0,
                 "total_processing_time": round(total_processing_time, 2),
-                "average_processing_time": round(total_processing_time / total_files, 2) if total_files > 0 else 0
+                "average_processing_time": average_processing_time
             }
             
         except Exception as e:
             return {
                 "error": str(e),
                 "total_files": 0,
-                "status_counts": {"processing": 0, "completed": 0, "failed": 0}
+                "status_counts": {"processing": 0, "completed": 0, "failed": 0},
+                "total_size_bytes": 0,
+                "total_size_mb": 0,
+                "total_processing_time": 0,
+                "average_processing_time": 0
             }
     
     def cleanup_old_files(self, days: int = 30) -> Dict[str, Any]:
