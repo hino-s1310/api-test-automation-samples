@@ -142,24 +142,38 @@ jobs:
           ENVIRONMENT: test
           PYTHONPATH: /home/runner/work/api-test-automation-samples/api-test-automation-samples
       
-      - name: Start UI server
+      - name: Start UI server (optimized)
         run: |
           cd ../../
-          echo "Starting UI server..."
+          echo "Starting UI server with optimizations..."
           
           # UIサーバーを起動
           cd src/ui
-          nohup pnpm dev > ui_server.log 2>&1 &
+          
+          # Next.jsの最適化設定
+          export NEXT_TELEMETRY_DISABLED=1
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          
+          # 開発サーバーを起動（最適化オプション付き）
+          echo "Starting Next.js development server..."
+          nohup pnpm dev --turbo > ui_server.log 2>&1 &
           echo $! > ui_server.pid
           
+          # 起動プロセスの確認
+          echo "UI server PID: $(cat ui_server.pid)"
+          
           # サーバー起動を待機
-          sleep 30
+          echo "Waiting for UI server to start..."
+          sleep 60
           
           # ログを確認
           echo "UI server log:"
           cat ui_server.log
         env:
           NODE_ENV: development
+          CI: true
+          NEXT_TELEMETRY_DISABLED: 1
+          NODE_OPTIONS: "--max-old-space-size=4096"
       
       - name: Verify servers are running
         run: |
@@ -253,46 +267,3 @@ jobs:
             ../../api_server.log
             ../../ui_server.log
           retention-days: 14
-            
-      - name: Comment PR with test results
-        if: github.event_name == 'pull_request' && !cancelled()
-        continue-on-error: true
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const body = `## 🎭 Playwright E2E Tests Completed (Node.js ${{ matrix.node-version }})
-            
-            ✅ **E2E tests have been completed successfully!**
-            
-            �� **Test Results:**
-            - **Status**: Tests completed
-            - **Node.js**: ${{ matrix.node-version }}
-            - **Python**: ${{ matrix.python-version }}
-            
-            📋 **Reports & Logs:**
-            - [View HTML Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            - [View Workflow Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            - [Download Test Results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            
-            �� **What was tested:**
-            - API endpoints and health checks
-            - Frontend UI components
-            - Integration between frontend and backend
-            - File upload and processing workflows
-            
-            💡 **Next Steps:**
-            - Review the detailed HTML report for test coverage
-            - Check server logs if any issues occurred
-            - All artifacts are available for download above`;
-            
-            try {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: body
-              });
-              console.log('PR comment posted successfully');
-            } catch (error) {
-              console.error('Failed to create PR comment:', error);
-            }
