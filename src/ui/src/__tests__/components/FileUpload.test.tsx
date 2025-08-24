@@ -7,7 +7,7 @@ import { UploadState } from '@/types'
 jest.mock('react-dropzone', () => ({
   useDropzone: ({ onDrop, disabled }: any) => ({
     getRootProps: () => ({
-      'data-testid': 'dropzone',
+      'data-testid': 'file-dropzone',
       role: 'presentation',
       tabIndex: 0,
       className: disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
@@ -46,7 +46,7 @@ describe('FileUpload', () => {
     expect(screen.getByText('PDFファイルをアップロード')).toBeInTheDocument()
     expect(screen.getByText('ドラッグ&ドロップまたはクリックしてファイルを選択')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'ファイルを選択' })).toBeInTheDocument()
-    expect(screen.getByTestId('dropzone')).toBeInTheDocument()
+    expect(screen.getByTestId('file-dropzone')).toBeInTheDocument()
   })
 
   it('ローディング状態が正しく表示される', () => {
@@ -118,7 +118,7 @@ describe('FileUpload', () => {
   it('ドロップゾーンがクリック可能', async () => {
     render(<FileUpload onUpload={mockOnUpload} uploadState={defaultUploadState} />)
 
-    const dropzone = screen.getByTestId('dropzone')
+    const dropzone = screen.getByTestId('file-dropzone')
     expect(dropzone).toHaveClass('cursor-pointer')
     expect(dropzone).not.toHaveClass('opacity-50')
   })
@@ -132,14 +132,14 @@ describe('FileUpload', () => {
 
     render(<FileUpload onUpload={mockOnUpload} uploadState={loadingState} />)
 
-    const dropzone = screen.getByTestId('dropzone')
+    const dropzone = screen.getByTestId('file-dropzone')
     expect(dropzone).toHaveClass('opacity-50', 'cursor-not-allowed')
   })
 
   it('ドロップゾーンをクリックしてファイル選択', async () => {
     render(<FileUpload onUpload={mockOnUpload} uploadState={defaultUploadState} />)
 
-    const dropzone = screen.getByTestId('dropzone')
+    const dropzone = screen.getByTestId('file-dropzone')
     const input = screen.getByTestId('file-input')
     
     // input要素のクリックをモック

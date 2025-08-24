@@ -33,25 +33,25 @@ export default function FileListTable({ files, onViewFile, onDeleteFile, deletin
     switch (status) {
       case 'completed':
         return (
-          <span className={`${baseClasses} bg-green-100 text-green-800`}>
+          <span className={`${baseClasses} bg-green-100 text-green-800`} data-testid={`status-${status}`}>
             完了
           </span>
         );
       case 'processing':
         return (
-          <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>
+          <span className={`${baseClasses} bg-yellow-100 text-yellow-800`} data-testid={`status-${status}`}>
             処理中
           </span>
         );
       case 'failed':
         return (
-          <span className={`${baseClasses} bg-red-100 text-red-800`}>
+          <span className={`${baseClasses} bg-red-100 text-red-800`} data-testid={`status-${status}`}>
             失敗
           </span>
         );
       default:
         return (
-          <span className={`${baseClasses} bg-gray-100 text-gray-800`}>
+          <span className={`${baseClasses} bg-gray-100 text-gray-800`} data-testid={`status-${status}`}>
             不明
           </span>
         );
@@ -59,26 +59,26 @@ export default function FileListTable({ files, onViewFile, onDeleteFile, deletin
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto" data-testid="file-list-table">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-testid="header-filename">
               ファイル名
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-testid="header-status">
               ステータス
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-testid="header-filesize">
               ファイルサイズ
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-testid="header-processing-time">
               処理時間
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-testid="header-created-at">
               作成日時
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-testid="header-actions">
               削除
             </th>
           </tr>
@@ -96,6 +96,7 @@ export default function FileListTable({ files, onViewFile, onDeleteFile, deletin
               tabIndex={file.status === 'completed' ? 0 : -1}
               role={file.status === 'completed' ? 'button' : undefined}
               aria-label={file.status === 'completed' ? `${file.filename}の詳細を表示` : undefined}
+              data-testid={`file-row-${file.id}`}
               className={`
                 transition-colors duration-150
                 ${file.status === 'completed' 
@@ -114,25 +115,25 @@ export default function FileListTable({ files, onViewFile, onDeleteFile, deletin
                     </div>
                   </div>
                   <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-900 truncate max-w-xs">
+                    <div className="text-sm font-medium text-gray-900 truncate max-w-xs" data-testid={`filename-${file.id}`}>
                       {file.filename}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-500" data-testid={`file-id-${file.id}`}>
                       ID: {file.id.substring(0, 8)}...
                     </div>
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
+              <td className="px-6 py-4 whitespace-nowrap" data-testid={`status-cell-${file.id}`}>
                 {getStatusBadge(file.status)}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" data-testid={`filesize-${file.id}`}>
                 {formatFileSize(file.file_size)}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" data-testid={`processing-time-${file.id}`}>
                 {file.processing_time ? `${file.processing_time.toFixed(2)}秒` : '-'}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" data-testid={`created-at-${file.id}`}>
                 {formatDateTime(file.created_at)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -145,9 +146,10 @@ export default function FileListTable({ files, onViewFile, onDeleteFile, deletin
                   className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
                   title="ファイルを削除"
                   aria-label={`${file.filename}を削除`}
+                  data-testid={`delete-button-${file.id}`}
                 >
                   {deletingFileId === file.id ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" data-testid={`delete-spinner-${file.id}`}></div>
                   ) : (
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

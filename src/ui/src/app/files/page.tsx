@@ -17,10 +17,10 @@ export default function FilesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
 
-  // ファイル一覧専用のレスポンシブページネーション
+  // ファイル一覧専用のレスポンシブページネーション - より少ない件数で表示
   const { itemsPerPage } = useFileListPagination({
-    minItemsPerPage: 5,
-    maxItemsPerPage: 30,
+    minItemsPerPage: 3,
+    maxItemsPerPage: 15,
     itemHeight: 72, // テーブル行の高さ（tr要素の実際の高さ）
   });
 
@@ -125,20 +125,20 @@ export default function FilesPage() {
 
   if (loading && !files) {
     return (
-      <div className="space-y-8">
-        <div className="text-left">
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+      <div className="space-y-6" data-testid="files-page-loading">
+        <div className="text-left" data-testid="loading-header">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2" data-testid="loading-title">
             ファイル一覧
           </h1>
-          <p className="text-sm lg:text-lg text-gray-600">
+          <p className="text-sm lg:text-lg text-gray-600" data-testid="loading-description">
             変換済みのPDFファイル一覧を表示します。
           </p>
         </div>
         
-        <div className="card" data-testid="file-list-table" style={{ minHeight: '400px' }}>
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">ファイル一覧を読み込んでいます...</p>
+        <div className="card" data-testid="loading-table" style={{ minHeight: '300px' }}>
+          <div className="text-center py-12" data-testid="loading-spinner-container">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" data-testid="loading-spinner"></div>
+            <p className="text-gray-500" data-testid="loading-text">ファイル一覧を読み込んでいます...</p>
           </div>
         </div>
       </div>
@@ -146,40 +146,43 @@ export default function FilesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-4" data-testid="files-page">
+      {/* ヘッダー部分 - コンパクト化 */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3" data-testid="page-header">
         <div className="text-left">
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-1" data-testid="page-title">
             ファイル一覧
           </h1>
-          <p className="text-sm lg:text-lg text-gray-600">
+          <p className="text-sm lg:text-lg text-gray-600" data-testid="page-description">
             変換済みのPDFファイル一覧を表示します。
           </p>
         </div>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
           <button
             onClick={refreshFiles}
             className="btn-secondary text-sm"
             disabled={loading}
+            data-testid="refresh-button"
           >
             {loading ? '更新中...' : '更新'}
           </button>
         </div>
       </div>
 
+      {/* エラーメッセージ - コンパクト化 */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="bg-red-50 border border-red-200 rounded-md p-3" data-testid="error-message">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="h-4 w-4 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
             </div>
-            <div className="ml-3">
+            <div className="ml-2">
               <h3 className="text-sm font-medium text-red-800">エラーが発生しました</h3>
-              <div className="mt-2 text-sm text-red-700">
-                <p>{error}</p>
+              <div className="mt-1 text-sm text-red-700">
+                <p data-testid="error-text">{error}</p>
               </div>
             </div>
           </div>
@@ -188,30 +191,31 @@ export default function FilesPage() {
 
       {files && (
         <>
-          <div className="card">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
+          {/* ファイル一覧カード - コンパクト化 */}
+          <div className="card" data-testid="files-card">
+            <div className="flex justify-between items-center mb-4" data-testid="files-header">
+              <h2 className="text-lg font-semibold text-gray-900" data-testid="files-title">
                 ファイル一覧（{files.total_count}件）
               </h2>
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-gray-500" data-testid="files-count">
                 {itemsPerPage}件/ページ表示
               </div>
             </div>
 
             {files.files.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="text-center py-8" data-testid="empty-files">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3" data-testid="empty-files-icon">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <h3 className="text-base font-medium text-gray-900 mb-2" data-testid="empty-files-title">
                   ファイルがありません
                 </h3>
-                <p className="text-gray-500 mb-4">
+                <p className="text-sm text-gray-500 mb-3" data-testid="empty-files-description">
                   まだファイルがアップロードされていません。
                 </p>
-                <a href="/" className="btn-primary">
+                <a href="/upload" className="btn-primary text-sm" data-testid="upload-link">
                   ファイルをアップロード
                 </a>
               </div>
@@ -225,6 +229,7 @@ export default function FilesPage() {
             )}
           </div>
 
+          {/* ページネーション - ファイル数が多い場合のみ表示 */}
           {files.total_count > itemsPerPage && (
             <Pagination
               currentPage={currentPage}

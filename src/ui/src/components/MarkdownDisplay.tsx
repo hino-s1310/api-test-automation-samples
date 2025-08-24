@@ -34,39 +34,45 @@ export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplay
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col" data-testid="markdown-display-container">
       <div className="card h-full flex flex-col">
-        <div className="flex items-center justify-between mb-3 flex-shrink-0">
-          <h2 className="text-lg lg:text-xl font-semibold text-gray-900">変換結果</h2>
+        {/* ヘッダー部分 - 固定サイズ */}
+        <div className="flex items-center justify-between mb-3 flex-shrink-0" data-testid="result-header">
+          <h2 className="text-lg lg:text-xl font-semibold text-gray-900" data-testid="result-title">変換結果</h2>
           <div className="flex space-x-2">
             <button
               onClick={copyToClipboard}
               className={`btn-secondary text-sm ${copied ? 'bg-green-500 hover:bg-green-600' : ''}`}
+              data-testid="copy-button"
             >
               {copied ? 'コピー済み!' : 'コピー'}
             </button>
             <button
               onClick={downloadMarkdown}
               className="btn-secondary text-sm"
+              data-testid="download-button"
             >
               ダウンロード
             </button>
             <button
               onClick={onNewUpload}
               className="btn-primary text-sm"
+              data-testid="new-file-button"
             >
               新しいファイル
             </button>
           </div>
         </div>
 
+        {/* 成功メッセージ - 固定サイズ */}
         {result.message && (
-          <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-md flex-shrink-0">
+          <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-md flex-shrink-0" data-testid="success-message">
             <p className="text-xs lg:text-sm text-green-800">{result.message}</p>
           </div>
         )}
 
-        <div className="mb-3 flex-shrink-0">
+        {/* タブ部分 - 固定サイズ */}
+        <div className="mb-3 flex-shrink-0" data-testid="tabs-section">
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               <button
@@ -76,6 +82,7 @@ export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplay
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
+                data-testid="preview-tab"
               >
                 プレビュー
               </button>
@@ -86,6 +93,7 @@ export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplay
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
+                data-testid="markdown-tab"
               >
                 Markdown
               </button>
@@ -93,25 +101,38 @@ export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplay
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0">
+        {/* コンテンツ部分 - 残りの高さを使用、スクロールなし */}
+        <div className="flex-1 min-h-0" data-testid="content-section">
           {activeTab === 'preview' ? (
-            <div className="prose max-w-none prose-sm lg:prose-base">
-              <ReactMarkdown>{result.markdown}</ReactMarkdown>
+            <div className="prose max-w-none prose-sm lg:prose-base h-full overflow-hidden" data-testid="preview-content">
+              <div className="h-full overflow-y-auto">
+                <ReactMarkdown>{result.markdown}</ReactMarkdown>
+              </div>
             </div>
           ) : (
-            <pre className="bg-gray-50 p-3 rounded-md text-xs lg:text-sm overflow-x-auto whitespace-pre-wrap font-mono h-full">
-              {result.markdown}
-            </pre>
+            <div className="h-full overflow-hidden" data-testid="raw-content-container">
+              <pre className="bg-gray-50 p-3 rounded-md text-xs lg:text-sm overflow-auto whitespace-pre-wrap font-mono h-full">
+                {result.markdown}
+              </pre>
+            </div>
           )}
         </div>
 
-        <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-md flex-shrink-0">
-          <p className="text-xs lg:text-sm text-blue-800">
-            <strong>ファイルID:</strong> {result.id}
-          </p>
-          <p className="text-xs text-blue-600 mt-1">
-            このIDで後からファイルの取得・更新・削除が可能
-          </p>
+        {/* ファイル情報 - 固定サイズ */}
+        <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-md flex-shrink-0" data-testid="file-info">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <p className="text-xs lg:text-sm text-blue-800">
+                <strong>ファイルID:</strong> <span data-testid="file-id">{result.id}</span>
+              </p>
+              <p className="text-xs text-blue-600">
+                文字数: {result.markdown.length.toLocaleString()}
+              </p>
+            </div>
+            <p className="text-xs text-blue-600">
+              このIDで後からファイルの取得・更新・削除が可能
+            </p>
+          </div>
         </div>
       </div>
     </div>

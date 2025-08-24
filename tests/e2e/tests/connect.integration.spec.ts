@@ -136,7 +136,7 @@ test.describe('フロント→API→DB統合テスト', () => {
     });
 
     // ページ読み込み
-    await page.goto('http://localhost:3000/');
+    await page.goto('http://localhost:3000/upload');
     await page.waitForLoadState('domcontentloaded');
 
     // ファイル一覧画面に遷移
