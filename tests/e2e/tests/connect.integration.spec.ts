@@ -56,6 +56,69 @@ test.describe('フロント→API→DB統合テスト', () => {
     console.log('APIサーバーの状態:', healthData);
   });
 
+  test('UIサーバーの状態を確認する', async ({ page }) => {
+    console.log('=== UIサーバーの状態確認 ===');
+    
+    // UIサーバーにアクセス
+    console.log('1. UIサーバーにアクセス開始...');
+    await page.goto('http://localhost:3000/');
+    
+    // 現在の状態を確認
+    console.log('2. 現在のURL:', page.url());
+    console.log('3. ページタイトル:', await page.title());
+    
+    // ページの内容を確認
+    console.log('4. ページの内容を確認...');
+    const pageContent = await page.content();
+    console.log('HTML長さ:', pageContent.length);
+    console.log('HTMLの最初の1000文字:', pageContent.substring(0, 1000));
+    
+    // 期待される要素の存在を確認
+    console.log('5. 期待される要素の存在を確認...');
+    
+    // Directory Listingが表示されているかチェック
+    const isDirectoryListing = await page.locator('text=Directory Listing For').isVisible();
+    if (isDirectoryListing) {
+      console.log('⚠️ Directory Listingが表示されています - ビルドに問題があります');
+      
+      // ディレクトリ一覧の内容を確認
+      const directoryItems = page.locator('a');
+      const count = await directoryItems.count();
+      console.log(`ディレクトリ内のアイテム数: ${count}`);
+      
+      for (let i = 0; i < Math.min(count, 10); i++) {
+        const item = directoryItems.nth(i);
+        const text = await item.textContent();
+        const href = await item.getAttribute('href');
+        console.log(`アイテム ${i}: ${text} (${href})`);
+      }
+      
+      // スクリーンショットを撮影
+      await page.screenshot({ path: 'debug-directory-listing.png', fullPage: true });
+      
+      throw new Error('UIサーバーがDirectory Listingを表示しています。ビルドに問題があります。');
+    }
+    
+    // 期待される要素の確認
+    const expectedElements = [
+      'text=PDF Converter',
+      'text=ファイル一覧',
+      'text=アップロード'
+    ];
+    
+    for (const selector of expectedElements) {
+      try {
+        const element = page.locator(selector);
+        const isVisible = await element.isVisible();
+        console.log(`要素 "${selector}": ${isVisible ? '表示' : '非表示'}`);
+      } catch (error) {
+        console.log(`要素 "${selector}": エラー - ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    
+    console.log('=== UIサーバーの状態確認完了 ===');
+  });
+
   test('ファイル一覧画面に遷移したらAPIが正常に動作する', async ({ page }) => {
     // データベースをクリーンアップ
     await cleanupMockData(page);
@@ -75,11 +138,10 @@ test.describe('フロント→API→DB統合テスト', () => {
     // ページ読み込み
     await page.goto('http://localhost:3000/');
     await page.waitForLoadState('domcontentloaded');
-    console.log(page.url());
-    
+
     // ファイル一覧画面に遷移
     await page.getByRole('link', { name: 'ファイル一覧' }).click();
-    await page.waitForURL('/files');
+    await page.waitForURL('http://localhost:3000/files/');
     
     // APIレスポンスが返ってくるまで明示的に待機
     await page.waitForResponse(response => response.url().includes('/files'));

@@ -164,7 +164,7 @@ jobs:
           echo "API server health check:"
           curl -v http://localhost:8000/health
       
-      - name: Build and start UI server (optimized)
+      - name: Build and start UI server (fixed)
         run: |
           cd ../../
           echo "Building UI application..."
@@ -188,23 +188,47 @@ jobs:
           export NODE_OPTIONS="--max-old-space-size=4096"
           
           # ビルド実行
+          echo "Starting build process..."
           pnpm build
           
-          echo "Starting UI server with built files..."
+          # ビルド結果の確認
+          echo "Build completed. Checking output directories..."
+          ls -la
           
-          # ビルド済みファイルを配信するシンプルなサーバーを起動
           # Next.jsの出力ディレクトリを確認
           if [ -d "dist" ]; then
+            echo "Found 'dist' directory"
             cd dist
           elif [ -d "out" ]; then
+            echo "Found 'out' directory"
             cd out
           elif [ -d ".next" ]; then
+            echo "Found '.next' directory"
             cd .next
+          elif [ -d "build" ]; then
+            echo "Found 'build' directory"
+            cd build
           else
             echo "Build output directory not found. Available directories:"
             ls -la
+            echo "Checking package.json for build configuration..."
+            cat package.json | grep -A 10 -B 10 "build"
             exit 1
           fi
+          
+          # ビルドファイルの内容を確認
+          echo "Build output contents:"
+          ls -la
+          
+          # index.htmlの存在確認
+          if [ -f "index.html" ]; then
+            echo "index.html found - static build successful"
+          else
+            echo "index.html not found - checking for other entry points"
+            find . -name "*.html" -o -name "*.js" | head -10
+          fi
+          
+          echo "Starting UI server with built files..."
           
           # ログファイルをワークスペースルートに保存（パス問題を回避）
           nohup python3 -m http.server 3000 > ../../ui_server.log 2>&1 &
