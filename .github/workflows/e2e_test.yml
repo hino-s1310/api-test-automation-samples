@@ -340,7 +340,7 @@ jobs:
       
       - name: Upload UI server logs
         uses: actions/upload-artifact@v4
-        if: ${{ !carncelled() }}
+        if: ${{ !cancelled() }}
         with:
           name: ui-server-logs-node-${{ matrix.node-version }}
           path: src/ui/ui_server.log
