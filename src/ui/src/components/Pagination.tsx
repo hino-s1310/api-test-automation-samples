@@ -96,10 +96,10 @@ export default function Pagination({ currentPage, totalItems, itemsPerPage, onPa
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="card">
+    <div className="card" data-testid="pagination-container">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         {/* アイテム数の表示 */}
-        <div className="text-sm text-gray-700">
+        <div className="text-sm text-gray-700" data-testid="item-range">
           <span>
             <span className="font-medium">{start}</span>-<span className="font-medium">{end}</span>件を表示（全
             <span className="font-medium">{totalItems}</span>件中）
@@ -107,12 +107,13 @@ export default function Pagination({ currentPage, totalItems, itemsPerPage, onPa
         </div>
 
         {/* ページネーション */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2" data-testid="pagination-controls">
           {/* 前へボタン */}
           <button
             onClick={handlePrevious}
             disabled={currentPage === 1}
             className="relative inline-flex items-center px-3 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            data-testid="previous-button"
           >
             <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -121,11 +122,11 @@ export default function Pagination({ currentPage, totalItems, itemsPerPage, onPa
           </button>
 
           {/* ページ番号 */}
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-1" data-testid="page-numbers">
             {pageNumbers.map((pageNumber, index) => {
               if (pageNumber === '...') {
                 return (
-                  <span key={`ellipsis-${index}`} className="px-3 py-2 text-sm text-gray-500">
+                  <span key={`ellipsis-${index}`} className="px-3 py-2 text-sm text-gray-500" data-testid="ellipsis">
                     ...
                   </span>
                 );
@@ -142,6 +143,7 @@ export default function Pagination({ currentPage, totalItems, itemsPerPage, onPa
                       ? 'bg-blue-600 text-white border border-blue-600'
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
+                  data-testid={`page-button-${pageNumber}`}
                 >
                   {pageNumber}
                 </button>
@@ -154,6 +156,7 @@ export default function Pagination({ currentPage, totalItems, itemsPerPage, onPa
             onClick={handleNext}
             disabled={currentPage === totalPages}
             className="relative inline-flex items-center px-3 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            data-testid="next-button"
           >
             次へ
             <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

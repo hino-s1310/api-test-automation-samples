@@ -115,32 +115,33 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="file-detail-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* オーバーレイ */}
         <div
           className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
           onClick={onClose}
+          data-testid="modal-overlay"
         ></div>
 
         {/* モーダルコンテンツ */}
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full" data-testid="modal-content">
           {/* ヘッダー */}
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-200">
+          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-200" data-testid="modal-header">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center" data-testid="modal-icon">
                     <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                     </svg>
                   </div>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900" data-testid="modal-title">
                     ファイル詳細
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500" data-testid="modal-file-id">
                     {file.id}
                   </p>
                 </div>
@@ -150,10 +151,11 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
                   onClick={handleUpdateClick}
                   disabled={isUpdating}
                   className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  data-testid="update-file-button"
                 >
                   {isUpdating ? (
                     <span className="flex items-center">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2" data-testid="update-spinner"></div>
                       更新中...
                     </span>
                   ) : (
@@ -168,18 +170,21 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
                 <button
                   onClick={copyToClipboard}
                   className={`btn-secondary text-sm ${copied ? 'bg-green-500 hover:bg-green-600 text-white' : ''}`}
+                  data-testid="copy-button"
                 >
                   {copied ? 'コピー済み!' : 'コピー'}
                 </button>
                 <button
                   onClick={downloadMarkdown}
                   className="btn-secondary text-sm"
+                  data-testid="download-button"
                 >
                   ダウンロード
                 </button>
                 <button
                   onClick={onClose}
                   className="text-gray-400 hover:text-gray-600"
+                  data-testid="close-button"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -201,7 +206,7 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
 
           {/* エラー表示 */}
           {updateError && (
-            <div className="bg-red-50 border-l-4 border-red-400 p-4 mx-4 mt-4">
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 mx-4 mt-4" data-testid="update-error">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -209,38 +214,38 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-red-700">{updateError}</p>
+                  <p className="text-sm text-red-700" data-testid="error-message">{updateError}</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* ファイル情報 */}
-          <div className="bg-gray-50 px-4 py-3 sm:px-6">
+          <div className="bg-gray-50 px-4 py-3 sm:px-6" data-testid="file-info-section">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
               <div>
                 <span className="font-medium text-gray-500">ファイル名:</span>
-                <p className="text-gray-900 truncate">{currentFile.filename || currentFile.id}</p>
+                <p className="text-gray-900 truncate" data-testid="file-filename">{currentFile.filename || currentFile.id}</p>
               </div>
               <div>
                 <span className="font-medium text-gray-500">作成日時:</span>
-                <p className="text-gray-900">{formatDateTime(currentFile.created_at)}</p>
+                <p className="text-gray-900" data-testid="file-created-at">{formatDateTime(currentFile.created_at)}</p>
               </div>
               {currentFile.updated_at && (
                 <div>
                   <span className="font-medium text-gray-500">更新日時:</span>
-                  <p className="text-gray-900">{formatDateTime(currentFile.updated_at)}</p>
+                  <p className="text-gray-900" data-testid="file-updated-at">{formatDateTime(currentFile.updated_at)}</p>
                 </div>
               )}
               <div>
                 <span className="font-medium text-gray-500">文字数:</span>
-                <p className="text-gray-900">{currentFile.markdown.length.toLocaleString()}文字</p>
+                <p className="text-gray-900" data-testid="file-character-count">{currentFile.markdown.length.toLocaleString()}文字</p>
               </div>
             </div>
           </div>
 
           {/* タブ */}
-          <div className="border-b border-gray-200 px-4 sm:px-6">
+          <div className="border-b border-gray-200 px-4 sm:px-6" data-testid="modal-tabs">
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveTab('preview')}
@@ -249,6 +254,7 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
+                data-testid="preview-tab"
               >
                 プレビュー
               </button>
@@ -259,6 +265,7 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
+                data-testid="markdown-tab"
               >
                 Markdown
               </button>
@@ -266,14 +273,14 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
           </div>
 
           {/* コンテンツ */}
-          <div className="px-4 py-5 sm:p-6">
+          <div className="px-4 py-5 sm:p-6" data-testid="modal-content-body">
             <div className="max-h-96 overflow-y-auto">
               {activeTab === 'preview' ? (
-                <div className="prose max-w-none" role="article" aria-label="markdown-content">
+                <div className="prose max-w-none" role="article" aria-label="markdown-content" data-testid="preview-content">
                   <ReactMarkdown>{currentFile.markdown}</ReactMarkdown>
                 </div>
               ) : (
-                <pre className="bg-gray-50 p-4 rounded-md text-sm overflow-x-auto whitespace-pre-wrap font-mono border">
+                <pre className="bg-gray-50 p-4 rounded-md text-sm overflow-x-auto whitespace-pre-wrap font-mono border" data-testid="raw-content">
                   {currentFile.markdown}
                 </pre>
               )}
@@ -281,11 +288,12 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
           </div>
 
           {/* フッター */}
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse" data-testid="modal-footer">
             <button
               type="button"
               className="btn-primary text-sm sm:ml-3"
               onClick={onClose}
+              data-testid="modal-close-button"
             >
               閉じる
             </button>

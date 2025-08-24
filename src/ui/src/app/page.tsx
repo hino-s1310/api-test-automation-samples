@@ -56,43 +56,58 @@ export default function Home() {
 
   return (
     <div 
-      className="flex flex-col h-full"
+      className="flex flex-col h-full max-h-full"
       style={{ 
-        maxHeight: `${availableHeight}px`,
-        minHeight: `${Math.min(600, availableHeight)}px`
+        height: `${availableHeight}px`,
+        maxHeight: `${availableHeight}px`
       }}
+      data-testid="upload-page"
     >
-      {/* ヘッダー部分 */}
-      <div className="text-left mb-4 flex-shrink-0">
-        <h1 className="text-3xl font-bold text-gray-900 mb-1">
+      {/* ヘッダー部分 - 固定サイズ */}
+      <div className="text-left mb-4 flex-shrink-0" data-testid="page-header">
+        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-1" data-testid="page-title">
           アップロード
         </h1>
-        <p className="text-lg text-gray-600">
+        <p className="text-lg text-gray-600" data-testid="page-description">
           PDFファイルをアップロードしてMarkdown形式に変換します。
         </p>
       </div>
       
-      {/* メインコンテンツ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 flex-1 overflow-hidden">
-        <div className="flex flex-col space-y-3 lg:space-y-4 h-full overflow-y-auto">
-          <div className="card flex-shrink-0">
-            <h2 className="text-lg lg:text-xl font-semibold text-gray-900 mb-3">
+      {/* メインコンテンツ - 残りの高さを均等に分割 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 flex-1 min-h-0" data-testid="main-content">
+        {/* 左側: アップロードセクション - スクロールなし */}
+        <div className="flex flex-col space-y-3 lg:space-y-4 h-full" data-testid="upload-section">
+          {/* ファイルアップロード - 固定サイズ */}
+          <div className="card flex-shrink-0" data-testid="upload-card">
+            <h2 className="text-lg lg:text-xl font-semibold text-gray-900 mb-3" data-testid="upload-card-title">
               ファイルアップロード
             </h2>
             <FileUpload onUpload={handleUpload} uploadState={uploadState} />
           </div>
 
-          {/* 使用方法の説明 - コンパクト化 */}
-          <div className="card flex-shrink-0">
-            <h3 className="text-md lg:text-lg font-semibold text-gray-900 mb-2">使用方法</h3>
-            <ol className="list-decimal list-inside space-y-1 text-xs lg:text-sm text-gray-600">
-              <li>PDFファイルをドラッグ&ドロップまたはクリック</li>
-              <li>自動的にアップロード・変換開始</li>
-              <li>右側にプレビューが表示</li>
-              <li>コピー・ダウンロード可能</li>
-            </ol>
+          {/* 使用方法の説明 - コンパクト化して固定サイズ */}
+          <div className="card flex-shrink-0" data-testid="usage-card">
+            <h3 className="text-md lg:text-lg font-semibold text-gray-900 mb-2" data-testid="usage-title">使用方法</h3>
+            <div className="grid grid-cols-2 gap-2 text-xs lg:text-sm text-gray-600" data-testid="usage-steps">
+              <div className="flex items-start space-x-2">
+                <span className="text-blue-600 font-bold">1.</span>
+                <span>PDFファイルをドラッグ&ドロップ</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-blue-600 font-bold">2.</span>
+                <span>自動変換開始</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-blue-600 font-bold">3.</span>
+                <span>右側にプレビュー表示</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-blue-600 font-bold">4.</span>
+                <span>コピー・ダウンロード可能</span>
+              </div>
+            </div>
             
-            <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+            <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md" data-testid="usage-note">
               <p className="text-xs text-yellow-800">
                 <strong>注意:</strong> 10MB以下のPDFファイルのみ対応
               </p>
@@ -100,16 +115,17 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex flex-col h-full overflow-hidden">
+        {/* 右側: 結果表示セクション - スクロールなし */}
+        <div className="flex flex-col h-full min-h-0" data-testid="result-section">
           {uploadState.result ? (
             <MarkdownDisplay 
               result={uploadState.result} 
               onNewUpload={handleNewUpload}
             />
           ) : (
-            <div className="card h-full flex items-center justify-center">
+            <div className="card h-full flex items-center justify-center" data-testid="empty-state">
               <div className="text-center py-6">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3" data-testid="empty-icon">
                   <svg 
                     className="w-6 h-6 text-gray-400" 
                     fill="none" 
@@ -124,10 +140,10 @@ export default function Home() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-md lg:text-lg font-medium text-gray-900 mb-1">
+                <h3 className="text-md lg:text-lg font-medium text-gray-900 mb-1" data-testid="empty-title">
                   変換結果がここに表示されます
                 </h3>
-                <p className="text-xs lg:text-sm text-gray-500">
+                <p className="text-xs lg:text-sm text-gray-500" data-testid="empty-description">
                   PDFファイルをアップロードすると、Markdownがここに表示されます。
                 </p>
               </div>

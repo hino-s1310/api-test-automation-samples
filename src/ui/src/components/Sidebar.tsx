@@ -46,6 +46,7 @@ export default function Sidebar({ isOpen, onClose, onToggle, isMobile = false }:
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={handleClose}
+          data-testid="sidebar-overlay"
         />
       )}
 
@@ -57,17 +58,17 @@ export default function Sidebar({ isOpen, onClose, onToggle, isMobile = false }:
         w-64
         overflow-hidden
         flex flex-col
-      `}>
+      `} data-testid="sidebar">
         {/* ヘッダー */}
-        <div className="flex items-center p-4 border-b flex-shrink-0">
+        <div className="flex items-center p-4 border-b flex-shrink-0" data-testid="sidebar-header">
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0" data-testid="sidebar-logo">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
             <div className="ml-3">
-              <span className="font-bold text-gray-900 whitespace-nowrap">
+              <span className="font-bold text-gray-900 whitespace-nowrap" data-testid="sidebar-title">
                 PDF Converter
               </span>
             </div>
@@ -79,6 +80,7 @@ export default function Sidebar({ isOpen, onClose, onToggle, isMobile = false }:
               onClick={handleClose}
               className="p-1 rounded-md text-gray-500 hover:text-gray-700 lg:hidden"
               aria-label="サイドバーを閉じる"
+              data-testid="sidebar-close-button"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -88,7 +90,7 @@ export default function Sidebar({ isOpen, onClose, onToggle, isMobile = false }:
         </div>
 
         {/* メニューアイテム */}
-        <nav className="flex-1 mt-8 px-4 overflow-y-auto">
+        <nav className="flex-1 mt-8 px-4 overflow-y-auto" data-testid="sidebar-navigation">
           <ul className="space-y-2">
             {menuItems.map((item) => {
               const isActive = pathname === item.href;
@@ -108,6 +110,7 @@ export default function Sidebar({ isOpen, onClose, onToggle, isMobile = false }:
                         : 'text-gray-700 hover:bg-gray-100'
                       }
                     `}
+                    data-testid={`sidebar-menu-${item.href.replace('/', '')}`}
                   >
                     <div className={`
                       flex-shrink-0 transition-colors duration-200
@@ -116,8 +119,8 @@ export default function Sidebar({ isOpen, onClose, onToggle, isMobile = false }:
                       {item.icon}
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm font-medium whitespace-nowrap">{item.label}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 whitespace-nowrap">{item.description}</p>
+                      <p className="text-sm font-medium whitespace-nowrap" data-testid={`sidebar-menu-label-${item.href.replace('/', '')}`}>{item.label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 whitespace-nowrap" data-testid={`sidebar-menu-description-${item.href.replace('/', '')}`}>{item.description}</p>
                     </div>
                   </Link>
                 </li>
@@ -127,12 +130,12 @@ export default function Sidebar({ isOpen, onClose, onToggle, isMobile = false }:
         </nav>
 
         {/* フッター */}
-        <div className="px-4 py-4 flex-shrink-0">
+        <div className="px-4 py-4 flex-shrink-0" data-testid="sidebar-footer">
           <div className="text-center">
-            <p className="text-xs text-gray-500 whitespace-nowrap">
+            <p className="text-xs text-gray-500 whitespace-nowrap" data-testid="sidebar-footer-title">
               PDF to Markdown
             </p>
-            <p className="text-xs text-gray-400 whitespace-nowrap">
+            <p className="text-xs text-gray-400 whitespace-nowrap" data-testid="sidebar-footer-version">
               v1.0.0
             </p>
           </div>

@@ -148,6 +148,13 @@ data/uploads/
 data/markdown/
 data/database.db
 
+# Test data directories (generated during test execution)
+tests/data/uploads/
+tests/data/markdown/
+tests/data/database.db
+tests/data/test_uploads/
+tests/data/test_markdown/
+
 # Sample files
 sample.pdf
 
