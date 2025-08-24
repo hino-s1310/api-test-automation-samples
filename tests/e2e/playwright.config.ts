@@ -20,7 +20,8 @@ export default defineConfig({
     ['github'],  // GitHub Actions integration
     ['json', { outputFile: 'test-results/results.json' }],
     ['junit', { outputFile: 'test-results/results.xml' }],
-    ['html', { outputFolder: 'playwright-report', open: 'never' }]
+    ['html', { outputFolder: 'playwright-report', open: 'never' }],
+    ['list']  // コンソール出力も追加
   ] : [
     ['html'],
     ['json', { outputFile: 'test-results/results.json' }],
@@ -57,14 +58,13 @@ export default defineConfig({
     },
   ],
 
-  webServer: [
+  // CI環境ではwebServerを使用しない（手動で起動するため）
+  webServer: process.env.CI ? [] : [
     {
       name: 'api-server',
-      command: process.env.CI 
-        ? 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000'
-        : 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
+      command: 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
       url: 'http://localhost:8000/health',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 120 * 1000,
       stdout: 'pipe',
       env: {
@@ -76,7 +76,7 @@ export default defineConfig({
       command: 'cd ../../src/ui && pnpm install && pnpm dev',
       url: 'http://localhost:3000',
       stdout: 'pipe',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 180 * 1000,
       env: {
         NODE_ENV: 'development'
