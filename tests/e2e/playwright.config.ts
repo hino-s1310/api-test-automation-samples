@@ -26,11 +26,66 @@ export default defineConfig({
     ['json', { outputFile: 'test-results/results.json' }],
     ['junit', { outputFile: 'test-results/results.xml' }]
   ],
+
+  /* Configure projects for different test types */
+  projects: [
+    {
+      name: 'api-tests',
+      testMatch: /.*\.api\.spec\.ts/,
+      use: { 
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:8000',
+      },
+    },
+
+    {
+      name: 'ui-tests',
+      testMatch: /.*\.ui\.spec\.ts/,
+      use: { 
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:3000',
+      },
+    },
+
+    {
+      name: 'integration-tests',
+      testMatch: /.*\.integration\.spec\.ts/,
+      use: { 
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:3000',
+      },
+    },
+  ],
+
+  webServer: [
+    {
+      name: 'api-server',
+      command: process.env.CI 
+        ? 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000'
+        : 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
+      url: 'http://localhost:8000/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+      stdout: 'pipe',
+      env: {
+        ENVIRONMENT: 'test'
+      }
+    },
+    {
+      name: 'ui-server',
+      command: 'cd ../../src/ui && pnpm install && pnpm dev',
+      url: 'http://localhost:3000',
+      stdout: 'pipe',
+      reuseExistingServer: !process.env.CI,
+      timeout: 180 * 1000,
+      env: {
+        NODE_ENV: 'development'
+      }
+    }
+  ],
+
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:8000',
-
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'retain-on-failure',
 
@@ -43,57 +98,6 @@ export default defineConfig({
     /* CI環境ではタイムアウトを延長して安定性を向上 */
     actionTimeout: process.env.CI ? 15000 : 5000,
     navigationTimeout: process.env.CI ? 45000 : 10000,
-  },
-
-  /* Configure projects for major browsers */
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-
-    // {
-    //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
-    // },
-
-    // {
-    //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
-    // },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
-  ],
-
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: process.env.CI 
-      ? 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000'
-      : 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
-    url: 'http://localhost:8000/health',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-    env: {
-      ENVIRONMENT: 'test'
-    }
   },
 
   /* CI環境ではグローバルタイムアウトを延長して安定性を向上 */
