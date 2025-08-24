@@ -3,8 +3,9 @@ import userEvent from '@testing-library/user-event'
 import Sidebar from '@/components/Sidebar'
 
 // next/navigationのモック
+const mockUsePathname = jest.fn(() => '/upload')
 jest.mock('next/navigation', () => ({
-  usePathname: () => '/',
+  usePathname: () => mockUsePathname(),
   useRouter: () => ({
     push: jest.fn(),
     replace: jest.fn(),
@@ -17,6 +18,8 @@ describe('Sidebar', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    // デフォルトで/uploadを返すようにリセット
+    mockUsePathname.mockReturnValue('/upload')
   })
 
   it('サイドバーが表示される', () => {
@@ -27,7 +30,26 @@ describe('Sidebar', () => {
     expect(screen.getByText('ファイル一覧')).toBeInTheDocument()
   })
 
-  it('現在のページのメニューがアクティブになる', () => {
+  it('現在のページのメニューがアクティブになる（/upload）', () => {
+    mockUsePathname.mockReturnValue('/upload')
+    render(<Sidebar isOpen={true} onClose={mockOnClose} />)
+
+    const uploadLink = screen.getByText('アップロード').closest('a')
+    expect(uploadLink).toHaveClass('bg-blue-100')
+    expect(uploadLink).toHaveClass('text-blue-700')
+  })
+
+  it('ファイル一覧ページでファイル一覧メニューがアクティブになる（/files）', () => {
+    mockUsePathname.mockReturnValue('/files')
+    render(<Sidebar isOpen={true} onClose={mockOnClose} />)
+
+    const filesLink = screen.getByText('ファイル一覧').closest('a')
+    expect(filesLink).toHaveClass('bg-blue-100')
+    expect(filesLink).toHaveClass('text-blue-700')
+  })
+
+  it('ルートページでアップロードメニューがアクティブになる（/）', () => {
+    mockUsePathname.mockReturnValue('/')
     render(<Sidebar isOpen={true} onClose={mockOnClose} />)
 
     const uploadLink = screen.getByText('アップロード').closest('a')

@@ -215,7 +215,7 @@ export default function FilesPage() {
                 <p className="text-sm text-gray-500 mb-3" data-testid="empty-files-description">
                   まだファイルがアップロードされていません。
                 </p>
-                <a href="/" className="btn-primary text-sm" data-testid="upload-link">
+                <a href="/upload" className="btn-primary text-sm" data-testid="upload-link">
                   ファイルをアップロード
                 </a>
               </div>
