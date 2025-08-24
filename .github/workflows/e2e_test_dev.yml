@@ -307,15 +307,16 @@ jobs:
             --retries=3 \
             --timeout=60000
           
-          echo "Phase 2: Running UI tests..."
-          pnpm exec playwright test \
-            --project=ui-tests \
-            --max-failures=3 \
-            --workers=1 \
-            --retries=3 \
-            --timeout=60000
+          # UIのみのテストは別のタイミングで実行する
+          # echo "Phase 2: Running UI tests..."
+          # pnpm exec playwright test \
+          #   --project=ui-tests \
+          #   --max-failures=3 \
+          #   --workers=1 \
+          #   --retries=3 \
+          #   --timeout=60000
           
-          echo "Phase 3: Running integration tests..."
+          echo "Phase 2: Running integration tests..."
           pnpm exec playwright test \
             --project=integration-tests \
             --max-failures=3 \
