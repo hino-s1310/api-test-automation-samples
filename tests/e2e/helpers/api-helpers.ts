@@ -4,7 +4,7 @@
  */
 
 import { APIRequestContext, expect } from '@playwright/test';
-import { UploadTestData, API_ENDPOINTS } from '../fixtures/test-data';
+import { UploadTestData, API_ENDPOINTS, VALID_UPLOAD_DATA } from '../fixtures/test-data';
 
 /**
  * テスト用のPDFファイルを作成（最小限のPDFヘッダー）
@@ -110,3 +110,33 @@ export function assertErrorResponse(response: any, expectedStatus: number) {
   expect(response.status()).toBe(expectedStatus);
 }
 
+// テスト用ヘルパー関数
+export async function setupMockData(page: any, data: any = VALID_UPLOAD_DATA) {
+  try {
+    console.log('ファイルアップロードを開始します...');
+    
+    const response = await uploadPdfFile(page.request, data);
+    console.log('アップロードレスポンス:', response.status(), response.statusText());
+    
+    if (response.status() === 200) {
+      console.log('ファイルのアップロードに成功しました');
+      return true;
+    } else {
+      const errorText = await response.text();
+      console.log('ファイルのアップロードに失敗しました:', response.status(), errorText);
+      return false;
+    }
+  } catch (error) {
+    console.log('ファイルのアップロードでエラーが発生しました:', error);
+    return false;
+  }
+}
+
+
+export async function cleanupMockData(page: any) {
+  try {
+    await page.request.post('http://localhost:8000/test/reset-db');
+  } catch (error) {
+    console.log('データベースリセットエンドポイントが利用できません');
+  }
+}

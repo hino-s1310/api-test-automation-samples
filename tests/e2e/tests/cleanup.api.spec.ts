@@ -1,11 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { CLEANUP_TEST_DATA,
-  EXPECTED_RESPONSES,
-  VALID_CLEANUP_DATA
- } from '../fixtures/test-data';
-import { uploadPdfFile,
-  assertSuccessResponse,
- } from '../helpers/api-helpers';
+import { CLEANUP_TEST_DATA, EXPECTED_RESPONSES } from '../fixtures/test-data';
+import { assertSuccessResponse } from '../helpers/api-helpers';
 
 
 test.describe('クリーンアップテスト', () => {
