@@ -49,6 +49,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'npm'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -58,7 +59,6 @@ jobs:
           dest: ~/setup-pnpm
           package_json_file: package.json
           standalone: false
-          registry: https://registry.npmjs.org/
 
       - name: Setup pnpm fallback
         if: failure()
@@ -71,15 +71,26 @@ jobs:
           # バージョン確認
           pnpm --version
 
-          # レジストリ設定
+          # レジストリ設定（必要に応じて）
           pnpm config set registry https://registry.npmjs.org/
 
           echo "pnpm installed via npm successfully"
+
+      - name: Verify pnpm installation
+        run: |
+          echo "Verifying pnpm installation..."
+          pnpm --version
+
+          # pnpmの設定確認
+          pnpm config list
+
+          echo "pnpm is ready to use"
 
       - name: Get pnpm store directory
         shell: bash
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+          echo "pnpm store path: $STORE_PATH"
 
       - name: Setup pnpm cache
         uses: actions/cache@v4
@@ -110,12 +121,25 @@ jobs:
           cd ../../
           cd src/ui
           echo "Installing UI dependencies..."
-          pnpm install --frozen-lockfile
-          echo "UI dependencies installed successfully"
+
+          # pnpmの状態確認
+          echo "pnpm version: $(pnpm --version)"
+          echo "Current directory: $(pwd)"
+          echo "Package.json exists: $(test -f package.json && echo 'Yes' || echo 'No')"
+
+          # 依存関係のインストール
+          pnpm install --frozen-lockfile --prefer-offline
+
+          if [ $? -eq 0 ]; then
+            echo "UI dependencies installed successfully"
+          else
+            echo "UI dependencies installation failed, trying with npm..."
+            npm ci
+          fi
 
           # Next.jsの確認
           echo "Checking Next.js installation..."
-          pnpm list next
+          pnpm list next || npm list next
 
           # package.jsonの確認
           echo "Package.json scripts:"

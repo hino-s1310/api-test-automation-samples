@@ -10,7 +10,6 @@ from src.api.models import FileStatus
 from .fixtures import (
     ConversionLogTestData,
     FileTestData,
-    PDFTestData,
     ValidationTestData,
     create_file_data,
 )
@@ -415,29 +414,7 @@ class TestFileServiceErrorCases:
 class TestPDFService:
     """PDFServiceのテストクラス"""
 
-    @pytest.fixture
-    def pdf_service(self, mock_db_manager):
-        """PDFServiceのインスタンス"""
-        from src.api.services.pdf_service import PDFService
-
-        return PDFService(upload_dir="test_uploads", markdown_dir="test_markdown")
-
-    @pytest.fixture
-    def valid_pdf_content(self):
-        """有効なPDFコンテンツ"""
-        return PDFTestData.valid_pdf_bytes()
-
-    @pytest.fixture
-    def invalid_pdf_content(self):
-        """無効なPDFコンテンツ"""
-        return PDFTestData.invalid_pdf_bytes()
-
-    @pytest.fixture
-    def large_pdf_content(self):
-        """サイズ制限を超えるPDFコンテンツ"""
-        return PDFTestData.large_pdf_bytes()
-
-    def test_validate_pdf_file_valid(self, pdf_service):
+    def test_validate_pdf_file_valid(self, pdf_service_for_test):
         """有効なPDFファイルの検証テスト"""
         # pypdf.PdfReaderをモックして、検証ロジックをテスト
         with patch("src.api.services.pdf_service.pypdf.PdfReader") as mock_pdf_reader:
@@ -449,7 +426,9 @@ class TestPDFService:
             filename = "test_document.pdf"
 
             # テスト実行
-            is_valid, message = pdf_service._validate_pdf_file(valid_content, filename)
+            is_valid, message = pdf_service_for_test._validate_pdf_file(
+                valid_content, filename
+            )
 
             # アサーション
             assert is_valid is True
@@ -458,10 +437,12 @@ class TestPDFService:
             # pypdf.PdfReaderが適切に呼ばれたことを確認
             mock_pdf_reader.assert_called_once()
 
-    def test_validate_pdf_file_invalid_extension(self, pdf_service, valid_pdf_content):
+    def test_validate_pdf_file_invalid_extension(
+        self, pdf_service_for_test, valid_pdf_content
+    ):
         """無効な拡張子のファイル検証テスト"""
         # テスト実行
-        is_valid, message = pdf_service._validate_pdf_file(
+        is_valid, message = pdf_service_for_test._validate_pdf_file(
             valid_pdf_content, "test.txt"
         )
 
@@ -469,10 +450,10 @@ class TestPDFService:
         assert is_valid is False
         assert "PDFファイルのみアップロード可能です" in message
 
-    def test_validate_pdf_file_too_large(self, pdf_service, large_pdf_content):
+    def test_validate_pdf_file_too_large(self, pdf_service_for_test, large_pdf_content):
         """サイズ制限を超えるファイルの検証テスト"""
         # テスト実行
-        is_valid, message = pdf_service._validate_pdf_file(
+        is_valid, message = pdf_service_for_test._validate_pdf_file(
             large_pdf_content, "test.pdf"
         )
 
@@ -480,10 +461,12 @@ class TestPDFService:
         assert is_valid is False
         assert "ファイルサイズは10MB以下にしてください" in message
 
-    def test_validate_pdf_file_invalid_content(self, pdf_service, invalid_pdf_content):
+    def test_validate_pdf_file_invalid_content(
+        self, pdf_service_for_test, invalid_pdf_content
+    ):
         """無効なPDFコンテンツの検証テスト"""
         # テスト実行
-        is_valid, message = pdf_service._validate_pdf_file(
+        is_valid, message = pdf_service_for_test._validate_pdf_file(
             invalid_pdf_content, "test.pdf"
         )
 
@@ -493,11 +476,13 @@ class TestPDFService:
 
     @pytest.mark.asyncio
     async def test_process_pdf_upload_invalid_extension(
-        self, pdf_service, valid_pdf_content
+        self, pdf_service_for_test, valid_pdf_content
     ):
         """無効な拡張子でのアップロード処理テスト"""
         # テスト実行
-        result = await pdf_service.process_pdf_upload(valid_pdf_content, "test.txt")
+        result = await pdf_service_for_test.process_pdf_upload(
+            valid_pdf_content, "test.txt"
+        )
 
         # アサーション
         assert result["success"] is False
@@ -505,10 +490,14 @@ class TestPDFService:
         assert result["file_id"] is None
 
     @pytest.mark.asyncio
-    async def test_process_pdf_upload_too_large(self, pdf_service, large_pdf_content):
+    async def test_process_pdf_upload_too_large(
+        self, pdf_service_for_test, large_pdf_content
+    ):
         """サイズ制限超過でのアップロード処理テスト"""
         # テスト実行
-        result = await pdf_service.process_pdf_upload(large_pdf_content, "test.pdf")
+        result = await pdf_service_for_test.process_pdf_upload(
+            large_pdf_content, "test.pdf"
+        )
 
         # アサーション
         assert result["success"] is False
@@ -517,11 +506,13 @@ class TestPDFService:
 
     @pytest.mark.asyncio
     async def test_process_pdf_upload_invalid_content(
-        self, pdf_service, invalid_pdf_content
+        self, pdf_service_for_test, invalid_pdf_content
     ):
         """無効なPDFコンテンツでのアップロード処理テスト"""
         # テスト実行
-        result = await pdf_service.process_pdf_upload(invalid_pdf_content, "test.pdf")
+        result = await pdf_service_for_test.process_pdf_upload(
+            invalid_pdf_content, "test.pdf"
+        )
 
         # アサーション
         assert result["success"] is False
@@ -530,7 +521,7 @@ class TestPDFService:
 
     @pytest.mark.asyncio
     async def test_process_pdf_upload_db_insert_failure(
-        self, pdf_service, mock_db_manager
+        self, pdf_service_for_test, mock_db_manager
     ):
         """データベース挿入失敗時のアップロード処理テスト"""
         # 複雑なPDFアップロード処理の例外テスト
@@ -546,7 +537,9 @@ class TestPDFService:
         filename = "test.txt"  # 無効な拡張子
 
         # テスト実行
-        result = await pdf_service.process_pdf_upload(invalid_content, filename)
+        result = await pdf_service_for_test.process_pdf_upload(
+            invalid_content, filename
+        )
 
         # アサーション（検証段階で失敗するため、DB例外には到達しない）
         assert result["success"] is False
@@ -555,14 +548,14 @@ class TestPDFService:
 
     @pytest.mark.asyncio
     async def test_reconvert_pdf_file_not_found(
-        self, pdf_service, mock_db_manager, valid_pdf_content
+        self, pdf_service_for_test, mock_db_manager, valid_pdf_content
     ):
         """存在しないファイルの再変換テスト"""
         # モック設定
         mock_db_manager.get_file.return_value = None
 
         # テスト実行
-        result = await pdf_service.reconvert_pdf(
+        result = await pdf_service_for_test.reconvert_pdf(
             "non-existent-id", valid_pdf_content, "test.pdf"
         )
 
@@ -573,11 +566,11 @@ class TestPDFService:
 
     @pytest.mark.asyncio
     async def test_reconvert_pdf_invalid_extension(
-        self, pdf_service, valid_pdf_content
+        self, pdf_service_for_test, valid_pdf_content
     ):
         """無効な拡張子での再変換テスト"""
         # テスト実行
-        result = await pdf_service.reconvert_pdf(
+        result = await pdf_service_for_test.reconvert_pdf(
             "test-file-id", valid_pdf_content, "test.txt"
         )
 
@@ -586,14 +579,14 @@ class TestPDFService:
         assert "PDFファイルのみアップロード可能です" in result["error"]
         assert result["file_id"] == "test-file-id"
 
-    def test_convert_pdf_to_markdown_fallback(self, pdf_service, tmp_path):
+    def test_convert_pdf_to_markdown_fallback(self, pdf_service_for_test, tmp_path):
         """PDF→Markdown変換のフォールバック処理テスト"""
         # テスト用の空ファイルを作成
         test_file = tmp_path / "test.pdf"
         test_file.write_bytes(b"fake pdf content")
 
         # テスト実行
-        result = pdf_service._convert_pdf_to_markdown(str(test_file))
+        result = pdf_service_for_test._convert_pdf_to_markdown(str(test_file))
 
         # アサーション
         assert isinstance(result, str)
@@ -607,17 +600,17 @@ class TestPDFService:
             or len(result) > 0  # 何らかの結果が返されることを確認
         )
 
-    def test_save_markdown(self, pdf_service, tmp_path):
+    def test_save_markdown(self, pdf_service_for_test, tmp_path):
         """Markdownファイル保存のテスト"""
         # テスト用ディレクトリを設定
-        pdf_service.markdown_dir = tmp_path
+        pdf_service_for_test.markdown_dir = tmp_path
 
         # テストデータ
         file_id = "test-file-id"
         markdown_content = "# Test Markdown\n\nThis is test content."
 
         # テスト実行
-        result_path = pdf_service._save_markdown(file_id, markdown_content)
+        result_path = pdf_service_for_test._save_markdown(file_id, markdown_content)
 
         # アサーション
         assert result_path.endswith(f"{file_id}.md")
@@ -625,17 +618,17 @@ class TestPDFService:
         assert saved_file.exists()
         assert saved_file.read_text(encoding="utf-8") == markdown_content
 
-    def test_save_uploaded_file(self, pdf_service, tmp_path):
+    def test_save_uploaded_file(self, pdf_service_for_test, tmp_path):
         """アップロードファイル保存のテスト"""
         # テスト用ディレクトリを設定
-        pdf_service.upload_dir = tmp_path
+        pdf_service_for_test.upload_dir = tmp_path
 
         # テストデータ
         file_content = b"test pdf content"
         filename = "test.pdf"
 
         # テスト実行
-        result_path = pdf_service._save_uploaded_file(file_content, filename)
+        result_path = pdf_service_for_test._save_uploaded_file(file_content, filename)
 
         # アサーション
         assert result_path.endswith(f"_{filename}")
@@ -669,13 +662,6 @@ class TestPDFService:
 class TestPDFServiceParameterized:
     """PDFServiceのパラメータ化テスト"""
 
-    @pytest.fixture
-    def pdf_service(self):
-        """PDFServiceのインスタンス"""
-        from src.api.services.pdf_service import PDFService
-
-        return PDFService()
-
     @pytest.mark.parametrize(
         "filename,expected_valid",
         [
@@ -690,13 +676,17 @@ class TestPDFServiceParameterized:
             (".pdf", True),
         ],
     )
-    def test_validate_file_extension(self, pdf_service, filename, expected_valid):
+    def test_validate_file_extension(
+        self, pdf_service_for_test, filename, expected_valid
+    ):
         """ファイル拡張子検証のパラメータ化テスト"""
         # 小さな有効なコンテンツ（拡張子チェックのみに焦点）
         small_content = b"x" * 100
 
         # テスト実行
-        is_valid, message = pdf_service._validate_pdf_file(small_content, filename)
+        is_valid, message = pdf_service_for_test._validate_pdf_file(
+            small_content, filename
+        )
 
         # 拡張子チェックのアサーション
         if expected_valid:
@@ -718,14 +708,16 @@ class TestPDFServiceParameterized:
             (50, False),  # 50MB - 無効
         ],
     )
-    def test_validate_file_size(self, pdf_service, size_mb, expected_valid):
+    def test_validate_file_size(self, pdf_service_for_test, size_mb, expected_valid):
         """ファイルサイズ検証のパラメータ化テスト"""
         # 指定サイズのコンテンツを作成
         content_size = size_mb * 1024 * 1024
         file_content = b"x" * content_size
 
         # テスト実行
-        is_valid, message = pdf_service._validate_pdf_file(file_content, "test.pdf")
+        is_valid, message = pdf_service_for_test._validate_pdf_file(
+            file_content, "test.pdf"
+        )
 
         # サイズチェックのアサーション
         if expected_valid:

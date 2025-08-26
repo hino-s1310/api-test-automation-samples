@@ -8,6 +8,7 @@ pytest 設定とテストフィクスチャ
 import shutil
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -89,6 +90,67 @@ def sample_file_id(test_client):
 # ===========================
 # パラメータ化フィクスチャ
 # ===========================
+
+# ===========================
+# PDFService関連のフィクスチャ
+# ===========================
+
+
+@pytest.fixture
+def pdf_service_for_test():
+    """テスト用のPDFServiceインスタンス（特定のディレクトリを指定）"""
+    from src.api.services.pdf_service import PDFService
+
+    return PDFService(upload_dir="test_uploads", markdown_dir="test_markdown")
+
+
+# ===========================
+# FileService関連のフィクスチャ
+# ===========================
+
+
+@pytest.fixture
+def file_service():
+    """FileServiceのインスタンス（DB がモック済み）"""
+    from src.api.services.file_service import FileService
+
+    return FileService()
+
+
+# ===========================
+# Mock関連のフィクスチャ
+# ===========================
+
+
+@pytest.fixture
+def mock_db_manager():
+    """データベースマネージャーのモック"""
+    with patch("src.api.services.file_service.db_manager") as mock_db:
+        yield mock_db
+
+
+@pytest.fixture
+def valid_pdf_content():
+    """有効なPDFコンテンツ"""
+    from tests.unit.fixtures import PDFTestData
+
+    return PDFTestData.valid_pdf_bytes()
+
+
+@pytest.fixture
+def invalid_pdf_content():
+    """無効なPDFコンテンツ"""
+    from tests.unit.fixtures import PDFTestData
+
+    return PDFTestData.invalid_pdf_bytes()
+
+
+@pytest.fixture
+def large_pdf_content():
+    """サイズ制限を超えるPDFコンテンツ"""
+    from tests.unit.fixtures import PDFTestData
+
+    return PDFTestData.large_pdf_bytes()
 
 
 @pytest.fixture(
@@ -202,14 +264,6 @@ def setup_test_logging():
 def large_file_content():
     """大容量ファイルのコンテンツ（10MB超）"""
     return b"x" * (11 * 1024 * 1024)  # 11MB
-
-
-@pytest.fixture
-def valid_pdf_content():
-    """有効なPDFファイルのコンテンツ"""
-    from tests.unit.helpers import load_test_pdf
-
-    return load_test_pdf()
 
 
 # ===========================
