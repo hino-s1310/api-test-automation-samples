@@ -5,7 +5,7 @@ PDF to Markdown API のユニットテストモジュール
 
 このパッケージには以下が含まれます:
 - test_api.py: API エンドポイントのテスト
-- test_services.py: サービス層のテスト  
+- test_services.py: サービス層のテスト
 - helpers/: テスト用ヘルパー関数とユーティリティ
 """
 

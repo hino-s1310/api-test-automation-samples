@@ -6,7 +6,7 @@ authors = [
     {name = "Your Name", email = "your.email@example.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 license = {text = "MIT"}
 keywords = ["pdf", "markdown", "api", "fastapi", "testing"]
 classifiers = [
@@ -26,17 +26,17 @@ dependencies = [
     "fastapi>=0.104.1",
     "uvicorn[standard]>=0.24.0",
     "python-multipart>=0.0.6",
-    
+
     # PDF変換関連
     "markitdown>=0.1.0",
     "pypdf>=4.0.0",
     "pdfplumber>=0.10.3",
-    
+
     # ファイル処理関連
     "python-magic>=0.4.27",
     "aiofiles>=23.2.1",
     "Pillow>=10.1.0",
-    
+
     # その他
     "python-dateutil>=2.8.2",
     "pydantic>=2.5.0",
@@ -49,12 +49,14 @@ dev = [
     "pytest-asyncio>=0.21.1",
     "httpx>=0.25.2",
     "pytest-cov>=4.1.0",
-    
+
     # 開発・デバッグ関連
     "python-dotenv>=1.0.0",
+    "ruff>=0.1.0",
     "black>=23.11.0",
     "flake8>=6.1.0",
     "mypy>=1.7.1",
+    "pre-commit>=4.3.0",
 ]
 
 test = [
@@ -82,11 +84,64 @@ dev-dependencies = [
     "pytest-asyncio>=0.21.1",
     "httpx>=0.25.2",
     "pytest-cov>=4.1.0",
-    "python-dotenv>=1.0.0",
+    "python-dotenv>=0.1.0",
+    "ruff>=0.1.0",
     "black>=23.11.0",
     "flake8>=6.1.0",
     "mypy>=1.7.1",
+    "pre-commit>=4.3.0",
 ]
+
+[tool.ruff]
+# ターゲットPythonバージョン
+target-version = "py310"
+
+# 行の最大長
+line-length = 88
+
+# 除外するファイル・ディレクトリ
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+    "node_modules",
+    "ui",
+    "tests/e2e",
+]
+
+# 含めるファイル
+include = ["*.py", "*.pyi"]
+
+[tool.ruff.lint]
+# ルールの設定
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+
+# 無視するルール
+ignore = [
+    "E501",  # line too long (blackが処理)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "B904",  # within an except clause, raise exceptions with raise ... from err
+]
+
+# 自動修正可能なルールのみ修正
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+known-third-party = ["fastapi", "uvicorn", "pytest", "httpx"]
 
 [tool.black]
 line-length = 88

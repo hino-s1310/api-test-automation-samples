@@ -39,20 +39,20 @@ export class BasePage {
   }
 
   // APIレスポンスが返ってくるまで明示的に待機
-  async waitForResponse(apiUrl: string, options?: { 
-    waitForSuccess?: boolean; 
-    timeout?: number; 
+  async waitForResponse(apiUrl: string, options?: {
+    waitForSuccess?: boolean;
+    timeout?: number;
   }): Promise<Response> {
     const { waitForSuccess = false, timeout = 30000 } = options || {};
-    
+
     if (waitForSuccess) {
       // リダイレクト完了を明示的に待機（最終的な200レスポンスまで）
-      return await this.page.waitForResponse(response => 
+      return await this.page.waitForResponse(response =>
         response.url().includes(apiUrl) && response.status() === 200
       , { timeout });
     } else {
       // 従来の動作（最初のレスポンスを待機）
-      return await this.page.waitForResponse(response => 
+      return await this.page.waitForResponse(response =>
         response.url().includes(apiUrl)
       , { timeout });
     }

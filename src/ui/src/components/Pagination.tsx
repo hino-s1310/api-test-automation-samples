@@ -9,7 +9,7 @@ interface PaginationProps {
 
 export default function Pagination({ currentPage, totalItems, itemsPerPage, onPageChange }: PaginationProps) {
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  
+
   if (totalPages <= 1) {
     return null;
   }
@@ -17,7 +17,7 @@ export default function Pagination({ currentPage, totalItems, itemsPerPage, onPa
   const getPageNumbers = () => {
     const pages = [];
     const maxVisiblePages = 5;
-    
+
     if (totalPages <= maxVisiblePages) {
       // 総ページ数が少ない場合は全て表示
       for (let i = 1; i <= totalPages; i++) {
@@ -26,7 +26,7 @@ export default function Pagination({ currentPage, totalItems, itemsPerPage, onPa
     } else {
       // 表示範囲を決定
       let startPage, endPage;
-      
+
       if (currentPage <= 3) {
         // 最初の方のページ: 1, 2, 3, 4, 5 を表示
         startPage = 1;
@@ -40,12 +40,12 @@ export default function Pagination({ currentPage, totalItems, itemsPerPage, onPa
         startPage = currentPage - 2;
         endPage = currentPage + 2;
       }
-      
+
       // 連続する5ページを表示
       for (let i = startPage; i <= endPage; i++) {
         pages.push(i);
       }
-      
+
       // 先頭に省略記号と1を追加（必要な場合）
       if (startPage > 1) {
         if (startPage > 2) {
@@ -53,7 +53,7 @@ export default function Pagination({ currentPage, totalItems, itemsPerPage, onPa
         }
         pages.unshift(1);
       }
-      
+
       // 末尾に省略記号と最終ページを追加（必要な場合）
       if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
@@ -62,7 +62,7 @@ export default function Pagination({ currentPage, totalItems, itemsPerPage, onPa
         pages.push(totalPages);
       }
     }
-    
+
     return pages;
   };
 
@@ -133,7 +133,7 @@ export default function Pagination({ currentPage, totalItems, itemsPerPage, onPa
               }
 
               const isCurrentPage = pageNumber === currentPage;
-              
+
               return (
                 <button
                   key={pageNumber}

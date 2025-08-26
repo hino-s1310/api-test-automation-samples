@@ -35,7 +35,7 @@ describe('FileDetailModal', () => {
     // ファイル情報が表示されていることを確認
     expect(screen.getByText('test.pdf')).toBeInTheDocument()
     expect(screen.getByText('ファイル詳細')).toBeInTheDocument()
-    
+
     // Markdownコンテンツが表示されていることを確認
     const markdownContent = screen.getByRole('article', { name: 'markdown-content' })
     expect(markdownContent).toHaveTextContent('Test Markdown')

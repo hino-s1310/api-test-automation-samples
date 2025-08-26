@@ -10,7 +10,7 @@ const FILE_NAME = VALID_UPLOAD_DATA.filename;
 test.describe('ファイル一覧APIの統合テスト', () => {
   // テストを直列実行して、データベースの状態を管理
   test.describe.configure({ mode: 'serial' });
-  
+
   // 各テストの前後でクリーンアップ
   test.beforeEach(async ({ page }) => {
     // テスト開始前にデータベースをクリーンアップ
@@ -23,7 +23,7 @@ test.describe('ファイル一覧APIの統合テスト', () => {
 
     // APIリクエストを監視
     const apiResponses: any[] = [];
-    
+
     page.on('response', response => {
       if (response.url().includes('/files')) {
         apiResponses.push(response);
@@ -41,7 +41,7 @@ test.describe('ファイル一覧APIの統合テスト', () => {
     // ファイル一覧画面に遷移
     await uploadPage.clickSideMenu('ファイル一覧 変換済みファイル管理');
     await filesListPage.waitForPageUrl('http://localhost:3000/files/');
-    
+
     // APIレスポンスが返ってくるまで明示的に待機
     await filesListPage.waitForResponse('/files');
 
@@ -51,7 +51,7 @@ test.describe('ファイル一覧APIの統合テスト', () => {
     // APIが呼び出されたことを確認
     expect(apiResponses.length).toBeGreaterThan(0);
     expect(apiResponses[0].status()).toBe(200);
-    
+
     // ファイル一覧の表示を確認（データが読み込まれるまで待機）
     const fileListTable = filesListPage.getFilesTable();
     await expect(fileListTable).toBeVisible();

@@ -42,12 +42,12 @@ export default function FileUpload({ onUpload, uploadState }: FileUploadProps) {
         data-testid="file-dropzone"
         className={`
           border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200
-          ${isDragActive 
-            ? 'border-blue-500 bg-blue-50' 
+          ${isDragActive
+            ? 'border-blue-500 bg-blue-50'
             : 'border-gray-300 hover:border-gray-400'
           }
-          ${uploadState.isLoading 
-            ? 'opacity-50 cursor-not-allowed' 
+          ${uploadState.isLoading
+            ? 'opacity-50 cursor-not-allowed'
             : 'hover:bg-gray-50'
           }
         `}
@@ -74,21 +74,21 @@ export default function FileUpload({ onUpload, uploadState }: FileUploadProps) {
               </svg>
             )}
           </div>
-          
+
           <div className="text-center">
             <h3 className="text-base font-medium text-gray-900 mb-1" data-testid="upload-title">
               {uploadState.isLoading ? 'アップロード中...' : 'PDFファイルをアップロード'}
             </h3>
             <p className="text-xs text-gray-500" data-testid="upload-description">
-              {uploadState.isLoading 
+              {uploadState.isLoading
                 ? 'ファイルを変換しています。しばらくお待ちください。'
-                : isDragActive 
+                : isDragActive
                   ? 'ここにファイルをドロップしてください'
                   : 'ドラッグ&ドロップまたはクリックしてファイルを選択'
               }
             </p>
           </div>
-          
+
           {!uploadState.isLoading && (
             <button
               type="button"
@@ -101,7 +101,7 @@ export default function FileUpload({ onUpload, uploadState }: FileUploadProps) {
           )}
         </div>
       </div>
-      
+
       {uploadState.error && (
         <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md" data-testid="upload-error">
           <div className="flex">

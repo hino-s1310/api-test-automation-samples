@@ -23,13 +23,13 @@ export const useResponsivePagination = ({
     const viewportHeight = window.innerHeight;
     const availableHeight = viewportHeight - headerHeight - paginationHeight - marginHeight;
     const calculatedItems = Math.floor(availableHeight / itemHeight);
-    
+
     // 最小値と最大値の範囲内に収める
     const clampedItems = Math.max(
-      minItemsPerPage, 
+      minItemsPerPage,
       Math.min(maxItemsPerPage, calculatedItems)
     );
-    
+
     return clampedItems;
   };
 
@@ -52,7 +52,7 @@ export const useResponsivePagination = ({
     };
 
     window.addEventListener('resize', handleResize);
-    
+
     // クリーンアップ
     return () => {
       clearTimeout(timeoutId);

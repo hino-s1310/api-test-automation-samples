@@ -14,73 +14,113 @@ jobs:
     name: Run E2E Tests with Next.js Dev Server
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    
+
     permissions:
       contents: read
       pull-requests: write
       checks: write
       statuses: write
-    
+
     strategy:
       fail-fast: false
       matrix:
         node-version: ["20.x"]
         python-version: ["3.11"]
-    
+
     defaults:
       run:
         working-directory: ./tests/e2e
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v2
         with:
           version: "0.4.30"
-      
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      
+
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9.15.0
-          run_install: false
-          dest: ~/setup-pnpm
-          package_json_file: package.json
-          standalone: false
-          registry: https://registry.npmjs.org/
-      
-      - name: Setup pnpm fallback
-        if: failure()
         run: |
-          echo "pnpm setup failed, trying alternative installation..."
-          
-          # Node.jsに付属のnpmを使用してpnpmをインストール
+          echo "Setting up pnpm via npm..."
+
+          # npmの設定を確認
+          echo "npm registry: $(npm config get registry)"
+
+          # npmを使用してpnpmをインストール
           npm install -g pnpm@9.15.0
-          
+
           # バージョン確認
           pnpm --version
-          
+
           # レジストリ設定
           pnpm config set registry https://registry.npmjs.org/
-          
-          echo "pnpm installed via npm successfully"
-      
+
+          # 設定確認
+          echo "pnpm registry: $(pnpm config get registry)"
+
+          echo "pnpm installed successfully via npm"
+        env:
+          NODE_ENV: production
+          CI: true
+
+      - name: Verify pnpm installation
+        run: |
+          echo "Verifying pnpm installation..."
+
+          # pnpmのパスを確認
+          which pnpm
+
+          # バージョン確認
+          pnpm --version
+
+          # pnpmの設定確認
+          pnpm config list
+
+          echo "pnpm is ready to use"
+
+      - name: Setup pnpm fallback if needed
+        if: failure()
+        run: |
+          echo "pnpm verification failed, trying alternative installation..."
+
+          # 既存のpnpmを削除
+          npm uninstall -g pnpm || true
+
+          # キャッシュをクリア
+          npm cache clean --force
+
+          # 再インストール
+          npm install -g pnpm@9.15.0
+
+          # 再確認
+          pnpm --version
+
+          echo "pnpm fallback installation completed"
+
       - name: Get pnpm store directory
         shell: bash
         run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-      
+          # pnpmが利用可能かチェック
+          if command -v pnpm >/dev/null 2>&1; then
+            STORE_PATH=$(pnpm store path --silent 2>/dev/null || echo "$HOME/.pnpm-store")
+            echo "STORE_PATH=$STORE_PATH" >> $GITHUB_ENV
+            echo "pnpm store path: $STORE_PATH"
+          else
+            echo "pnpm not available, using default store path"
+            echo "STORE_PATH=$HOME/.pnpm-store" >> $GITHUB_ENV
+          fi
+
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
@@ -88,7 +128,7 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
-      
+
       - name: Setup UV cache
         uses: actions/cache@v4
         with:
@@ -96,34 +136,48 @@ jobs:
           key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-uv-
-      
+
       - name: Install Python dependencies
         run: |
           cd ../../
           uv sync
-      
+
       - name: Install E2E test dependencies
-        run: pnpm install --frozen-lockfile
-      
+        run: |
+          echo "Installing E2E test dependencies..."
+          pnpm install --frozen-lockfile --prefer-offline
+          echo "E2E dependencies installed successfully"
+
       - name: Install UI dependencies
         run: |
           cd ../../
           cd src/ui
           echo "Installing UI dependencies..."
-          pnpm install --frozen-lockfile
-          echo "UI dependencies installed successfully"
-          
+
+          # 現在のディレクトリとファイルの確認
+          echo "Current directory: $(pwd)"
+          echo "Package.json exists: $(test -f package.json && echo 'Yes' || echo 'No')"
+          echo "pnpm version: $(pnpm --version)"
+
+          # 依存関係のインストール
+          if pnpm install --frozen-lockfile --prefer-offline; then
+            echo "UI dependencies installed successfully"
+          else
+            echo "pnpm install failed, trying with npm..."
+            npm ci
+          fi
+
           # Next.jsの確認
           echo "Checking Next.js installation..."
-          pnpm list next
-          
+          pnpm list next || npm list next
+
           # package.jsonの確認
           echo "Package.json scripts:"
           cat package.json | grep -A 5 -B 5 "scripts"
         env:
           NODE_ENV: development
           CI: true
-      
+
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         id: playwright-cache
@@ -132,107 +186,116 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ hashFiles('tests/e2e/package.json') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
-      
+
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install chromium --with-deps
-      
+        run: |
+          echo "Installing Playwright browsers..."
+          if command -v pnpm >/dev/null 2>&1; then
+            pnpm exec playwright install chromium --with-deps
+          else
+            npx playwright install chromium --with-deps
+          fi
+          echo "Playwright browsers installed successfully"
+
       - name: Check and kill existing processes
         run: |
           # ポート8000と3000を使用しているプロセスを確認・停止
           echo "Checking for existing processes on ports 8000 and 3000..."
-          
+
           if lsof -i :8000 > /dev/null 2>&1; then
             echo "Port 8000 is in use. Stopping existing process..."
             lsof -ti :8000 | xargs kill -9 || true
             sleep 2
           fi
-          
+
           if lsof -i :3000 > /dev/null 2>&1; then
             echo "Port 3000 is in use. Stopping existing process..."
             lsof -ti :3000 | xargs kill -9 || true
             sleep 2
           fi
-          
+
           # プロセスが完全に停止するまで待機
           sleep 5
-      
+
       - name: Start API server
         run: |
           cd ../../
           export ENVIRONMENT=test
           export PYTHONPATH=/home/runner/work/api-test-automation-samples/api-test-automation-samples
-          
+
           # データベースディレクトリを作成
           mkdir -p data/uploads data/markdown
-          
+
           # APIサーバーを起動
           echo "Starting API server..."
           nohup uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000 > api_server.log 2>&1 &
           echo $! > api_server.pid
-          
+
           # サーバー起動を待機
           sleep 20
-          
+
           # ログを確認
           echo "API server log:"
           cat api_server.log
         env:
           ENVIRONMENT: test
           PYTHONPATH: /home/runner/work/api-test-automation-samples/api-test-automation-samples
-      
+
       - name: Verify API server is running
         run: |
           cd ../../
           echo "Checking API server health..."
           timeout 60s bash -c 'until curl -f http://localhost:8000/health 2>/dev/null; do sleep 2; echo "Waiting for API server..."; done'
           echo "API server is running successfully"
-          
+
           # ヘルスチェックの詳細を確認
           echo "API server health check:"
           curl -v http://localhost:8000/health
-      
+
       - name: Start UI server with Next.js dev server
         run: |
           cd ../../
           echo "Starting UI server with Next.js development server..."
-          
+
           # UIサーバーを起動
           cd src/ui
-          
-          # 依存関係の確認
+
+          # 依存関係の確認（既にインストール済みの場合はスキップ）
           echo "Checking UI dependencies..."
-          if [ ! -d "node_modules" ]; then
+          if [ ! -d "node_modules" ] || [ ! -f "node_modules/.pnpm/next" ]; then
             echo "Installing UI dependencies..."
             pnpm install --frozen-lockfile
+          else
+            echo "UI dependencies already installed, skipping..."
           fi
-          
+
           # Next.jsの確認
           echo "Checking Next.js installation..."
           pnpm list next
-          
+
           # 開発サーバーを起動
           echo "Starting Next.js development server..."
           export NEXT_TELEMETRY_DISABLED=1
           export NODE_OPTIONS="--max-old-space-size=4096"
           export CI=true
-          
+
           # 開発サーバーを起動（バックグラウンドで実行）
           echo "Starting Next.js dev server in background..."
           nohup pnpm dev > ../../ui_server.log 2>&1 &
           echo $! > ../../ui_server.pid
-          
+
           # プロセスIDの確認
           echo "UI server PID: $(cat ../../ui_server.pid)"
-          
+
           # サーバー起動を待機
           echo "Waiting for Next.js dev server to start..."
           sleep 60
-          
+
           # ログを確認
           echo "UI server log:"
           cat ../../ui_server.log
-          
+
           # プロセス状態の確認
           if [ -f ../../ui_server.pid ]; then
             if kill -0 $(cat ../../ui_server.pid) 2>/dev/null; then
@@ -247,16 +310,17 @@ jobs:
           CI: true
           NEXT_TELEMETRY_DISABLED: 1
           NODE_OPTIONS: "--max-old-space-size=4096"
-      
+          PYTHONPATH: /home/runner/work/api-test-automation-samples/api-test-automation-samples
+
       - name: Verify UI server is running
         run: |
           cd ../../
           echo "Checking UI server..."
-          
+
           # UIサーバーの起動確認（より詳細な確認）
           for i in {1..30}; do
             echo "Attempt $i/30: Checking UI server..."
-            
+
             # プロセス状態確認
             if [ -f ui_server.pid ]; then
               if ! kill -0 $(cat ui_server.pid) 2>/dev/null; then
@@ -268,24 +332,24 @@ jobs:
                 exit 1
               fi
             fi
-            
+
             # HTTP接続確認（より詳細なチェック）
             if curl -f http://localhost:3000 > /dev/null 2>&1; then
               echo "UI server is responding successfully!"
-              
+
               # レスポンスの詳細確認
               echo "UI server response details:"
               curl -I http://localhost:3000
-              
+
               # ページの内容を確認
               echo "Page content preview:"
               curl -s http://localhost:3000 | head -20
               break
             fi
-            
+
             echo "UI server not ready yet, waiting..."
             sleep 3
-            
+
             # タイムアウトチェック
             if [ $i -eq 30 ]; then
               echo "UI server failed to start within 90 seconds"
@@ -300,13 +364,13 @@ jobs:
               exit 1
             fi
           done
-          
+
           echo "UI server is running successfully"
-          
+
           # UIサーバーの詳細確認
           echo "UI server check:"
           curl -v http://localhost:3000
-      
+
       - name: Run comprehensive E2E tests
         run: |
           # テスト用の環境変数を設定
@@ -314,90 +378,99 @@ jobs:
           export ENVIRONMENT=test
           export PWTEST_SKIP_TEST_OUTPUT=1
           export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-          
+
           # 全テストを実行（API、UI、統合テスト）
           echo "Running comprehensive E2E tests..."
-          
+
           # テストの実行順序を制御
           echo "Phase 1: Running API tests..."
-          pnpm exec playwright test \
-            --project=api-tests \
-            --max-failures=3 \
-            --workers=1 \
-            --retries=3 \
-            --timeout=60000
-          
-          # UIのみのテストは別のタイミングで実行する
-          # echo "Phase 2: Running UI tests..."
-          # pnpm exec playwright test \
-          #   --project=ui-tests \
-          #   --max-failures=3 \
-          #   --workers=1 \
-          #   --retries=3 \
-          #   --timeout=60000
-          
+          if command -v pnpm >/dev/null 2>&1; then
+            pnpm exec playwright test \
+              --project=api-tests \
+              --max-failures=3 \
+              --workers=1 \
+              --retries=3 \
+              --timeout=60000
+          else
+            npx playwright test \
+              --project=api-tests \
+              --max-failures=3 \
+              --workers=1 \
+              --retries=3 \
+              --timeout=60000
+          fi
+
           echo "Phase 2: Running integration tests..."
-          pnpm exec playwright test \
-            --project=integration-tests \
-            --max-failures=3 \
-            --workers=1 \
-            --retries=3 \
-            --timeout=60000
-      
+          if command -v pnpm >/dev/null 2>&1; then
+            pnpm exec playwright test \
+              --project=integration-tests \
+              --max-failures=3 \
+              --workers=1 \
+              --retries=3 \
+              --timeout=60000
+          else
+            npx playwright test \
+              --project=integration-tests \
+              --max-failures=3 \
+              --workers=1 \
+              --retries=3 \
+              --timeout=60000
+          fi
+
       - name: Aggregate test results
         run: |
           echo "=== Test Results Summary ==="
-          
+
           # テスト結果ファイルの確認
           if [ -d "test-results" ]; then
             echo "Test results directory contents:"
             ls -la test-results/
-            
+
             # 結果ファイルの解析
             if [ -f "test-results/results.json" ]; then
               echo "Test results summary:"
               cat test-results/results.json | jq '.stats' || echo "Could not parse test results"
             fi
           fi
-          
+
           # Playwrightレポートの確認
           if [ -d "playwright-report" ]; then
             echo "Playwright report generated successfully"
           else
             echo "Playwright report not found"
           fi
-      
+
       - name: Stop servers
         if: always()
         run: |
           cd ../../
           echo "Stopping servers..."
-          
+
           # APIサーバーを停止
           if [ -f api_server.pid ]; then
             echo "Stopping API server..."
             kill $(cat api_server.pid) 2>/dev/null || true
             rm -f api_server.pid
           fi
-          
+
           # UIサーバーを停止
           if [ -f ui_server.pid ]; then
             echo "Stopping UI server..."
             kill $(cat ui_server.pid) 2>/dev/null || true
             rm -f ui_server.pid
           fi
-          
+
           # ログファイルを保存
           if [ -f api_server.log ]; then
             echo "API server log:"
             cat api_server.log
           fi
-          
+
           if [ -f ui_server.log ]; then
             echo "UI server log:"
             cat ui_server.log
           fi
-      
+
       - name: Upload test results and reports
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
@@ -407,7 +480,7 @@ jobs:
             tests/e2e/test-results/
             tests/e2e/playwright-report/
           retention-days: 14
-            
+
       - name: Upload Playwright HTML Report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
@@ -415,7 +488,7 @@ jobs:
           name: playwright-report-node-${{ matrix.node-version }}
           path: tests/e2e/playwright-report/
           retention-days: 14
-      
+
       - name: Upload server logs
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
@@ -425,7 +498,7 @@ jobs:
             api_server.log
             ui_server.log
           retention-days: 14
-            
+
       - name: Comment PR with test results
         if: github.event_name == 'pull_request' && !cancelled()
         continue-on-error: true
@@ -433,32 +506,32 @@ jobs:
         with:
           script: |
             const body = `## 🎭 Playwright E2E Tests Completed (Next.js Dev Server)
-            
+
             ✅ **Comprehensive E2E tests have been completed successfully!**
-            
+
             **Test Results:**
             - **Status**: All tests completed
             - **Node.js**: ${{ matrix.node-version }}
             - **Python**: ${{ matrix.python-version }}
             - **UI Server**: Next.js Development Server
-            
+
             **What was tested:**
             - ✅ API endpoints and health checks
             - ✅ Frontend UI components (Next.js Dev Server)
             - ✅ UI-API integration and communication
             - ✅ File upload and processing workflows
             - ✅ End-to-end user experience
-            
+
             📊 **Reports & Logs:**
             - [View HTML Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             - [View Workflow Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             - [Download Test Results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            
+
             💡 **Next Steps:**
             - Review the detailed HTML report for test coverage
             - Check server logs if any issues occurred
             - All artifacts are available for download above`;
-            
+
             try {
               await github.rest.issues.createComment({
                 issue_number: context.issue.number,

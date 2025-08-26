@@ -17,7 +17,7 @@ export const api = {
   async uploadPdf(file: File): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     try {
       const response = await apiClient.post<UploadResponse>('/upload', formData, {
         headers: {
@@ -37,7 +37,7 @@ export const api = {
   async updateFile(id: string, file: File): Promise<FileInfo> {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     try {
       const response = await apiClient.put<FileInfo>(`/files/${id}`, formData, {
         headers: {

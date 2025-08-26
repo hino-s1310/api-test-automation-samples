@@ -9,7 +9,7 @@ const FILE_NAME = VALID_UPLOAD_DATA.filename;
 test.describe('ファイル詳細APIの統合テスト', () => {
   // テストを直列実行して、データベースの状態を管理
   test.describe.configure({ mode: 'serial' });
-  
+
   // 各テストの前後でクリーンアップ
   test.beforeEach(async ({ page }) => {
     // テスト開始前にデータベースをクリーンアップ
@@ -23,7 +23,7 @@ test.describe('ファイル詳細APIの統合テスト', () => {
 
     // APIリクエストを監視
     const apiResponses: any[] = [];
-    
+
     page.on('response', response => {
       // ファイル詳細APIのレスポンスを監視（/files/{id}の形式）
       if (response.url().includes(`/files/${fileId}`)) {
@@ -47,34 +47,34 @@ test.describe('ファイル詳細APIの統合テスト', () => {
     await filesListPage.clickFileName(FILE_NAME);
 
     // ファイル詳細APIのレスポンスを待機
-    await page.waitForResponse(response => 
-      response.url().includes(`/files/${fileId}`) && 
-      !response.url().includes('?page=') && 
+    await page.waitForResponse(response =>
+      response.url().includes(`/files/${fileId}`) &&
+      !response.url().includes('?page=') &&
       response.status() === 200
     , { timeout: 30000 });
 
     // ページ読み込み完了を待機
     await filesListPage.waitForPageLoad('domcontentloaded');
-    
+
     // APIが呼び出されたことを確認
     expect(apiResponses.length).toBeGreaterThan(0);
-    
+
     // ファイル詳細APIのレスポンスを確認
-    const fileDetailApiResponse = apiResponses.find(response => 
+    const fileDetailApiResponse = apiResponses.find(response =>
       response.url().includes(`/files/${fileId}`)
     );
-    
+
     if (fileDetailApiResponse) {
       expect(fileDetailApiResponse.status()).toBe(200);
     } else {
       throw new Error('ファイル詳細APIのレスポンスが見つかりません');
     }
-    
+
     // ファイル詳細モーダルのファイル名の確認
     const fileName = filesListPage.getFileDetailModalFileName();
     await expect(fileName).toBeVisible();
     await expect(fileName).toContainText(FILE_NAME);
-    
+
   });
 
   test.afterEach(async ({ page }) => {

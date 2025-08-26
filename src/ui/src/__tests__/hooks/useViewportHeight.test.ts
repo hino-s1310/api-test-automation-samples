@@ -37,7 +37,7 @@ describe('useViewportHeight', () => {
     await act(async () => {
       window.innerHeight = 1000
       window.dispatchEvent(new Event('resize'))
-      
+
       // デバウンス期間（150ms）より長く待機
       await new Promise(resolve => setTimeout(resolve, 200))
     })
