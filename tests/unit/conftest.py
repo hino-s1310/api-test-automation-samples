@@ -267,6 +267,166 @@ def large_file_content():
 
 
 # ===========================
+# 不足しているfixtureの追加
+# ===========================
+
+
+@pytest.fixture
+def mock_get_file_success():
+    """ファイル取得成功のモックデータ"""
+    return {
+        "id": "test-file-id-123",
+        "filename": "test.pdf",
+        "markdown_content": "# Test Content\n\nThis is test content.",
+        "status": "completed",
+        "created_at": "2025-01-01T00:00:00",
+        "updated_at": "2025-01-01T00:00:00",
+        "file_size": 1024,
+        "processing_time": 1.5,
+    }
+
+
+@pytest.fixture
+def mock_get_file_not_found():
+    """ファイルが見つからない場合のモックデータ"""
+    return None
+
+
+@pytest.fixture
+def mock_list_files_success():
+    """ファイル一覧取得成功のモックデータ"""
+    return {
+        "files": [
+            {
+                "id": "file-1",
+                "filename": "test1.pdf",
+                "status": "completed",
+                "created_at": "2025-01-01T00:00:00",
+                "updated_at": "2025-01-01T00:00:00",
+                "file_size": 1024,
+                "processing_time": 1.5,
+            },
+            {
+                "id": "file-2",
+                "filename": "test2.pdf",
+                "status": "completed",
+                "created_at": "2025-01-01T00:00:00",
+                "updated_at": "2025-01-01T00:00:00",
+                "file_size": 2048,
+                "processing_time": 2.0,
+            },
+        ],
+        "total_count": 2,
+        "page": 1,
+        "per_page": 10,
+    }
+
+
+@pytest.fixture
+def mock_list_files_pagination():
+    """ページネーション用のモックデータ"""
+    return {
+        "files": [
+            {
+                "id": "file-2",
+                "filename": "test2.pdf",
+                "status": "completed",
+                "created_at": "2025-01-01T00:00:00",
+                "updated_at": "2025-01-01T00:00:00",
+                "file_size": 2048,
+                "processing_time": 2.0,
+            }
+        ],
+        "total_count": 2,
+        "page": 2,
+        "per_page": 1,
+    }
+
+
+@pytest.fixture
+def single_file_data():
+    """単一ファイルのテストデータ"""
+    return {
+        "id": "test-file-id-123",
+        "filename": "test.pdf",
+        "markdown_content": "# Test Content\n\nThis is test content.",
+        "status": "completed",
+        "created_at": "2025-01-01T00:00:00",
+        "updated_at": "2025-01-01T00:00:00",
+        "file_size": 1024,
+        "processing_time": 1.5,
+    }
+
+
+@pytest.fixture
+def assert_file_data():
+    """ファイルデータのアサーション用ヘルパー"""
+
+    def _assert_file_data(actual, expected):
+        assert actual is not None
+        assert actual["id"] == expected["id"]
+        assert actual["filename"] == expected["filename"]
+
+        # markdown_contentキーが存在する場合はmarkdownと比較
+        if "markdown_content" in expected:
+            assert actual["markdown"] == expected["markdown_content"]
+        elif "markdown" in expected:
+            assert actual["markdown"] == expected["markdown"]
+
+        assert actual["status"] == expected["status"]
+        assert actual["created_at"] == expected["created_at"]
+        assert actual["updated_at"] == expected["updated_at"]
+        # オプショナルなフィールドの確認
+        if "file_size" in expected:
+            assert actual["file_size"] == expected["file_size"]
+        if "processing_time" in expected:
+            assert actual["processing_time"] == expected["processing_time"]
+
+    return _assert_file_data
+
+
+@pytest.fixture
+def assert_list_response():
+    """リストレスポンスのアサーション用ヘルパー"""
+
+    def _assert_list_response(actual, expected, page=1, per_page=10):
+        assert actual is not None
+        assert actual["total_count"] == expected["total_count"]
+        assert actual["page"] == page
+        assert actual["per_page"] == per_page
+        assert len(actual["files"]) == len(expected["files"])
+
+        for i, file in enumerate(actual["files"]):
+            expected_file = expected["files"][i]
+            assert file["id"] == expected_file["id"]
+            assert file["filename"] == expected_file["filename"]
+            assert file["status"] == expected_file["status"]
+
+    return _assert_list_response
+
+
+@pytest.fixture
+def list_files_response_data():
+    """ファイル一覧レスポンス用のテストデータ"""
+    return {
+        "files": [
+            {
+                "id": "file-1",
+                "filename": "test1.pdf",
+                "status": "completed",
+                "created_at": "2025-01-01T00:00:00",
+                "updated_at": "2025-01-01T00:00:00",
+                "file_size": 1024,
+                "processing_time": 1.5,
+            }
+        ],
+        "total_count": 1,
+        "page": 1,
+        "per_page": 10,
+    }
+
+
+# ===========================
 # テスト結果の収集・レポート
 # ===========================
 

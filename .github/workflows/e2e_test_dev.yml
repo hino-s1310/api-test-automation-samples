@@ -79,6 +79,11 @@ jobs:
       - name: Verify pnpm installation
         run: |
           echo "Verifying pnpm installation..."
+
+          # pnpmのパスを確認
+          which pnpm
+
+          # バージョン確認
           pnpm --version
 
           # pnpmの設定確認
@@ -122,18 +127,16 @@ jobs:
           cd src/ui
           echo "Installing UI dependencies..."
 
-          # pnpmの状態確認
-          echo "pnpm version: $(pnpm --version)"
+          # 現在のディレクトリとファイルの確認
           echo "Current directory: $(pwd)"
           echo "Package.json exists: $(test -f package.json && echo 'Yes' || echo 'No')"
+          echo "pnpm version: $(pnpm --version)"
 
           # 依存関係のインストール
-          pnpm install --frozen-lockfile --prefer-offline
-
-          if [ $? -eq 0 ]; then
+          if pnpm install --frozen-lockfile --prefer-offline; then
             echo "UI dependencies installed successfully"
           else
-            echo "UI dependencies installation failed, trying with npm..."
+            echo "pnpm install failed, trying with npm..."
             npm ci
           fi
 

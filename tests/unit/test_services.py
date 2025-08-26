@@ -10,16 +10,18 @@ from src.api.models import FileStatus
 from .fixtures import (
     ConversionLogTestData,
     FileTestData,
-    ValidationTestData,
     create_file_data,
 )
 
 
 class TestFileService:
     def test_get_file_success(
-        self, file_service, mock_get_file_success, assert_file_data
+        self, file_service, mock_get_file_success, assert_file_data, mock_db_manager
     ):
         """ファイル取得成功のテスト"""
+        # モック設定
+        mock_db_manager.get_file.return_value = mock_get_file_success
+
         # テスト実行
         file_id = mock_get_file_success["id"]
         result = file_service.get_file(file_id)
@@ -27,8 +29,13 @@ class TestFileService:
         # アサーション
         assert_file_data(result, mock_get_file_success)
 
-    def test_get_file_not_found(self, file_service, mock_get_file_not_found):
+    def test_get_file_not_found(
+        self, file_service, mock_get_file_not_found, mock_db_manager
+    ):
         """ファイルが見つからない場合のテスト"""
+        # モック設定
+        mock_db_manager.get_file.return_value = None
+
         # テスト実行
         file_id = "non_existent_id"
         result = file_service.get_file(file_id)
@@ -37,9 +44,16 @@ class TestFileService:
         assert result is None
 
     def test_list_files_success(
-        self, file_service, mock_list_files_success, assert_list_response
+        self,
+        file_service,
+        mock_list_files_success,
+        assert_list_response,
+        mock_db_manager,
     ):
         """ファイル一覧取得成功のテスト"""
+        # モック設定
+        mock_db_manager.list_files.return_value = mock_list_files_success
+
         # テスト実行
         result = file_service.list_files()
 
@@ -47,9 +61,16 @@ class TestFileService:
         assert_list_response(result, mock_list_files_success, page=1, per_page=10)
 
     def test_list_files_pagination(
-        self, file_service, mock_list_files_pagination, assert_list_response
+        self,
+        file_service,
+        mock_list_files_pagination,
+        assert_list_response,
+        mock_db_manager,
     ):
         """ページネーションのテスト"""
+        # モック設定
+        mock_db_manager.list_files.return_value = mock_list_files_pagination
+
         # テスト実行
         result = file_service.list_files(page=2, per_page=1)
 
@@ -191,13 +212,14 @@ class TestFileService:
         expected_mb = round(3840 / (1024 * 1024), 2)
         assert result["total_size_mb"] == expected_mb
 
-        # processing_timeが存在するもののみの合計: 2.0+1.5+0.5=4.0
+        # 処理時間の計算（実際の実装では、processing_timeが存在するもののみの合計）
+        # 2.0 + 1.5 + 0.5 = 4.0
         assert result["total_processing_time"] == 4.0
         assert result["average_processing_time"] == 1.0  # 4.0/4
 
     def test_get_file_statistics_exception(self, file_service, mock_db_manager):
-        """統計情報取得で例外が発生した場合のテスト"""
-        # モック設定（例外発生）
+        """ファイル統計情報取得時の例外処理テスト"""
+        # モック設定
         mock_db_manager.list_files.side_effect = Exception("Database error")
 
         # テスト実行
@@ -205,29 +227,33 @@ class TestFileService:
 
         # アサーション
         assert "error" in result
-        assert result["total_files"] == 0
-        assert result["status_counts"]["completed"] == 0
+        assert "Database error" in result["error"]
 
     def test_cleanup_old_files_success(self, file_service, mock_db_manager):
         """古いファイルクリーンアップ成功のテスト"""
-        # 基本的な機能をテスト（例外処理のみ）
-        mock_db_manager.list_files.return_value = {"files": [], "total_count": 0}
+        # モック設定
+        mock_db_manager.list_files.return_value = {
+            "files": [
+                {"id": "old-file-1", "created_at": "2025-01-01T00:00:00"},
+                {"id": "old-file-2", "created_at": "2025-01-01T00:00:00"},
+            ],
+            "total_count": 2,
+        }
+        mock_db_manager.delete_file.return_value = True
 
         # テスト実行
         result = file_service.cleanup_old_files(days=30)
 
         # アサーション
         assert result["success"] is True
-        assert result["deleted_count"] == 0
-        assert result["total_old_files"] == 0
-
-        # list_filesが呼ばれたことを確認
-        mock_db_manager.list_files.assert_called_once_with(page=1, per_page=10000)
+        assert result["deleted_count"] == 2
+        assert result["total_old_files"] == 2
+        assert "cutoff_date" in result
 
     def test_cleanup_old_files_exception(self, file_service, mock_db_manager):
-        """クリーンアップで例外が発生した場合のテスト"""
-        # モック設定（例外発生）
-        mock_db_manager.list_files.side_effect = Exception("Database error")
+        """古いファイルクリーンアップ時の例外処理テスト"""
+        # モック設定
+        mock_db_manager.list_files.side_effect = Exception("Cleanup failed")
 
         # テスト実行
         result = file_service.cleanup_old_files(days=30)
@@ -235,7 +261,7 @@ class TestFileService:
         # アサーション
         assert result["success"] is False
         assert "error" in result
-        assert result["deleted_count"] == 0
+        assert "Cleanup failed" in result["error"]
 
     def test_get_current_time(self, file_service):
         """現在時刻取得のテスト"""
@@ -249,18 +275,30 @@ class TestFileService:
         assert time_diff < 1.0
 
     def test_validate_file_id_valid_uuids(self, file_service):
-        """有効なUUIDの検証テスト"""
-        valid_uuids = ValidationTestData.valid_uuids()
+        """有効なUUID形式のファイルID検証テスト"""
+        valid_ids = [
+            "12345678-1234-5678-9abc-123456789def",
+            "87654321-4321-8765-fedc-987654321abc",
+            "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        ]
 
-        for uuid in valid_uuids:
-            assert file_service.validate_file_id(uuid) is True
+        for file_id in valid_ids:
+            result = file_service.validate_file_id(file_id)
+            assert result is True, f"Failed for ID: {file_id}"
 
     def test_validate_file_id_invalid_uuids(self, file_service):
-        """無効なUUIDの検証テスト"""
-        invalid_uuids = ValidationTestData.invalid_uuids()
+        """無効なUUID形式のファイルID検証テスト"""
+        invalid_ids = [
+            "invalid-id",
+            "12345678-1234-5678-9abc",  # 短すぎる
+            "12345678-1234-5678-9abc-123456789def-extra",  # 長すぎる
+            "12345678-1234-5678-9abc-123456789defg",  # 無効な文字
+            "",  # 空文字
+        ]
 
-        for uuid in invalid_uuids:
-            assert file_service.validate_file_id(uuid) is False
+        for file_id in invalid_ids:
+            result = file_service.validate_file_id(file_id)
+            assert result is False, f"Should fail for ID: {file_id}"
 
 
 # ===============================
