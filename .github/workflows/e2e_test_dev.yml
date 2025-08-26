@@ -51,29 +51,28 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9.15.0
-          run_install: false
-          dest: ~/setup-pnpm
-          package_json_file: package.json
-          standalone: false
-
-      - name: Setup pnpm fallback
-        if: failure()
         run: |
-          echo "pnpm setup failed, trying alternative installation..."
+          echo "Setting up pnpm via npm..."
 
-          # Node.jsに付属のnpmを使用してpnpmをインストール
+          # npmの設定を確認
+          echo "npm registry: $(npm config get registry)"
+
+          # npmを使用してpnpmをインストール
           npm install -g pnpm@9.15.0
 
           # バージョン確認
           pnpm --version
 
-          # レジストリ設定（必要に応じて）
+          # レジストリ設定
           pnpm config set registry https://registry.npmjs.org/
 
-          echo "pnpm installed via npm successfully"
+          # 設定確認
+          echo "pnpm registry: $(pnpm config get registry)"
+
+          echo "pnpm installed successfully via npm"
+        env:
+          NODE_ENV: production
+          CI: true
 
       - name: Verify pnpm installation
         run: |
@@ -89,6 +88,25 @@ jobs:
           pnpm config list
 
           echo "pnpm is ready to use"
+
+      - name: Setup pnpm fallback if needed
+        if: failure()
+        run: |
+          echo "pnpm verification failed, trying alternative installation..."
+
+          # 既存のpnpmを削除
+          npm uninstall -g pnpm || true
+
+          # キャッシュをクリア
+          npm cache clean --force
+
+          # 再インストール
+          npm install -g pnpm@9.15.0
+
+          # 再確認
+          pnpm --version
+
+          echo "pnpm fallback installation completed"
 
       - name: Get pnpm store directory
         shell: bash
@@ -171,7 +189,14 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install chromium --with-deps
+        run: |
+          echo "Installing Playwright browsers..."
+          if command -v pnpm >/dev/null 2>&1; then
+            pnpm exec playwright install chromium --with-deps
+          else
+            npx playwright install chromium --with-deps
+          fi
+          echo "Playwright browsers installed successfully"
 
       - name: Check and kill existing processes
         run: |
@@ -236,11 +261,13 @@ jobs:
           # UIサーバーを起動
           cd src/ui
 
-          # 依存関係の確認
+          # 依存関係の確認（既にインストール済みの場合はスキップ）
           echo "Checking UI dependencies..."
-          if [ ! -d "node_modules" ]; then
+          if [ ! -d "node_modules" ] || [ ! -f "node_modules/.pnpm/next" ]; then
             echo "Installing UI dependencies..."
             pnpm install --frozen-lockfile
+          else
+            echo "UI dependencies already installed, skipping..."
           fi
 
           # Next.jsの確認
@@ -283,6 +310,7 @@ jobs:
           CI: true
           NEXT_TELEMETRY_DISABLED: 1
           NODE_OPTIONS: "--max-old-space-size=4096"
+          PYTHONPATH: /home/runner/work/api-test-automation-samples/api-test-automation-samples
 
       - name: Verify UI server is running
         run: |
@@ -356,29 +384,38 @@ jobs:
 
           # テストの実行順序を制御
           echo "Phase 1: Running API tests..."
-          pnpm exec playwright test \
-            --project=api-tests \
-            --max-failures=3 \
-            --workers=1 \
-            --retries=3 \
-            --timeout=60000
-
-          # UIのみのテストは別のタイミングで実行する
-          # echo "Phase 2: Running UI tests..."
-          # pnpm exec playwright test \
-          #   --project=ui-tests \
-          #   --max-failures=3 \
-          #   --workers=1 \
-          #   --retries=3 \
-          #   --timeout=60000
+          if command -v pnpm >/dev/null 2>&1; then
+            pnpm exec playwright test \
+              --project=api-tests \
+              --max-failures=3 \
+              --workers=1 \
+              --retries=3 \
+              --timeout=60000
+          else
+            npx playwright test \
+              --project=api-tests \
+              --max-failures=3 \
+              --workers=1 \
+              --retries=3 \
+              --timeout=60000
+          fi
 
           echo "Phase 2: Running integration tests..."
-          pnpm exec playwright test \
-            --project=integration-tests \
-            --max-failures=3 \
-            --workers=1 \
-            --retries=3 \
-            --timeout=60000
+          if command -v pnpm >/dev/null 2>&1; then
+            pnpm exec playwright test \
+              --project=integration-tests \
+              --max-failures=3 \
+              --workers=1 \
+              --retries=3 \
+              --timeout=60000
+          else
+            npx playwright test \
+              --project=integration-tests \
+              --max-failures=3 \
+              --workers=1 \
+              --retries=3 \
+              --timeout=60000
+          fi
 
       - name: Aggregate test results
         run: |
