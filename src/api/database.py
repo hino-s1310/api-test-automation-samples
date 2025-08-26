@@ -101,17 +101,27 @@ class DatabaseManager:
                 
                 params.append(file_id)
                 
-                query = f"""
-                    UPDATE files 
-                    SET {', '.join(update_fields)}
-                    WHERE id = ?
-                """
-                
+                query = f"UPDATE files SET {', '.join(update_fields)} WHERE id = ?"
                 conn.execute(query, params)
                 conn.commit()
                 return True
         except Exception as e:
             print(f"Error updating file status: {e}")
+            return False
+    
+    def update_filename(self, file_id: str, new_filename: str) -> bool:
+        """ファイル名を更新"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("""
+                    UPDATE files 
+                    SET filename = ?, updated_at = CURRENT_TIMESTAMP 
+                    WHERE id = ?
+                """, (new_filename, file_id))
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Error updating filename: {e}")
             return False
     
     def get_file(self, file_id: str) -> Optional[Dict[str, Any]]:

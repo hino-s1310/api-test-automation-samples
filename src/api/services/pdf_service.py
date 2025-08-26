@@ -217,7 +217,7 @@ class PDFService:
     
     async def reconvert_pdf(self, file_id: str, file_content: bytes, 
                            filename: str) -> Dict[str, Any]:
-        """PDFの再変換処理"""
+        """PDFの再変換処理（新しいファイル名で更新）"""
         start_time = time.time()
         
         # ファイル検証
@@ -253,7 +253,7 @@ class PDFService:
             # 処理時間計算
             processing_time = time.time() - start_time
             
-            # データベース更新
+            # データベース更新（ファイル名も更新）
             db_manager.update_file_status(
                 file_id, 
                 FileStatus.COMPLETED, 
@@ -261,12 +261,15 @@ class PDFService:
                 processing_time
             )
             
+            # ファイル名を更新
+            db_manager.update_filename(file_id, filename)
+            
             # ログ記録
             db_manager.add_conversion_log(
                 file_id, 
                 "reconvert", 
                 "success", 
-                "PDF reconversion completed",
+                f"PDF reconversion completed with new filename: {filename}",
                 processing_time
             )
             
