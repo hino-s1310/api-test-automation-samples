@@ -29,7 +29,7 @@ export default function FileListTable({ files, onViewFile, onDeleteFile, deletin
 
   const getStatusBadge = (status: string) => {
     const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-    
+
     switch (status) {
       case 'completed':
         return (
@@ -85,8 +85,8 @@ export default function FileListTable({ files, onViewFile, onDeleteFile, deletin
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {files.map((file) => (
-            <tr 
-              key={file.id} 
+            <tr
+              key={file.id}
               onClick={() => file.status === 'completed' && onViewFile(file.id)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && file.status === 'completed') {
@@ -99,8 +99,8 @@ export default function FileListTable({ files, onViewFile, onDeleteFile, deletin
               data-testid={`file-row-${file.id}`}
               className={`
                 transition-colors duration-150
-                ${file.status === 'completed' 
-                  ? 'hover:bg-blue-50 cursor-pointer focus:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset' 
+                ${file.status === 'completed'
+                  ? 'hover:bg-blue-50 cursor-pointer focus:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset'
                   : 'hover:bg-gray-50'
                 }
               `}

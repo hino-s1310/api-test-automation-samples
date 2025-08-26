@@ -12,6 +12,12 @@ install: ## Install dependencies
 install-hooks: ## Install pre-commit hooks
 	uv run pre-commit install
 
+pre-commit-run: ## Run pre-commit on all files
+	uv run pre-commit run --all-files
+
+pre-commit-update: ## Update pre-commit hooks
+	uv run pre-commit autoupdate
+
 # Testing
 test: test-unit ## Run unit tests (default)
 
@@ -49,14 +55,18 @@ coverage: ## Generate coverage report
 
 # Code quality
 lint: ## Run linting
-	uv run flake8 src/ tests/
+	uv run ruff check src/ tests/
 	uv run mypy src/
 
 format: ## Format code
+	uv run ruff check --fix src/ tests/
+	uv run ruff format src/ tests/
 	uv run black src/ tests/
 	uv run isort src/ tests/
 
 check: ## Run all quality checks
+	uv run ruff check src/ tests/
+	uv run ruff format --check src/ tests/
 	uv run black --check src/ tests/
 	uv run isort --check-only src/ tests/
 	uv run flake8 src/ tests/

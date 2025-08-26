@@ -33,7 +33,7 @@ export default defineConfig({
     {
       name: 'api-tests',
       testMatch: /.*\.api\.spec\.ts/,
-      use: { 
+      use: {
         ...devices['Desktop Chrome'],
         baseURL: 'http://localhost:8000',
       },
@@ -42,7 +42,7 @@ export default defineConfig({
     {
       name: 'ui-tests',
       testMatch: /.*\.ui\.spec\.ts/,
-      use: { 
+      use: {
         ...devices['Desktop Chrome'],
         baseURL: 'http://localhost:3000',
       },
@@ -51,7 +51,7 @@ export default defineConfig({
     {
       name: 'integration-tests',
       testMatch: /.*\.integration\.spec\.ts/,
-      use: { 
+      use: {
         ...devices['Desktop Chrome'],
         baseURL: 'http://localhost:3000',
         // CI環境でのタイムアウトを延長

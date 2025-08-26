@@ -26,11 +26,11 @@ describe('MarkdownDisplay', () => {
     // プレビューでMarkdownコンテンツが表示される（生のテキストでも確認）
     expect(screen.getByText(/Test Title/)).toBeInTheDocument()
     expect(screen.getByText(/This is a test content/)).toBeInTheDocument()
-    
+
     // ファイル情報が表示される
     expect(screen.getByText('ファイルID:')).toBeInTheDocument()
     expect(screen.getByText(mockResult.id)).toBeInTheDocument()
-    
+
     // メッセージが表示される
     expect(screen.getByText(mockResult.message!)).toBeInTheDocument()
   })
@@ -73,7 +73,7 @@ describe('MarkdownDisplay', () => {
     await userEvent.click(copyButton)
 
     expect(mockClipboard.writeText).toHaveBeenCalledWith(mockResult.markdown)
-    
+
     // コピー成功時のUI変更をテスト
     expect(screen.getByText('コピー済み!')).toBeInTheDocument()
   })
@@ -88,7 +88,7 @@ describe('MarkdownDisplay', () => {
     // ダウンロードボタンが表示されることを確認
     const downloadButton = screen.getByRole('button', { name: 'ダウンロード' })
     expect(downloadButton).toBeInTheDocument()
-    
+
     // ボタンがクリック可能であることを確認
     expect(downloadButton).not.toBeDisabled()
   })
@@ -108,7 +108,7 @@ describe('MarkdownDisplay', () => {
     // プレビュータブがアクティブ
     const previewTab = screen.getByRole('button', { name: 'プレビュー' })
     const markdownTab = screen.getByRole('button', { name: 'Markdown' })
-    
+
     expect(previewTab).toHaveClass('border-blue-500', 'text-blue-600')
     expect(markdownTab).toHaveClass('border-transparent', 'text-gray-500')
   })

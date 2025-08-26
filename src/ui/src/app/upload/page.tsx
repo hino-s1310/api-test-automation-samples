@@ -31,7 +31,7 @@ export default function UploadPage() {
       });
     } catch (error: any) {
       let errorMessage = 'アップロードに失敗しました。';
-      
+
       if (error.response?.data?.detail) {
         errorMessage = error.response.data.detail;
       } else if (error.message) {
@@ -55,9 +55,9 @@ export default function UploadPage() {
   };
 
   return (
-    <div 
+    <div
       className="flex flex-col h-full max-h-full"
-      style={{ 
+      style={{
         height: `${availableHeight}px`,
         maxHeight: `${availableHeight}px`
       }}
@@ -72,7 +72,7 @@ export default function UploadPage() {
           PDFファイルをアップロードしてMarkdown形式に変換します。
         </p>
       </div>
-      
+
       {/* メインコンテンツ - 残りの高さを均等に分割 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 flex-1 min-h-0" data-testid="main-content">
         {/* 左側: アップロードセクション - スクロールなし */}
@@ -106,7 +106,7 @@ export default function UploadPage() {
                 <span>コピー・ダウンロード可能</span>
               </div>
             </div>
-            
+
             <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md" data-testid="usage-note">
               <p className="text-xs text-yellow-800">
                 <strong>注意:</strong> 10MB以下のPDFファイルのみ対応
@@ -118,25 +118,25 @@ export default function UploadPage() {
         {/* 右側: 結果表示セクション - スクロールなし */}
         <div className="flex flex-col h-full min-h-0" data-testid="result-section">
           {uploadState.result ? (
-            <MarkdownDisplay 
-              result={uploadState.result} 
+            <MarkdownDisplay
+              result={uploadState.result}
               onNewUpload={handleNewUpload}
             />
           ) : (
             <div className="card h-full flex items-center justify-center" data-testid="empty-state">
               <div className="text-center py-6">
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3" data-testid="empty-icon">
-                  <svg 
-                    className="w-6 h-6 text-gray-400" 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <svg
+                    className="w-6 h-6 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
                 </div>

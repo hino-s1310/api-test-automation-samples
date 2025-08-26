@@ -17,54 +17,54 @@ jobs:
   test:
     name: Run Unit Tests
     runs-on: ubuntu-latest
-    
+
     # GitHub Actions の権限設定
     permissions:
       contents: read
       pull-requests: write
       checks: write
       statuses: write
-    
+
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11"]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
           version: "latest"
-      
+
       - name: Set up virtual environment
         run: |
           uv python install ${{ matrix.python-version }}
           uv venv --python ${{ matrix.python-version }}
-          
+
       - name: Install dependencies
         run: |
           uv pip install -e ".[test]"
-          
+
       - name: Verify installation
         run: |
           uv pip list
           python --version
           which python
-          
+
       - name: Create test data directory
         run: |
           mkdir -p tests/data
           # テスト用PDFファイルが存在することを確認
           ls -la tests/data/
-          
+
       - name: Run unit tests with coverage
         run: |
           uv run pytest tests/unit/ \
@@ -75,14 +75,14 @@ jobs:
             --junitxml=test-results.xml \
             -v \
             --tb=short
-            
+
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
-          
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -92,7 +92,7 @@ jobs:
             test-results.xml
             htmlcov/
             coverage.xml
-            
+
       - name: Comment PR with coverage
         if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
         uses: MishaKav/pytest-coverage-comment@main
@@ -103,23 +103,23 @@ jobs:
           title: "Coverage Report (Python 3.11)"
           badge-title: "Coverage"
         continue-on-error: true
-        
+
       - name: Coverage Summary (fallback)
         if: always()
         run: |
           echo "## 📊 Test & Coverage Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           # パーサースクリプトを使用して情報を抽出
           if [ -f ".github/scripts/parse_coverage.py" ]; then
             # 専用スクリプトを使用（推奨）
             eval $(python .github/scripts/parse_coverage.py)
-            
+
             echo "### Coverage Report" >> $GITHUB_STEP_SUMMARY
             echo "- **Line Coverage**: ${LINE_COVERAGE}%" >> $GITHUB_STEP_SUMMARY
             echo "- **Branch Coverage**: ${BRANCH_COVERAGE}%" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            
+
             echo "### Test Results" >> $GITHUB_STEP_SUMMARY
             echo "- **Total Tests**: ${TOTAL_TESTS}" >> $GITHUB_STEP_SUMMARY
             echo "- **Passed**: ${PASSED_TESTS}" >> $GITHUB_STEP_SUMMARY
@@ -127,14 +127,14 @@ jobs:
             echo "- **Skipped**: ${SKIPPED_TESTS}" >> $GITHUB_STEP_SUMMARY
             echo "- **Success Rate**: ${SUCCESS_RATE}%" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            
+
             # ステータスバッジ風の表示
             if [ "${FAILED_TESTS}" -eq 0 ]; then
               echo "🟢 **Status**: All tests passed!" >> $GITHUB_STEP_SUMMARY
             else
               echo "🔴 **Status**: ${FAILED_TESTS} test(s) failed" >> $GITHUB_STEP_SUMMARY
             fi
-            
+
           else
             # フォールバック: 単行Pythonコマンド使用
             if [ -f coverage.xml ]; then
@@ -143,13 +143,13 @@ jobs:
             else
               echo "⚠️ Coverage report not found" >> $GITHUB_STEP_SUMMARY
             fi
-            
+
             if [ -f test-results.xml ]; then
               TESTS=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('test-results.xml'); root = tree.getroot(); print(root.get('tests', '0'))" 2>/dev/null || echo "N/A")
               echo "🧪 **Test Results**: $TESTS tests" >> $GITHUB_STEP_SUMMARY
             fi
           fi
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📁 **Detailed Reports**: Available in artifacts section" >> $GITHUB_STEP_SUMMARY
           echo "🔗 **Local Testing**: Run \`make coverage\` for detailed HTML report" >> $GITHUB_STEP_SUMMARY

@@ -27,7 +27,7 @@ test.describe('CRUDテスト', () => {
   test('ファイルをアップロードする', async ({ request }) => {
     // 一意のテストデータを生成
     const uniqueTestData = generateUniqueTestData();
-    
+
     // ファイルをアップロードする
     const response = await uploadPdfFile(request, uniqueTestData)
     // レスポンスのステータスコードとメッセージを検証
@@ -45,7 +45,7 @@ test.describe('CRUDテスト', () => {
     // このテスト専用にファイルをアップロード
     const uniqueTestData = generateUniqueTestData();
     await uploadPdfFile(request, uniqueTestData);
-    
+
     // ファイル一覧を取得する
     const response = await getFilesList(request)
 
@@ -65,7 +65,7 @@ test.describe('CRUDテスト', () => {
     const uniqueTestData = generateUniqueTestData();
     const uploadResponse = await uploadPdfFile(request, uniqueTestData);
     expect(uploadResponse.status()).toBe(200);
-    
+
     const uploadData = await uploadResponse.json();
     const testFileId = uploadData.id;
 
@@ -92,7 +92,7 @@ test.describe('CRUDテスト', () => {
     const uniqueTestData = generateUniqueTestData();
     const uploadResponse = await uploadPdfFile(request, uniqueTestData);
     expect(uploadResponse.status()).toBe(200);
-    
+
     const uploadData = await uploadResponse.json();
     const testFileId = uploadData.id;
 
@@ -112,34 +112,34 @@ test.describe('CRUDテスト', () => {
     // このテスト専用にファイルをアップロード
     const uniqueTestData = generateUniqueTestData();
     await uploadPdfFile(request, uniqueTestData);
-    
+
     // ファイルの統計情報を取得する
     const response = await getFileStatistics(request)
     // レスポンスのステータスコードを検証
     await assertSuccessResponse(response, EXPECTED_RESPONSES.GET_FILE_STATISTICS_SUCCESS.status)
     // レスポンスのデータを検証
     const responseBody = await response.json()
-    
+
     // 基本的な構造の検証
     expect(responseBody.total_files).toEqual(1)
     expect(responseBody.status_counts).toBeDefined()
     expect(responseBody.status_counts.completed).toEqual(1)
     expect(responseBody.status_counts.processing).toEqual(0)
     expect(responseBody.status_counts.failed).toEqual(0)
-    
+
     // 動的な値の検証（範囲や存在確認）
     expect(responseBody.total_size_bytes).toBeGreaterThan(0)
     expect(responseBody.total_size_mb).toBeGreaterThanOrEqual(0)  // APIの実装に依存
     expect(responseBody.total_processing_time).toBeGreaterThan(0)
     expect(responseBody.average_processing_time).toBeGreaterThan(0)
-    
+
     // デバッグ用：実際の値をログ出力
     console.log('Debug - Statistics:', {
       total_size_bytes: responseBody.total_size_bytes,
       total_size_mb: responseBody.total_size_mb,
       expected_mb: responseBody.total_size_bytes / (1024 * 1024)
     })
-    
+
     // 論理的な関係の検証（APIの実装に依存するため、基本的な検証のみ）
     expect(responseBody.average_processing_time).toBeCloseTo(responseBody.total_processing_time / responseBody.total_files, 6)
   })
@@ -149,7 +149,7 @@ test.describe('CRUDテスト', () => {
     const uniqueTestData = generateUniqueTestData();
     const uploadResponse = await uploadPdfFile(request, uniqueTestData)
     expect(uploadResponse.status()).toBe(200)
-    
+
     const uploadData = await uploadResponse.json()
     const testFileId = uploadData.id
 
@@ -169,7 +169,7 @@ test.describe('CRUDテスト', () => {
     const uniqueTestData = generateUniqueTestData();
     const uploadResponse = await uploadPdfFile(request, uniqueTestData)
     expect(uploadResponse.status()).toBe(200)
-    
+
     const uploadData = await uploadResponse.json()
     const testFileId = uploadData.id
 
@@ -187,7 +187,7 @@ test.describe('CRUDテスト', () => {
     const uniqueTestData = generateUniqueTestData();
     const uploadResponse = await uploadPdfFile(request, uniqueTestData)
     expect(uploadResponse.status()).toBe(200)
-    
+
     const uploadData = await uploadResponse.json()
     const testFileId = uploadData.id
 

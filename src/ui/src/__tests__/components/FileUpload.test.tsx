@@ -61,7 +61,7 @@ describe('FileUpload', () => {
     expect(screen.getByText('アップロード中...')).toBeInTheDocument()
     expect(screen.getByText('ファイルを変換しています。しばらくお待ちください。')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'ファイルを選択' })).not.toBeInTheDocument()
-    
+
     // スピナーが表示されることを確認
     const spinner = document.querySelector('.animate-spin')
     expect(spinner).toBeInTheDocument()
@@ -141,7 +141,7 @@ describe('FileUpload', () => {
 
     const dropzone = screen.getByTestId('file-dropzone')
     const input = screen.getByTestId('file-input')
-    
+
     // input要素のクリックをモック
     const mockClick = jest.fn()
     input.click = mockClick

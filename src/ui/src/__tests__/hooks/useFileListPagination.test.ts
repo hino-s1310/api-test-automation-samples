@@ -55,12 +55,12 @@ describe('useFileListPagination', () => {
 
   it('ウィンドウサイズに応じてitemsPerPageが更新される', async () => {
     const { result } = renderHook(() => useFileListPagination(defaultOptions))
-    
+
     // 初期化完了を待つ
     await act(async () => {
       await new Promise(resolve => setTimeout(resolve, 10))
     })
-    
+
     const initialItemsPerPage = result.current.itemsPerPage
 
     await act(async () => {
@@ -91,7 +91,7 @@ describe('useFileListPagination', () => {
 
   it('リサイズイベントがデバウンスされる', async () => {
     const { result } = renderHook(() => useFileListPagination(defaultOptions))
-    
+
     // 初期化完了を待つ
     await act(async () => {
       await new Promise(resolve => setTimeout(resolve, 10))
@@ -105,7 +105,7 @@ describe('useFileListPagination', () => {
       window.dispatchEvent(new Event('resize'))
       window.innerHeight = 1100
       window.dispatchEvent(new Event('resize'))
-      
+
       // デバウンス期間後に状態が更新されることを確認
       await new Promise(resolve => setTimeout(resolve, 200))
     })

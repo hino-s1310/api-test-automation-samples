@@ -29,7 +29,7 @@ export default function FilesPage() {
       setLoading(true);
       setError(null);
       const response = await api.getFileList(page, itemsPerPage);
-      
+
       // APIレスポンスのページ番号とローカル状態の整合性チェック
       if (response.page !== page) {
         console.warn(`Page mismatch: requested ${page}, got ${response.page}`);
@@ -43,7 +43,7 @@ export default function FilesPage() {
           return;
         }
       }
-      
+
       setFiles(response);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'ファイル一覧の取得に失敗しました');
@@ -93,11 +93,11 @@ export default function FilesPage() {
     try {
       setDeletingFileId(fileId);
       await api.deleteFile(fileId);
-      
+
       // 削除後、現在のページが空になる可能性があるかチェック
       const isLastItemOnPage = files && files.files.length === 1;
       const shouldGoToPreviousPage = isLastItemOnPage && currentPage > 1;
-      
+
       if (shouldGoToPreviousPage) {
         // 前のページに移動してからデータを取得
         const newPage = currentPage - 1;
@@ -134,7 +134,7 @@ export default function FilesPage() {
             変換済みのPDFファイル一覧を表示します。
           </p>
         </div>
-        
+
         <div className="card" data-testid="loading-table" style={{ minHeight: '300px' }}>
           <div className="text-center py-12" data-testid="loading-spinner-container">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" data-testid="loading-spinner"></div>
@@ -157,7 +157,7 @@ export default function FilesPage() {
             変換済みのPDFファイル一覧を表示します。
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           <button
             onClick={refreshFiles}

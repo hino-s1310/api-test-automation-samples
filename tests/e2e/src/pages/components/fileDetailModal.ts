@@ -78,5 +78,5 @@ export class FileDetailModal extends BaseComponents {
   async getFileContent() {
     return this.fileContent;
   }
-  
+
 }

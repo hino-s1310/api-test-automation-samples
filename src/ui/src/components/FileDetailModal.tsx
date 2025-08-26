@@ -63,29 +63,29 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
     try {
       setIsUpdating(true);
       setUpdateError(null);
-      
+
       const updatedFile = await api.updateFile(currentFile.id, selectedFile);
       setCurrentFile(updatedFile);
-      
+
       // 親コンポーネントに更新を通知
       if (onFileUpdated) {
         onFileUpdated(updatedFile);
       }
-      
+
       // ファイル入力をリセット
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      
+
     } catch (error: any) {
       let errorMessage = 'ファイルの更新に失敗しました。';
-      
+
       if (error.response?.data?.detail) {
         errorMessage = error.response.data.detail;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setUpdateError(errorMessage);
     } finally {
       setIsUpdating(false);
@@ -191,7 +191,7 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
                   </svg>
                 </button>
               </div>
-              
+
               {/* 隠しファイル入力 */}
               <input
                 ref={fileInputRef}

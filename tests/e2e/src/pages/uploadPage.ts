@@ -37,5 +37,5 @@ export class UploadPage extends BasePage {
   getFileId() {
     return this.fileId;
   }
-  
+
 }

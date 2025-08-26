@@ -8,7 +8,7 @@ test.describe('エラーハンドリングテスト', () => {
   test('無効なファイル形式のアップロード', async ({ request }) => {
     // 無効なファイル（テキストファイル）をアップロード
     const invalidFile = Buffer.from('This is not a PDF file');
-    
+
     const response = await request.post('/upload', {
       multipart: {
         file: {
@@ -27,7 +27,7 @@ test.describe('エラーハンドリングテスト', () => {
   test('ファイルサイズ制限のテスト', async ({ request }) => {
     // 10MBを超えるファイルを作成
     const oversizedFile = Buffer.alloc(11 * 1024 * 1024, 'A');
-    
+
     const response = await request.post('/upload', {
       multipart: {
         file: {
@@ -46,10 +46,10 @@ test.describe('エラーハンドリングテスト', () => {
   test('無効なファイルIDでのアクセス', async ({ request }) => {
     // 無効なUUID形式のID
     const invalidId = 'invalid-id';
-    
+
     const response = await request.get(`/files/${invalidId}`);
     expect(response.status()).toBe(400);
-    
+
     const responseBody = await response.json();
     expect(responseBody.detail).toContain('無効なファイルID形式');
   });
@@ -57,10 +57,10 @@ test.describe('エラーハンドリングテスト', () => {
   test('存在しないファイルIDでのアクセス', async ({ request }) => {
     // 有効なUUID形式だが存在しないID
     const nonExistentId = '12345678-1234-5678-9abc-123456789def';
-    
+
     const response = await request.get(`/files/${nonExistentId}`);
     expect(response.status()).toBe(404);
-    
+
     const responseBody = await response.json();
     expect(responseBody.detail).toContain('ファイルが見つかりません');
   });
@@ -69,7 +69,7 @@ test.describe('エラーハンドリングテスト', () => {
     // 範囲外の日数
     const response = await request.post('/cleanup?days=0');
     expect(response.status()).toBe(422);
-    
+
     const response2 = await request.post('/cleanup?days=366');
     expect(response2.status()).toBe(422);
   });

@@ -21,7 +21,7 @@ export async function uploadPdfFile(
   testData: UploadTestData
 ) {
   const pdfContent = createTestPdfBuffer();
-  
+
   return await request.post(API_ENDPOINTS.upload, {
     multipart: {
       file: {
@@ -66,7 +66,7 @@ export async function getFileStatistics(request: APIRequestContext) {
  */
 export async function reconvertFile(request: APIRequestContext, fileId: string) {
   const pdfContent = createTestPdfBuffer();
-  
+
   return await request.put(API_ENDPOINTS.fileDetail(fileId), {
     multipart: {
       file: {
@@ -94,12 +94,12 @@ export async function assertSuccessResponse(
   expectedMessage?: string
 ) {
   expect(response.status()).toBe(expectedStatus);
-  
+
   const responseBody = await response.json();
   if (expectedMessage) {
     expect(responseBody.message).toBe(expectedMessage);
   }
-  
+
   return responseBody;
 }
 
@@ -114,10 +114,10 @@ export function assertErrorResponse(response: any, expectedStatus: number) {
 export async function setupMockData(page: any, data: any = VALID_UPLOAD_DATA) {
   try {
     console.log('ファイルアップロードを開始します...');
-    
+
     const response = await uploadPdfFile(page.request, data);
     console.log('アップロードレスポンス:', response.status(), response.statusText());
-    
+
     if (response.status() === 200) {
       console.log('ファイルのアップロードに成功しました');
       return true;

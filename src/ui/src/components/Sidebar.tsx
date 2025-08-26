@@ -12,7 +12,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose, onToggle, isMobile = false }: SidebarProps) {
   const pathname = usePathname();
-  
+
   // onClose と onToggle のどちらか利用可能な方を使用
   const handleClose = onClose || onToggle;
 
@@ -73,7 +73,7 @@ export default function Sidebar({ isOpen, onClose, onToggle, isMobile = false }:
               </span>
             </div>
           </div>
-          
+
           {/* 閉じるボタン（モバイルのみ） */}
           {isMobile && (
             <button

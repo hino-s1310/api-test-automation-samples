@@ -12,7 +12,7 @@ test.describe('ファイル削除の統合テスト', () => {
     // テスト開始前にデータベースをクリーンアップ
     await cleanupMockData(page);
   });
-  
+
   test('ファイル削除したらAPIが正常に動作する', async ({ page }) => {
     // モックデータを挿入し、ファイルIDを取得
     await setupMockData(page);
@@ -20,7 +20,7 @@ test.describe('ファイル削除の統合テスト', () => {
 
     // APIリクエストを監視
     const apiResponses: any[] = [];
-    
+
     page.on('response', response => {
       if (response.url().includes(`/files/${fileId}`)) {
         apiResponses.push(response);
