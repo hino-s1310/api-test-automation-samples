@@ -140,3 +140,12 @@ export async function cleanupMockData(page: any) {
     console.log('データベースリセットエンドポイントが利用できません');
   }
 }
+
+/**
+ * ファイルIDを取得するヘルパー関数
+ */
+export async function getFileId(page: any, fileName: string) {
+  const response = await getFilesList(page.request);
+  const responseBody = await response.json();
+  return responseBody.files.find((file: any) => file.filename === fileName)?.id;
+}

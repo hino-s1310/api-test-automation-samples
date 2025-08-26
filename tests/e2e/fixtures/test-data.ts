@@ -90,6 +90,16 @@ export const VALID_CLEANUP_DATA: UploadTestData = {
 };
 
 /**
+ * ファイル更新用の正常系テストデータ
+ */
+export const VALID_UPDATE_DATA: UploadTestData = {
+  id: '2',
+  filename: 'updated-test.pdf',
+  markdown: 'updated-test',
+  status: 'completed',
+};
+
+/**
  * レスポンス期待値
  */
 export const EXPECTED_RESPONSES = {

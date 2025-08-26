@@ -11,9 +11,6 @@ test.describe('ファイルアップロードの統合テスト', () => {
   });
   
   test('ファイルアップロードしたらAPIが正常に動作する', async ({ page }) => {
-    // モックデータを挿入
-    await setupMockData(page);
-
     // APIリクエストを監視
     const apiResponses: any[] = [];
     

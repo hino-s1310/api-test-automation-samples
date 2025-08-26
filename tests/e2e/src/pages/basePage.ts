@@ -28,8 +28,14 @@ export class BasePage {
     await this.page.waitForLoadState(state);
   }
 
+  // ページURLが変更されるまで待機
   async waitForPageUrl(url: string) {
     await this.page.waitForURL(url);
+  }
+
+  // ページを再読み込み
+  async reload() {
+    await this.page.reload();
   }
 
   // APIレスポンスが返ってくるまで明示的に待機

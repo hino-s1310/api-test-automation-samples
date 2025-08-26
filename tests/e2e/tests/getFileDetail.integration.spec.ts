@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { cleanupMockData, setupMockData } from '../helpers/api-helpers';
+import { cleanupMockData, setupMockData, getFileId } from '../helpers/api-helpers';
 import { UploadPage } from '../src/pages/uploadPage';
 import { FilesListPage } from '../src/pages/filesListPage';
+import { VALID_UPLOAD_DATA } from '../fixtures/test-data';
 
+const FILE_NAME = VALID_UPLOAD_DATA.filename;
 
 test.describe('ファイル詳細APIの統合テスト', () => {
   // テストを直列実行して、データベースの状態を管理
@@ -15,15 +17,16 @@ test.describe('ファイル詳細APIの統合テスト', () => {
   });
 
   test('ファイル詳細モーダルを開いたらAPIが正常に動作する', async ({ page }) => {
-    // モックデータを挿入
+    // モックデータを挿入し、ファイルIDを取得
     await setupMockData(page);
+    const fileId = await getFileId(page, FILE_NAME);
 
     // APIリクエストを監視
     const apiResponses: any[] = [];
     
     page.on('response', response => {
       // ファイル詳細APIのレスポンスを監視（/files/{id}の形式）
-      if (response.url().includes('/files/') && !response.url().includes('?page=')) {
+      if (response.url().includes(`/files/${fileId}`)) {
         apiResponses.push(response);
       }
     });
@@ -40,12 +43,12 @@ test.describe('ファイル詳細APIの統合テスト', () => {
     await uploadPage.clickSideMenu('ファイル一覧 変換済みファイル管理');
     await filesListPage.waitForPageUrl('http://localhost:3000/files/');
 
-    // ファイル詳細画面に遷移
-    await filesListPage.clickFileName('test.pdf');
+    // ファイル詳細モーダルを開く
+    await filesListPage.clickFileName(FILE_NAME);
 
     // ファイル詳細APIのレスポンスを待機
     await page.waitForResponse(response => 
-      response.url().includes('/files/') && 
+      response.url().includes(`/files/${fileId}`) && 
       !response.url().includes('?page=') && 
       response.status() === 200
     , { timeout: 30000 });
@@ -58,7 +61,7 @@ test.describe('ファイル詳細APIの統合テスト', () => {
     
     // ファイル詳細APIのレスポンスを確認
     const fileDetailApiResponse = apiResponses.find(response => 
-      response.url().includes('/files/') && !response.url().includes('?page=')
+      response.url().includes(`/files/${fileId}`)
     );
     
     if (fileDetailApiResponse) {
@@ -70,7 +73,7 @@ test.describe('ファイル詳細APIの統合テスト', () => {
     // ファイル詳細モーダルのファイル名の確認
     const fileName = filesListPage.getFileDetailModalFileName();
     await expect(fileName).toBeVisible();
-    await expect(fileName).toContainText('test.pdf');
+    await expect(fileName).toContainText(FILE_NAME);
     
   });
 

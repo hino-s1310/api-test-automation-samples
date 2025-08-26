@@ -2,7 +2,7 @@
 import { Locator, Page } from '@playwright/test';
 import { BaseComponents } from './baseComponents';
 
-export class fileDetailModal extends BaseComponents {
+export class FileDetailModal extends BaseComponents {
 
   private fileName: Locator;
   private fileId: Locator;
@@ -13,6 +13,7 @@ export class fileDetailModal extends BaseComponents {
   private downloadButton: Locator;
   private copyButton: Locator;
   private closeButton: Locator;
+  private fileContent: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -25,6 +26,7 @@ export class fileDetailModal extends BaseComponents {
     this.downloadButton = page.getByTestId('download-button');
     this.copyButton = page.getByTestId('copy-button');
     this.closeButton = page.getByTestId('modal-close-button');
+    this.fileContent = page.getByTestId('markdown-content').locator('p');
   }
 
   // ファイル名を取得
@@ -72,6 +74,9 @@ export class fileDetailModal extends BaseComponents {
     await this.closeButton.click();
   }
 
-
+  // ファイル内容を取得
+  async getFileContent() {
+    return this.fileContent;
+  }
   
 }

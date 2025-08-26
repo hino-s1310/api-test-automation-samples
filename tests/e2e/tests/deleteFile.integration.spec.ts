@@ -1,31 +1,28 @@
 import { test, expect } from '@playwright/test';
-import { cleanupMockData, setupMockData } from '../helpers/api-helpers';
+import { cleanupMockData, setupMockData, getFileId } from '../helpers/api-helpers';
 import { UploadPage } from '../src/pages/uploadPage';
 import { FilesListPage } from '../src/pages/filesListPage';
 import { VALID_UPLOAD_DATA } from '../fixtures/test-data';
 
 const FILE_NAME = VALID_UPLOAD_DATA.filename;
 
+test.describe('ファイル削除の統合テスト', () => {
 
-test.describe('ファイル一覧APIの統合テスト', () => {
-  // テストを直列実行して、データベースの状態を管理
-  test.describe.configure({ mode: 'serial' });
-  
-  // 各テストの前後でクリーンアップ
   test.beforeEach(async ({ page }) => {
     // テスト開始前にデータベースをクリーンアップ
     await cleanupMockData(page);
   });
-
-  test('ファイル一覧画面に遷移したらAPIが正常に動作する', async ({ page }) => {
-    // モックデータを挿入
+  
+  test('ファイル削除したらAPIが正常に動作する', async ({ page }) => {
+    // モックデータを挿入し、ファイルIDを取得
     await setupMockData(page);
+    const fileId = await getFileId(page, FILE_NAME);
 
     // APIリクエストを監視
     const apiResponses: any[] = [];
     
     page.on('response', response => {
-      if (response.url().includes('/files')) {
+      if (response.url().includes(`/files/${fileId}`)) {
         apiResponses.push(response);
       }
     });
@@ -41,23 +38,21 @@ test.describe('ファイル一覧APIの統合テスト', () => {
     // ファイル一覧画面に遷移
     await uploadPage.clickSideMenu('ファイル一覧 変換済みファイル管理');
     await filesListPage.waitForPageUrl('http://localhost:3000/files/');
-    
-    // APIレスポンスが返ってくるまで明示的に待機
-    await filesListPage.waitForResponse('/files');
 
-    // ページ読み込み完了を待機
-    await filesListPage.waitForPageLoad('domcontentloaded');
+    // ファイルを削除
+    await filesListPage.clickDeleteButton(FILE_NAME);
+
+    // ファイル削除APIのレスポンスを待機
+    const response = await filesListPage.waitForResponse(`/files/${fileId}`);
 
     // APIが呼び出されたことを確認
-    expect(apiResponses.length).toBeGreaterThan(0);
-    expect(apiResponses[0].status()).toBe(200);
-    
-    // ファイル一覧の表示を確認（データが読み込まれるまで待機）
-    const fileListTable = filesListPage.getFilesTable();
-    await expect(fileListTable).toBeVisible();
-    // テーブルの行が表示されるまで待機
-    const filesNameLocator = filesListPage.getFilesNameLocator(FILE_NAME);
-    await expect(filesNameLocator).toBeVisible();
+    expect(response.status()).toBe(200);
+
+    const responseBody = await response.json();
+    expect(responseBody.message).toBe('ファイルが正常に削除されました');
+
+    // 削除後の確認を追加
+    await expect(filesListPage.getFilesNameLocator(FILE_NAME)).not.toBeVisible();
   });
 
   test.afterEach(async ({ page }) => {
