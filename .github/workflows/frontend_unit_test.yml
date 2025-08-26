@@ -48,10 +48,6 @@ jobs:
         with:
           version: 9.15.0
           run_install: false
-          dest: ~/setup-pnpm
-          package_json_file: package.json
-          standalone: false
-          registry: https://registry.npmjs.org/
 
       - name: Setup pnpm fallback
         if: failure()
@@ -63,9 +59,6 @@ jobs:
 
           # バージョン確認
           pnpm --version
-
-          # レジストリ設定
-          pnpm config set registry https://registry.npmjs.org/
 
           echo "pnpm installed via npm successfully"
 
