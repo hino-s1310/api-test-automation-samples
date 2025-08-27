@@ -147,7 +147,7 @@ jobs:
           echo "Installing E2E test dependencies..."
 
           # 正しいディレクトリに移動
-          cd playwright
+          cd tests
           echo "Current directory: $(pwd)"
 
           # 依存関係をインストール
@@ -196,7 +196,7 @@ jobs:
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('tests/e2e/playwright/package.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('tests/e2e/playwright/tests/package.json') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
 
@@ -205,8 +205,8 @@ jobs:
         run: |
           echo "Installing Playwright browsers..."
 
-          # 正しいディレクトリに移動（既にtests/e2eにいるため、playwrightのみ）
-          cd playwright
+          # 正しいディレクトリに移動（playwright設定ファイルがあるディレクトリ）
+          cd tests
           echo "Current directory: $(pwd)"
 
           if command -v pnpm >/dev/null 2>&1; then
@@ -409,8 +409,8 @@ jobs:
           export PWTEST_SKIP_TEST_OUTPUT=1
           export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-          # 正しいディレクトリに移動（既にtests/e2eにいるため、playwrightのみ）
-          cd playwright
+          # 正しいディレクトリに移動（playwright設定ファイルがあるディレクトリ）
+          cd tests
           echo "Current directory: $(pwd)"
 
           # 全テストを実行（API、UI、統合テスト）
@@ -455,8 +455,8 @@ jobs:
         run: |
           echo "=== Test Results Summary ==="
 
-          # playwrightディレクトリに移動
-          cd playwright
+          # testsディレクトリに移動
+          cd tests
 
           # テスト結果ファイルの確認
           if [ -d "test-results" ]; then
@@ -517,8 +517,8 @@ jobs:
         with:
           name: e2e-test-results-node-${{ matrix.node-version }}
           path: |
-            tests/e2e/playwright/test-results/
-            tests/e2e/playwright/playwright-report/
+            tests/e2e/playwright/tests/test-results/
+            tests/e2e/playwright/tests/playwright-report/
           retention-days: 14
 
       - name: Upload Playwright HTML Report
@@ -526,7 +526,7 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: playwright-report-node-${{ matrix.node-version }}
-          path: tests/e2e/playwright/playwright-report/
+          path: tests/e2e/playwright/tests/playwright-report/
           retention-days: 14
 
       - name: Upload server logs

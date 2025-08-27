@@ -65,7 +65,7 @@ export default defineConfig({
   webServer: process.env.CI ? [] : [
     {
       name: 'api-server',
-      command: 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
+      command: 'cd ../../ && ENVIRONMENT=test uv run uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000',
       url: 'http://localhost:8000/health',
       reuseExistingServer: true,
       timeout: 120 * 1000,
@@ -76,7 +76,7 @@ export default defineConfig({
     },
     {
       name: 'ui-server',
-      command: 'cd ../../src/ui && pnpm install && pnpm dev',
+      command: 'cd ../../apps/web && pnpm install && pnpm dev',
       url: 'http://localhost:3000',
       stdout: 'pipe',
       reuseExistingServer: true,
