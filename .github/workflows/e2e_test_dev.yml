@@ -205,8 +205,8 @@ jobs:
         run: |
           echo "Installing Playwright browsers..."
 
-          # 正しいディレクトリに移動
-          cd tests/e2e/playwright
+          # 正しいディレクトリに移動（既にtests/e2eにいるため、playwrightのみ）
+          cd playwright
           echo "Current directory: $(pwd)"
 
           if command -v pnpm >/dev/null 2>&1; then
@@ -409,8 +409,8 @@ jobs:
           export PWTEST_SKIP_TEST_OUTPUT=1
           export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-          # 正しいディレクトリに移動
-          cd tests/e2e/playwright
+          # 正しいディレクトリに移動（既にtests/e2eにいるため、playwrightのみ）
+          cd playwright
           echo "Current directory: $(pwd)"
 
           # 全テストを実行（API、UI、統合テスト）
@@ -455,6 +455,9 @@ jobs:
         run: |
           echo "=== Test Results Summary ==="
 
+          # playwrightディレクトリに移動
+          cd playwright
+
           # テスト結果ファイルの確認
           if [ -d "test-results" ]; then
             echo "Test results directory contents:"
@@ -473,6 +476,9 @@ jobs:
           else
             echo "Playwright report not found"
           fi
+
+          # 元のディレクトリに戻る
+          cd ..
 
       - name: Stop servers
         if: always()
