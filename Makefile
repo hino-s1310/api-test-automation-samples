@@ -74,10 +74,10 @@ check: ## Run all quality checks
 
 # Development
 dev: ## Start development server
-	uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+	uv run uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000
 
 run: ## Start production server
-	uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+	uv run uvicorn apps.api.main:app --host 0.0.0.0 --port 8000
 
 # Cleanup
 clean: ## Clean up generated files

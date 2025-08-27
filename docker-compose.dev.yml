@@ -1,19 +1,19 @@
 version: '3.8'
 
 services:
-  # 開発用API（ホットリロード対応）
   api-dev:
-    build: .
-    container_name: pdf-markdown-api-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - ./src:/app/src
-      - ./pyproject.toml:/app/pyproject.toml
+      - ./data:/app/data
+      - ./apps/api:/app/apps/api
     environment:
       - PYTHONPATH=/app
       - ENVIRONMENT=development
-    command: uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+    command: uv run uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000
     restart: unless-stopped
 
 volumes:

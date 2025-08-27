@@ -1,22 +1,22 @@
-# api-test-automation-samples
+# test-automation-samples
 
-PDFをMarkdown形式に変換するAPIに対して、様々なAPIテストツールで自動テストのサンプルコードを作成する包括的なプロジェクトです。
+Web（Next.js）＋API（FastAPI）＋Mobile（Expo）のサンプルアプリに自動テストコードを作成しています。
 
-## 🎯 プロジェクトの目的
-
-**api-test-automation-samples** は、同じAPIに対して複数のテストツールでの実装例を提供し、包括的なテスト戦略（ユニット、E2E、CI/CD）を実現することを目的としています。
+サンプルアプリはPDFをMarkdown形式に変換し、PDFの内容を虫食いにして覚えているかどうかを確認できるアプリです。JSTQBの学習に役立てられればと思います。
 
 ### **主な特徴**
 - 同じAPIに対して複数のテストツールでの実装例を提供
 - 包括的なテスト戦略（ユニット、E2E、CI/CD）
+- **Web・モバイル・APIの統合開発環境**
+- **PDF→Markdown変換 + 穴埋めクイズ機能**
 - モダンな技術スタックの採用
 - 実用的なサンプルコード
 
-## 🚀 技術スタック
+## 技術スタック
 
 ### **バックエンド**
 - **フレームワーク**: FastAPI 0.104.1+
-- **言語**: Python 3.11+
+- **言語**: Python 3.10+
 - **パッケージマネージャー**: uv
 - **データベース**: SQLite
 - **PDF処理**: markitdown, pypdf, pdfplumber
@@ -26,12 +26,19 @@ PDFをMarkdown形式に変換するAPIに対して、様々なAPIテストツー
 - **言語**: TypeScript 5.2+
 - **UIライブラリ**: React 18
 - **スタイリング**: Tailwind CSS 3.3+
-- **パッケージマネージャー**: pnpm 8.10+
+- **パッケージマネージャー**: pnpm 8.10+ (UI), pnpm 9.15+ (E2E)
+
+### **モバイルアプリ**
+- **フレームワーク**: Expo 50
+- **言語**: TypeScript 5.3+
+- **UIライブラリ**: React Native 0.73.6
+- **ナビゲーション**: Expo Router
+- **パッケージマネージャー**: pnpm 9.15+
 
 ### **テスト**
 - **Python**: pytest + pytest-asyncio + pytest-cov
 - **TypeScript**: Jest + Testing Library
-- **E2E**: Playwright
+- **E2E**: Playwright (Web), Maestro (Mobile)
 - **カバレッジ**: pytest-cov, Jest coverage
 
 ### **CI/CD**
@@ -40,50 +47,123 @@ PDFをMarkdown形式に変換するAPIに対して、様々なAPIテストツー
 - **カバレッジ**: Codecov
 - **アーティファクト**: GitHub Actions Artifacts
 
-## 📁 プロジェクト構成
+## モバイルアプリ拡充ロードマップ
+
+### **詳細な機能チェックリスト**
+
+#### **フェーズ0: 基盤構築** ✅
+- [x] Expo 50 + React Native 0.73.6環境構築
+- [x] TypeScript設定・型定義
+- [x] 基本的なディレクトリ構造
+- [x] pnpmワークスペース設定
+
+#### **フェーズ1: PDFアップロード機能** ✅
+- [x] Expo Document Picker統合
+- [x] PDFファイル選択・検証
+- [x] FastAPI連携・アップロード
+- [x] エラーハンドリング
+
+#### **フェーズ2: Markdown表示** ✅
+- [x] 変換結果の表示
+- [x] 基本的なスタイリング
+- [x] レスポンシブレイアウト
+- [x] 成功・エラー通知
+
+#### **フェーズ3: 穴埋めクイズ機能** 🔄
+- [ ] マークダウンテキストの解析
+- [ ] 穴埋め問題の自動生成
+- [ ] クイズUIの実装
+- [ ] 回答・採点機能
+
+#### **フェーズ4: ファイル管理** 📋
+- [ ] アップロード履歴表示
+- [ ] ファイル一覧・検索
+- [ ] ファイル削除・更新
+- [ ] ローカルストレージ連携
+
+#### **フェーズ5: 進捗管理** 📋
+- [ ] 変換進捗バー
+- [ ] 完了通知・プッシュ通知
+- [ ] バックグラウンド処理
+- [ ] エラーリトライ機能
+
+#### **フェーズ6: オフライン対応** 📋
+- [ ] ローカルキャッシュ
+- [ ] オフライン時の動作
+- [ ] 同期機能
+- [ ] データ整合性チェック
+
+#### **フェーズ7: 高度なUI/UX** 📋
+- [ ] アニメーション・トランジション
+- [ ] ジェスチャー操作
+- [ ] ダークモード対応
+- [ ] アクセシビリティ向上
+
+## プロジェクト構成
 
 ```
-api-test-automation-samples/
-├── src/                          # ソースコード
-│   ├── api/                      # FastAPI バックエンド
-│   │   ├── main.py              # メインアプリケーション
-│   │   ├── models.py             # データモデル
-│   │   ├── database.py           # データベース管理
-│   │   └── services/             # ビジネスロジック
-│   │       ├── file_service.py   # ファイル管理サービス
-│   │       └── pdf_service.py    # PDF変換サービス
-│   └── ui/                       # Next.js フロントエンド
-│       ├── src/
-│       │   ├── app/              # App Router
-│       │   ├── components/       # React コンポーネント
-│       │   ├── hooks/            # カスタムフック
-│       │   ├── lib/              # ユーティリティ
-│       │   └── types/            # TypeScript型定義
-│       ├── package.json          # 依存関係
-│       └── jest.config.ts        # Jest設定
-├── tests/                         # テストコード
-│   ├── unit/                     # Python ユニットテスト
-│   │   ├── test_api.py           # APIテスト
-│   │   ├── test_services.py      # サービステスト
-│   │   ├── fixtures/             # テストデータ
-│   │   └── helpers/              # テストヘルパー
-│   └── e2e/                      # Playwright E2Eテスト
-│       ├── tests/                 # テストファイル
-│       ├── fixtures/              # テストデータ
-│       ├── helpers/               # テストヘルパー
-│       └── package.json          # 依存関係
-├── .github/workflows/             # GitHub Actions
-│   ├── backend_unit_test.yml     # バックエンドテスト
-│   ├── frontend_unit_test.yml    # フロントエンドテスト
-│   └── e2e_test.yml              # E2Eテスト
-├── docs/                          # ドキュメント
-├── data/                          # データファイル
-├── Makefile                       # 開発用コマンド
-├── pyproject.toml                # Python設定
-└── README.md                      # プロジェクト説明
+test-automation-samples/
+├── apps/                          # アプリケーション群
+│   ├── web/                       # Next.js フロントエンド
+│   │   ├── src/
+│   │   │   ├── app/               # App Router
+│   │   │   │   ├── upload/        # アップロードページ
+│   │   │   │   └── files/         # ファイル一覧ページ
+│   │   │   ├── components/        # React コンポーネント
+│   │   │   ├── hooks/             # カスタムフック
+│   │   │   ├── lib/               # ユーティリティ
+│   │   │   ├── types/             # TypeScript型定義
+│   │   │   └── __tests__/         # テストファイル
+│   │   ├── package.json           # 依存関係
+│   │   └── jest.config.ts         # Jest設定
+│   ├── mobile/                    # Expo (React Native) モバイルアプリ
+│   │   ├── src/
+│   │   │   ├── components/        # React Native コンポーネント
+│   │   │   ├── screens/           # 画面コンポーネント
+│   │   │   ├── hooks/             # カスタムフック
+│   │   │   ├── lib/               # ユーティリティ
+│   │   │   └── types/             # TypeScript型定義
+│   │   ├── app/                   # Expo Router
+│   │   ├── assets/                # 画像・アイコン
+│   │   ├── app.json               # Expo設定
+│   │   ├── package.json           # 依存関係
+│   │   └── tsconfig.json          # TypeScript設定
+│   └── api/                       # FastAPI バックエンド
+│       ├── main.py                # メインアプリケーション
+│       ├── models.py              # データモデル
+│       ├── database.py            # データベース管理
+│       └── services/              # ビジネスロジック
+│           ├── file_service.py    # ファイル管理サービス
+│           └── pdf_service.py     # PDF変換サービス
+├── tests/                          # テストコード
+│   ├── unit/                      # Python ユニットテスト
+│   │   ├── test_api.py            # APIテスト
+│   │   ├── test_services.py       # サービステスト
+│   │   ├── fixtures/              # テストデータ
+│   │   └── helpers/               # テストヘルパー
+│   └── e2e/                       # E2Eテスト
+│       ├── playwright/            # Web E2Eテスト
+│       │   ├── tests/             # Playwrightテスト
+│       │   ├── fixtures/          # テストデータ
+│       │   ├── package.json       # 依存関係
+│       │   └── playwright.config.ts # Playwright設定
+│       └── maestro/               # Mobile E2Eテスト
+│           ├── tests/             # Maestroテスト
+│           └── fixtures/          # テストデータ
+├── .github/workflows/              # GitHub Actions
+│   ├── backend_unit_test.yml      # バックエンドテスト
+│   ├── frontend_unit_test.yml     # フロントエンドテスト
+│   └── e2e_test_dev.yml           # E2Eテスト
+├── docs/                           # ドキュメント
+├── data/                           # データファイル
+├── Makefile                        # 開発用コマンド
+├── pnpm-workspace.yaml            # pnpmワークスペース管理
+├── pyproject.toml                 # Python設定
+├── package.json                    # ルート設定
+└── README.md                       # プロジェクト説明
 ```
 
-## 🔧 機能一覧
+## 機能一覧
 
 ### **API エンドポイント**
 
@@ -107,34 +187,49 @@ api-test-automation-samples/
 - ファイル管理（一覧・削除・更新）
 - レスポンシブデザイン
 
-## 🧪 テスト戦略
+### **モバイルアプリ機能**
+- PDFファイル選択・アップロード
+- Markdown変換結果表示
+- 基本的なUI/UX
+- 穴埋めクイズ機能（開発中）
 
-### **テスト構成**
+## テストツール
+### **テスト構成（テストピラミッド＋サイズ感）**
 
-#### ユニットテスト
-- **バックエンド**: pytest + pytest-asyncio
-- **フロントエンド**: Jest + Testing Library
-- **カバレッジ**: pytest-cov, Jest coverage
+#### Unitテスト (S: Small)
+- **バックエンド**
+  - pytest + pytest-asyncio
+  - ビジネスロジック、変換関数、バリデーションの検証
+- **フロントエンド**
+  - Jest + Testing Library
+  - UIコンポーネント単体の表示／状態遷移テスト
+- **モバイル**
+  - Jest + React Native Testing Library
+  - Hooksやコンポーネントの単体テスト
+- **カバレッジ管理**
+  - pytest-cov, Jest coverage
 
-#### 統合テスト
-- **API**: pytest + httpx
-- **データベース**: SQLite + テストデータ
+#### Integrationテスト (M: Medium)
+- **APIレベル統合**
+  - pytest + httpx
+  - APIエンドポイント疎通、リクエスト/レスポンス仕様確認
+- **DBレベル統合**
+  - SQLite + テストデータ
+  - ORM操作やクエリ挙動の検証
+- **UI→API統合**
+  - Playwright（Web）、Maestro（Mobile）
+  - UI操作をトリガーにAPIが呼ばれ、レスポンスが反映されることを確認
 
-#### E2Eテスト
-- **ブラウザ**: Playwright
-- **シナリオ**: ファイルアップロードから変換完了まで
-
-### **対応予定のテストツール**
-| カテゴリ | ツール | 言語 | 特徴 | ステータス |
-|----------|--------|------|------|------------|
-| **APIテスト** | pytest + httpx | Python | 軽量・高速 | ✅ 実装済み |
-| **E2Eテスト** | Playwright | Node.js | ブラウザ自動化 | ✅ 実装済み |
-| **APIテスト** | Postman/Newman | - | GUI・コレクション | 🔄 予定 |
-| **BDDテスト** | Karate | Java | 自然言語記述 | 🔄 予定 |
+#### Systemテスト (L: Large, End-to-End)
+- **Web**: Playwright
+- **Mobile**: Maestro
+- **シナリオ**:
+  - ユーザーが「PDFアップロード → Markdown変換 → 赤セル編集 → 暗記確認」までを完了できるか
+  - ハッピーパス中心
 
 ---
 
-## 🚀 CI/CD & テスト自動化
+## CI/CD & テスト自動化
 
 ### GitHub Actions ワークフロー
 
@@ -142,35 +237,49 @@ api-test-automation-samples/
 
 #### **主要ワークフロー**
 
-| ワークフロー | トリガー | 目的 |
-|-------------|----------|------|
-| `backend_unit_test.yml` | PR作成・main push・定期実行 | バックエンドユニットテスト |
-| `frontend_unit_test.yml` | PR作成・main push・定期実行 | フロントエンドユニットテスト |
-| `e2e_test.yml` | PR作成・main push・定期実行 | E2Eテスト |
+| ワークフロー | トリガー | 目的 | 実行内容 |
+|-------------|----------|------|----------|
+| `backend_unit_test.yml` | PR作成・main push・定期実行 | バックエンドユニットテスト | pytest + カバレッジ + コード品質 |
+| `frontend_unit_test.yml` | PR作成・main push・定期実行 | フロントエンドユニットテスト | Jest + カバレッジ + TypeScript型チェック |
+| `e2e_test_dev.yml` | PR作成・main push・定期実行 | E2Eテスト | Playwright + 実際のAPIサーバー連携 |
 
 #### **実行タイミング**
-- **PR作成・更新時**: 全テストを実行
+- **PR作成・更新時**: 全テストを実行（Lint + Unit + E2E）
 - **mainブランチプッシュ時**: 全テストを実行
-- **毎日午前3時（JST）**: 定期的なヘルスチェック
+- **毎日午前3時（JST）**: バックエンド・フロントエンド・モバイルの定期テスト
+- **毎日午後6時（JST）**: E2Eテストの定期実行
 - **手動実行**: 必要に応じて実行可能
 
-#### **テスト構成**
+#### **CI/CDパイプライン構成**
 ```
 CI/CD Pipeline
 ├── バックエンドテスト
-│   ├── Python 3.11 + uv
+│   ├── Python 3.10 + uv
 │   ├── pytest + カバレッジ
 │   └── コード品質チェック
 ├── フロントエンドテスト
 │   ├── Node.js 20.x + pnpm
 │   ├── Jest + カバレッジ
 │   └── TypeScript型チェック
+├── モバイルアプリテスト
+│   ├── Node.js 20.x + pnpm
+│   ├── Jest + React Native Testing Library
+│   └── TypeScript型チェック
 └── E2Eテスト
-    ├── Playwright
+    ├── Playwright (Web)
+    ├── Maestro (Mobile)
     └── 実際のAPIサーバー連携
 ```
 
-### 🛠️ 開発者向けツール
+#### **品質保証プロセス**
+1. **Lintチェック**: ESLint, Flake8, Black, Ruff
+2. **型チェック**: TypeScript, MyPy
+3. **ユニットテスト**: Jest, pytest
+4. **E2Eテスト**: Playwright, Maestro
+5. **カバレッジ**: 最小80%以上を要求
+6. **アーティファクト**: テスト結果・カバレッジレポートを保存
+
+### 開発者向けツール
 
 #### **Make コマンド（バックエンド）**
 ```bash
@@ -198,35 +307,63 @@ make coverage        # カバレッジレポート生成
 make clean           # 生成ファイルのクリーンアップ
 ```
 
-#### **pnpm コマンド（フロントエンド）**
+#### **pnpm コマンド（統合管理）**
 ```bash
-cd src/ui
+# 全依存関係インストール
+pnpm install:all
 
-# 開発サーバー
+# 開発サーバー起動
+pnpm dev:web        # Next.js フロントエンド
+pnpm dev:mobile     # Expo モバイルアプリ
+pnpm dev:api        # FastAPI バックエンド
+
+# テスト実行
+pnpm test:web       # フロントエンドテスト
+pnpm test:mobile    # モバイルアプリテスト
+pnpm test:api       # バックエンドテスト
+pnpm test:e2e:web   # Web E2Eテスト
+pnpm test:e2e:mobile # Mobile E2Eテスト
+
+# ビルド
+pnpm build:web      # Next.js ビルド
+pnpm build:mobile   # Expo ビルド
+```
+
+#### **pnpm コマンド（個別アプリ）**
+```bash
+# Webアプリ
+cd apps/web
 pnpm dev             # 開発サーバー起動
 pnpm build           # ビルド
 pnpm start           # 本番サーバー起動
-
-# テスト・品質
 pnpm test            # テスト実行
 pnpm test --coverage # カバレッジ付きテスト
+pnpm lint            # Lintチェック
+pnpm type-check      # 型チェック
+
+# モバイルアプリ
+cd apps/mobile
+pnpm start           # Expo開発サーバー起動
+pnpm android         # Androidエミュレータ起動
+pnpm ios             # iOSシミュレータ起動
+pnpm test            # テスト実行
 pnpm lint            # Lintチェック
 pnpm type-check      # 型チェック
 ```
 
 #### **Pre-commit フック**
 コミット前に自動的に実行されるチェック：
-- コードフォーマット (Black)
-- Lintチェック (Flake8)
-- 型チェック (MyPy)
+- コードフォーマット (Black, Ruff)
+- Lintチェック (Flake8, ESLint)
+- 型チェック (MyPy, TypeScript)
 - ユニットテスト実行
 
 ---
 
-## 🚀 クイックスタート
+## クイックスタート
 
 ### **前提条件**
-- Python 3.11+
+- Python 3.10+
 - Node.js 20.x+
 - uv (Python パッケージマネージャー)
 - pnpm (Node.js パッケージマネージャー)
@@ -235,362 +372,152 @@ pnpm type-check      # 型チェック
 
 #### 1. リポジトリクローン
 ```bash
-git clone https://github.com/yourusername/api-test-automation-samples.git
-cd api-test-automation-samples
+git clone https://github.com/yourusername/test-automation-samples.git
+cd test-automation-samples
 ```
 
-#### 2. バックエンドセットアップ
+#### 2. 全依存関係インストール
 ```bash
-# uv インストール（未インストールの場合）
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# 依存関係インストール
-make install
-
-# データベース初期化
-make db-init
-
-# 開発サーバー起動
-make dev
+# 全アプリケーションの依存関係を一括インストール
+pnpm install:all
 ```
 
-#### 3. フロントエンドセットアップ
+#### 3. 個別アプリケーションの起動
+
+**バックエンド（API）**
 ```bash
-cd src/ui
-
-# 依存関係インストール
-pnpm install
-
 # 開発サーバー起動
+pnpm dev:api
+
+# または個別に
+cd apps/api
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**フロントエンド（Web）**
+```bash
+# 開発サーバー起動
+pnpm dev:web
+
+# または個別に
+cd apps/web
 pnpm dev
+```
+
+**モバイルアプリ**
+```bash
+# Expo開発サーバー起動
+pnpm dev:mobile
+
+# または個別に
+cd apps/mobile
+pnpm start
 ```
 
 #### 4. テスト実行
 ```bash
-# バックエンドテスト
-make test-unit
+# 全テスト実行
+pnpm test:web       # フロントエンド
+pnpm test:mobile    # モバイルアプリ
+pnpm test:api       # バックエンド
+pnpm test:e2e:web   # Web E2E
+pnpm test:e2e:mobile # Mobile E2E
 
-# フロントエンドテスト
-cd src/ui && pnpm test
-
-# E2Eテスト
-make test-e2e
+# 個別実行
+cd apps/web && pnpm test
+cd apps/mobile && pnpm test
+cd apps/api && uv run pytest tests/unit/
 ```
 
 ### **動作確認**
 - バックエンド: http://localhost:8000
 - フロントエンド: http://localhost:3000
 - API ドキュメント: http://localhost:8000/docs
+- モバイル: Expo GoアプリでQRコード読み取り
 
 ---
 
-## 機能要件
-1. **PDFアップロード**
-   - `/upload` エンドポイントでPDFファイルを受け付け
-2. **Markdown変換**
-   - MarkItDownで変換し、Markdown文字列として返却
-3. **変換結果の表示**
-   - 即時レスポンス（オプションでファイル保存＆DB）
-4. **Markdown変換の再実行、更新**
-   - 一度DBに保存したものを再実行し、更新をかける
-5. **DBに保存したMarkdownの削除**
-   - 即時レスポンス（オプションでファイル保存＆DB）
-6. **エラーハンドリング**
-   - PDF以外のファイル拒否
-   - サイズ制限（例：10MBまで）
-   - 変換失敗時のエラー応答
+## 📋 今後の拡張フェーズ
 
----
+### **短期目標（1-2ヶ月）**
+- [ ] **フェーズ3**: 穴埋めクイズ機能の完全実装
+- [ ] **フェーズ4**: ファイル一覧・管理機能
+- [ ] **フェーズ5**: 進捗管理・通知機能
 
-## APIエンドポイント
+### **中期目標（3-6ヶ月）**
+- [ ] **フェーズ6**: オフライン対応
+- [ ] **フェーズ7**: 高度なUI/UX
+- [ ] **テスト拡充**: Maestro E2Eテスト完全実装
+- [ ] **CI/CD強化**: モバイルアプリの自動テスト統合
 
-| メソッド | パス | 概要 | リクエスト例 | レスポンス例 |
-|----------|------|------|--------------|--------------|
-| **POST** | `/upload` | PDFアップロード＆Markdown変換 | multipart/form-dataでPDF送信 | `{ "markdown": "# 見出し...", "id": "123" }` |
-| **GET** | `/files/{id}` | 保存済みMarkdown取得 | `/files/123` | `{ "id": "123", "markdown": "# 見出し...", "created_at": "2024-01-01T00:00:00" }` |
-| **PUT** | `/files/{id}` | 保存済みMarkdownの再変換・更新 | `/files/123` + PDF | `{ "id": "123", "markdown": "# 更新された見出し...", "updated_at": "2024-01-01T00:00:00" }` |
-| **DELETE** | `/files/{id}` | 保存済みMarkdownの削除 | `/files/123` | `{ "message": "File deleted successfully" }` |
-| **GET** | `/files` | 保存済みファイル一覧取得 | `/files` | `{ "files": [{"id": "123", "created_at": "2024-01-01T00:00:00"}] }` |
+### **長期目標（6ヶ月以上）**
+- [ ] **パフォーマンス最適化**: 大容量ファイル対応
+- [ ] **セキュリティ強化**: 認証・認可機能
+- [ ] **スケーラビリティ**: マイクロサービス化
+- [ ] **監視・ログ**: 本格運用対応
 
----
-
-## プロジェクト構造
-
-```
-api-test-automation-samples/
-├── README.md
-├── pyproject.toml         # Python依存関係管理
-├── src/                   # ソースコード
-│   ├── __init__.py
-│   ├── main.py            # FastAPIアプリケーション
-│   ├── models.py          # データモデル定義
-│   ├── database.py        # データベース接続・操作
-│   └── services/          # ビジネスロジック
-│       ├── __init__.py
-│       ├── pdf_service.py # PDF変換処理
-│       └── file_service.py # ファイル管理処理
-├── tests/                 # テストコード
-│   ├── pytest/            # pytestテスト
-│   │   ├── __init__.py
-│   │   ├── test_api.py    # APIテスト
-│   │   ├── test_services.py # サービス層テスト
-│   │   └── conftest.py    # テスト設定
-│   └── playwright/            # Playwrightテスト
-│       ├── package.json   # Node.js依存関係
-│       ├── playwright.config.ts # Playwright設定
-│       ├── tests/         # Playwrightテスト
-│       │   └── api.spec.ts # API E2Eテスト
-│       └── utils/         # テスト用ユーティリティ
-├── data/                  # データ保存用ディレクトリ
-│   ├── uploads/           # アップロードされたPDF
-│   ├── markdown/          # 変換されたMarkdown
-│   └── database.db        # SQLiteデータベース
-├── docs/                  # ドキュメント
-│   ├── BRANCH_RULES.md    # ブランチ戦略・ルール
-│   └── API_SPECIFICATION.md # API仕様書
-└── sample.pdf             # テスト用サンプルPDF
-```
-
----
-
-## 処理フロー
-1. クライアントがPDFをアップロード（Web or モバイルアプリ）
-2. APIがMarkItDownでMarkdownへ変換
-3. 即時レスポンスとしてMarkdownを返却し、DBに保存する
-
----
-
-## 使用技術
-
-### **バックエンド**
-- **言語**: Python3.10以上
-- **フレームワーク**: FastAPI
-- **変換ライブラリ**: MarkItDown
-- **DB**: SQLite
-- **その他**: Uvicorn（開発用サーバー）
-- **パッケージ管理**: uv
-
-### **テスト**
-- **Python**: pytest + httpx
-- **Node.js**: Playwright + TypeScript
-- **E2Eテスト**: ブラウザベースの統合テスト
-
-### **パッケージ管理**
-- **Python**: uv + pyproject.toml
-- **Node.js**: pnpm + package.json
-
----
-
-### システム要件
-- Python 3.8以上
-- 十分なディスク容量（アップロードファイル用）
-
----
-
-## セットアップ手順
-
-### 1. プロジェクトのクローン・初期化
-```bash
-git clone <repository-url>
-cd api-test-automation-samples
-```
-
-### 2. Python環境のセットアップ
-```bash
-# uvがインストールされていない場合は先にインストール
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Python依存関係のインストール（仮想環境も自動で作成される）
-uv sync
-
-# 仮想環境の有効化
-source .venv/bin/activate  # macOS/Linux
-# または
-.venv\Scripts\activate     # Windows
-```
-
-### 3. Node.js環境のセットアップ
-```bash
-# Node.jsがインストールされていない場合は先にインストール
-# https://nodejs.org/ からダウンロード、またはnvmを使用
-
-# pnpmがインストールされていない場合は先にインストール
-npm install -g pnpm
-
-# UIの依存関係をインストール
-cd src/ui
-pnpm install
-
-# Playwrightディレクトリに移動
-cd ../../tests/e2e
-
-# Node.js依存関係のインストール
-pnpm install
-
-# Playwrightのブラウザをインストール
-pnpm exec playwright install
-```
-
-### 4. 必要なディレクトリの作成
-```bash
-mkdir -p data/uploads data/markdown
-```
-
-### 5. 開発サーバーの起動
-```bash
-uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-
-## テストの実行
-
-### 1. Pythonテスト（pytest）の実行
-```bash
-# 全テストの実行
-pytest tests/python/
-
-# 特定のテストファイルの実行
-pytest tests/python/test_api.py
-
-# 詳細出力でテスト実行
-pytest tests/python/ -v
-
-# カバレッジ付きでテスト実行
-pytest tests/python/ --cov=src
-```
-
-### 2. Node.jsテスト（Playwright）の実行
-```bash
-# 全テストの実行
-pnpm playwright test
-
-# 特定のテストファイルの実行
-pnpm playwright test tests/api.spec.ts
-
-# UIモードでテスト実行（デバッグ用）
-pnpm playwright test --ui
-
-# ヘッドレスモードでテスト実行
-pnpm playwright test --headed
-
-# 特定のブラウザでテスト実行
-pnpm playwright test --project=chromium
-```
-
-### 3. テスト用サンプルPDFの準備
-```bash
-# テスト用のサンプルPDFを作成（テキストベース）
-echo "This is a test PDF content" > sample.txt
-# または既存のPDFファイルをコピー
-cp /path/to/your/sample.pdf ./sample.pdf
-```
-
----
-
-## API使用例
-
-### 1. PDFアップロード・変換
-```bash
-curl -X POST "http://localhost:8000/upload" \
-     -H "accept: application/json" \
-     -H "Content-Type: multipart/form-data" \
-     -F "file=@sample.pdf"
-```
-
-### 2. 変換結果の取得
-```bash
-curl -X GET "http://localhost:8000/files/{file_id}" \
-     -H "accept: application/json"
-```
-
-### 3. ファイル一覧の取得
-```bash
-curl -X GET "http://localhost:8000/files" \
-     -H "accept: application/json"
-```
-
-### 4. ファイルの更新
-```bash
-curl -X PUT "http://localhost:8000/files/{file_id}" \
-     -H "accept: application/json" \
-     -H "Content-Type: multipart/form-data" \
-     -F "file=@updated_sample.pdf"
-```
-
-### 5. ファイルの削除
-```bash
-curl -X DELETE "http://localhost:8000/files/{file_id}" \
-     -H "accept: application/json"
-```
-
----
-
-##　Web UI（Swagger）
-
-開発サーバー起動後、以下のURLでAPIドキュメントとテストUIにアクセスできます：
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
+### **技術的課題・検討事項**
+- [ ] **状態管理**: Zustand vs Redux Toolkit
+- [ ] **API設計**: GraphQL vs REST
+- [ ] **データベース**: PostgreSQL移行検討
+- [ ] **コンテナ化**: Docker Compose最適化
+- [ ] **CI/CD**: GitHub Actions vs GitLab CI
 ---
 
 ## トラブルシューティング
 
-### よくある問題と解決方法
+### **よくある問題と解決方法**
 
-#### 1. MarkItDownライブラリのインストールエラー
+#### 1. 依存関係のインストールエラー
 ```bash
-# 代替案：pipで直接インストール
-pip install git+https://github.com/microsoft/markitdown.git
+# キャッシュクリア
+pnpm store prune
+rm -rf node_modules
+pnpm install:all
 ```
 
-#### 2. ファイルアップロードエラー
-- ファイルサイズ制限の確認（10MB以下）
-- ファイル形式の確認（.pdfのみ）
-- ディレクトリの権限確認
-
-#### 3. データベースエラー
+#### 2. モバイルアプリの起動エラー
 ```bash
-# データベースファイルの権限確認
-chmod 755 data/
-chmod 644 data/database.db
+# Expo CLIの更新
+npm install -g @expo/cli@latest
+
+# キャッシュクリア
+expo start --clear
 ```
 
-#### 4. ポートが既に使用されている
+#### 3. APIサーバーの起動エラー
 ```bash
-# 別のポートで起動
-uvicorn main:app --reload --port 8001
+# Python環境の確認
+uv python --version
+
+# 依存関係の再インストール
+cd apps/api
+uv sync
 ```
 
----
-
-## 今後の拡張案
-
-### **機能拡張**
-- 認証機能の追加（JWT）
-- 外部ストレージ（S3等）への対応
-- リアルタイム変換進捗の表示
-
-### **テストツールの拡張**
-- **Postman/Newman** - APIテストコレクション
-- **Karate** - BDDスタイルのAPIテスト
+#### 4. テストの実行エラー
+```bash
+# テスト環境の確認
+pnpm test:web --verbose
+pnpm test:mobile --verbose
+uv run pytest tests/unit/ -v
+```
 
 ---
 
 ## 参考資料
 
-### **API・フレームワーク**
+### **公式ドキュメント**
 - [FastAPI公式ドキュメント](https://fastapi.tiangolo.com/)
-- [MarkItDown GitHub](https://github.com/microsoft/markitdown)
-- [SQLite公式ドキュメント](https://www.sqlite.org/docs.html)
+- [Next.js公式ドキュメント](https://nextjs.org/docs)
+- [Expo公式ドキュメント](https://docs.expo.dev/)
+- [React Native公式ドキュメント](https://reactnative.dev/)
 
-### **Pythonテスト**
+### **テスト関連**
 - [pytest公式ドキュメント](https://docs.pytest.org/)
-- [httpx公式ドキュメント](https://www.python-httpx.org/)
-
-### **Node.jsテスト**
 - [Playwright公式ドキュメント](https://playwright.dev/)
-- [TypeScript公式ドキュメント](https://www.typescriptlang.org/)
+- [Jest公式ドキュメント](https://jestjs.io/)
+- [React Native Testing Library](https://callstack.github.io/react-native-testing-library/)
 
 ### **パッケージ管理**
 - [uv公式ドキュメント](https://docs.astral.sh/uv/)
@@ -598,121 +525,10 @@ uvicorn main:app --reload --port 8001
 
 ---
 
-## Docker環境での実行
+## ライセンス
 
-> **⚠️ 注意**: Python 3.10以上が必要です（markitdownライブラリの要件）
-
-### **本番環境での実行**
-```bash
-# 全サービスを起動（API + テスト実行）
-docker-compose up --build
-
-# バックグラウンドで実行
-docker-compose up -d --build
-
-# ログの確認
-docker-compose logs -f api
-
-# サービスの停止
-docker-compose down
-```
-
-### **開発環境での実行**
-```bash
-# 開発用APIを起動（ホットリロード対応）
-docker-compose -f docker-compose.dev.yml up --build
-
-# バックグラウンドで起動
-docker-compose -f docker-compose.dev.yml up -d api-dev
-
-# ログの確認
-docker-compose -f docker-compose.dev.yml logs -f api-dev
-```
-
-### **個別のサービス実行**
-```bash
-# APIのみビルド・起動（Python 3.10以上）
-docker build -t pdf-markdown-api .
-docker run -p 8000:8000 -v $(pwd)/src:/app/src pdf-markdown-api
-
-# Playwrightテストのみ実行
-docker run --rm -v $(pwd)/tests/playwright:/app mcr.microsoft.com/playwright:v1.40.0-focal
-
-# Pythonバージョン確認
-docker run --rm pdf-markdown-api python --version
-```
+このプロジェクトは [MIT License](LICENSE) の下で公開されています。
 
 ---
 
-## ドキュメント
-
-### **プロジェクトドキュメント**
-- [API仕様書](docs/API_SPECIFICATION.md) - 詳細なAPI仕様と使用例
-- [ブランチ戦略](docs/BRANCH_RULES.md) - ブランチ作成ルールと開発フロー
-- [GitHub設定](docs/GITHUB_SETUP.md) - CI/CD設定と開発環境セットアップ
-
-## 開発ルール関連
-
-### **ブランチ戦略**
-詳細なブランチ作成ルールは [ブランチ戦略ドキュメント](docs/BRANCH_RULES.md) を参照してください。
-
-### **GitHubテンプレート**
-- **Pull Request**: `.github/PULL_REQUEST_TEMPLATE.md` を使用
-- **Issue**: `.github/ISSUE_TEMPLATE/` 内のテンプレートを使用
-  - バグ報告: `BUG_REPORT.md`
-  - 機能要求: `FEATURE_REQUEST.md`
-
-### **ブランチ命名例**
-```bash
-# 新機能実装
-git checkout -b feature/implement-pdf-upload
-
-# テスト追加
-git checkout -b test/add-playwright-e2e-tests
-
-# バグ修正
-git checkout -b bugfix/123-pdf-conversion-error
-
-# リファクタリング
-git checkout -b refactor/services-extract-common
-```
-
----
-
-## ローカルでの動作確認
-
-### **Python環境での動作確認**
-```bash
-# 環境構築
-# uvがインストールされていない場合は先にインストール
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# 依存関係のインストール
-uv sync
-
-# 仮想環境の有効化（uvが自動で作成）
-source .venv/bin/activate
-
-# 開発サーバー起動
-uv run uvicorn src.api.main:app --reload
-
-# 動作確認
-curl -F "file=@sample.pdf" http://localhost:8000/upload
-```
-
-### **Node.js環境での動作確認**
-```bash
-# UIの動作確認
-cd src/ui
-pnpm install
-pnpm dev
-
-# Playwrightテストの実行
-cd ../../tests/e2e
-pnpm install
-pnpm exec playwright install
-pnpm playwright test
-
-# UIモードでのテスト実行
-pnpm playwright test --ui
-```
+**このリポジトリは、モダンなWeb・モバイル・API開発のベストプラクティスを学び、実践できる包括的なサンプルプロジェクトです。**

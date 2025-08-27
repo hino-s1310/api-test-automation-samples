@@ -1,0 +1,40 @@
+{
+  "name": "api-test-automation-samples",
+  "version": "1.0.0",
+  "description": "PDF to Markdown API with comprehensive testing samples including mobile app",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:mobile": "pnpm --filter mobile start",
+    "dev:api": "cd apps/api && uv run uvicorn main:app --reload",
+    "build:web": "pnpm --filter web build",
+    "build:mobile": "pnpm --filter mobile build",
+    "test:web": "pnpm --filter web test",
+    "test:mobile": "pnpm --filter mobile test",
+    "test:api": "cd apps/api && uv run pytest tests/unit/",
+    "test:e2e:web": "pnpm --filter playwright test",
+    "test:e2e:mobile": "pnpm --filter maestro test",
+    "lint": "pnpm -r lint",
+    "type-check": "pnpm -r type-check",
+    "install:all": "pnpm install && cd apps/api && uv sync"
+  },
+  "keywords": [
+    "pdf",
+    "markdown",
+    "api",
+    "fastapi",
+    "nextjs",
+    "expo",
+    "react-native",
+    "testing",
+    "playwright",
+    "maestro"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

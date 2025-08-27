@@ -1,0 +1,4 @@
+packages:
+  - 'apps/*'
+  - 'tests/e2e/playwright'
+  - 'tests/e2e/maestro'

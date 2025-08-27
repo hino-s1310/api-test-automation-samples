@@ -4,8 +4,10 @@
 
 このプロジェクトは、PDF to Markdown APIのテスト自動化サンプルを提供する包括的なリポジトリです。
 
-### **技術スタック**
-- **バックエンド**: FastAPI + Python 3.11 + uv
+## 🚀 技術スタック
+
+### **バックエンド**
+- **フレームワーク**: FastAPI + Python 3.10 + uv
 - **フロントエンド**: Next.js 14 + React 18 + TypeScript + Tailwind CSS
 - **テスト**: pytest (Python), Jest (TypeScript), Playwright (E2E)
 - **CI/CD**: GitHub Actions
@@ -169,7 +171,7 @@ open coverage/lcov-report/index.html
 ## 開発環境セットアップ
 
 ### 前提条件
-- Python 3.11+
+- Python 3.10+
 - Node.js 20.x+
 - uv (Python パッケージマネージャー)
 - pnpm (Node.js パッケージマネージャー)

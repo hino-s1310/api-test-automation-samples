@@ -27,6 +27,7 @@ repos:
       - id: check-merge-conflict
       # ファイル名の重複確認
       - id: check-added-large-files
+        args: ['--maxkb', '1000']  # 1MBまで許可
 
 # グローバル設定
 default_language_version:

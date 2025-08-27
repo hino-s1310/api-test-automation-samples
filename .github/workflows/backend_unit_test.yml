@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.10"]
 
     steps:
       - name: Checkout code
@@ -68,7 +68,7 @@ jobs:
       - name: Run unit tests with coverage
         run: |
           uv run pytest tests/unit/ \
-            --cov=src \
+            --cov=apps.api \
             --cov-report=term-missing \
             --cov-report=xml \
             --cov-report=html \
@@ -87,7 +87,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-python-3.11
+          name: test-results-python-3.10
           path: |
             test-results.xml
             htmlcov/
@@ -100,7 +100,7 @@ jobs:
           pytest-xml-coverage-path: ./coverage.xml
           junitxml-path: ./test-results.xml
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          title: "Coverage Report (Python 3.11)"
+          title: "Coverage Report (Python 3.10)"
           badge-title: "Coverage"
         continue-on-error: true
 

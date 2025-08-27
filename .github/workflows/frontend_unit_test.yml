@@ -32,7 +32,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./src/ui
+        working-directory: ./apps/web
 
     steps:
       - name: Checkout code
@@ -150,7 +150,7 @@ jobs:
         with:
           name: frontend-test-results-node-${{ matrix.node-version }}
           path: |
-            src/ui/coverage/
+            apps/web/coverage/
 
       - name: Comment PR with coverage
         if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork

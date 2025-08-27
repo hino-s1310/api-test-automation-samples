@@ -4,10 +4,10 @@
 
 このドキュメントでは、PDF to Markdown APIのテスト自動化サンプルプロジェクトにおけるブランチ戦略とブランチ作成ルールを定義します。
 
-## プロジェクト構成
+## 🚀 技術スタック
 
-### **技術スタック**
-- **バックエンド**: FastAPI + Python 3.11 + uv
+### **バックエンド**
+- **フレームワーク**: FastAPI + Python 3.10 + uv
 - **フロントエンド**: Next.js 14 + React 18 + TypeScript + Tailwind CSS
 - **テスト**: pytest (Python), Jest (TypeScript), Playwright (E2E)
 - **CI/CD**: GitHub Actions
@@ -254,7 +254,7 @@ git commit -m "test: add Playwright E2E tests for file upload"
 git commit -m "fix: resolve memory leak in large file processing"
 git commit -m "refactor: extract common validation logic to utils"
 git commit -m "docs: update API specification with new endpoints"
-git commit -m "ci: update GitHub Actions workflow for Python 3.11"
+git commit -m "ci: update GitHub Actions workflow for Python 3.10"
 ```
 
 ## テスト戦略

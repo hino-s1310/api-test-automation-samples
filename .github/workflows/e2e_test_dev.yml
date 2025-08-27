@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         node-version: ["20.x"]
-        python-version: ["3.11"]
+        python-version: ["3.10"]
 
     defaults:
       run:
@@ -41,9 +41,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v2
+        uses: astral-sh/setup-uv@v3
         with:
-          version: "0.4.30"
+          version: "latest"
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -151,7 +151,7 @@ jobs:
       - name: Install UI dependencies
         run: |
           cd ../../
-          cd src/ui
+          cd apps/web
           echo "Installing UI dependencies..."
 
           # 現在のディレクトリとファイルの確認
@@ -229,7 +229,7 @@ jobs:
 
           # APIサーバーを起動
           echo "Starting API server..."
-          nohup uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000 > api_server.log 2>&1 &
+          nohup uv run uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 > api_server.log 2>&1 &
           echo $! > api_server.pid
 
           # サーバー起動を待機
@@ -259,7 +259,7 @@ jobs:
           echo "Starting UI server with Next.js development server..."
 
           # UIサーバーを起動
-          cd src/ui
+          cd apps/web
 
           # 依存関係の確認（既にインストール済みの場合はスキップ）
           echo "Checking UI dependencies..."
