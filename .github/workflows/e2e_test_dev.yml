@@ -146,8 +146,8 @@ jobs:
         run: |
           echo "Installing E2E test dependencies..."
 
-          # 正しいディレクトリに移動
-          cd tests
+          # 正しいディレクトリに移動（package.jsonがあるディレクトリ）
+          cd playwright
           echo "Current directory: $(pwd)"
 
           # 依存関係をインストール
@@ -196,7 +196,7 @@ jobs:
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('tests/e2e/playwright/tests/package.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('tests/e2e/playwright/package.json') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
 
@@ -205,8 +205,8 @@ jobs:
         run: |
           echo "Installing Playwright browsers..."
 
-          # 正しいディレクトリに移動（playwright設定ファイルがあるディレクトリ）
-          cd tests
+          # 依存関係がインストールされたディレクトリに移動
+          cd playwright
           echo "Current directory: $(pwd)"
 
           if command -v pnpm >/dev/null 2>&1; then
@@ -455,8 +455,8 @@ jobs:
         run: |
           echo "=== Test Results Summary ==="
 
-          # testsディレクトリに移動
-          cd tests
+          # playwright/testsディレクトリに移動
+          cd playwright/tests
 
           # テスト結果ファイルの確認
           if [ -d "test-results" ]; then
@@ -478,7 +478,7 @@ jobs:
           fi
 
           # 元のディレクトリに戻る
-          cd ..
+          cd ../..
 
       - name: Stop servers
         if: always()
