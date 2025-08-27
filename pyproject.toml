@@ -133,6 +133,7 @@ ignore = [
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
     "B904",  # within an except clause, raise exceptions with raise ... from err
+    "E402",  # module level import not at top of file (テストファイルで必要)
 ]
 
 # 自動修正可能なルールのみ修正
@@ -140,7 +141,7 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["src"]
+known-first-party = ["apps"]
 known-third-party = ["fastapi", "uvicorn", "pytest", "httpx"]
 
 [tool.black]
@@ -217,3 +218,6 @@ log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+env = [
+    "PYTHONPATH={toxinidir}",
+]

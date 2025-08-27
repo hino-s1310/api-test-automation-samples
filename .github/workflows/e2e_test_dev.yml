@@ -145,8 +145,21 @@ jobs:
       - name: Install E2E test dependencies
         run: |
           echo "Installing E2E test dependencies..."
+
+          # 正しいディレクトリに移動
+          cd playwright
+          echo "Current directory: $(pwd)"
+
+          # 依存関係をインストール
           pnpm install --frozen-lockfile --prefer-offline
           echo "E2E dependencies installed successfully"
+
+          # Playwrightパッケージがインストールされているか確認
+          echo "Checking Playwright installation..."
+          pnpm list @playwright/test || echo "Playwright not found in dependencies"
+
+          # 元のディレクトリに戻る
+          cd ..
 
       - name: Install UI dependencies
         run: |
@@ -183,7 +196,7 @@ jobs:
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('tests/e2e/package.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('tests/e2e/playwright/package.json') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
 
@@ -191,11 +204,28 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
           echo "Installing Playwright browsers..."
+
+          # 正しいディレクトリに移動
+          cd tests/e2e/playwright
+          echo "Current directory: $(pwd)"
+
           if command -v pnpm >/dev/null 2>&1; then
-            pnpm exec playwright install chromium --with-deps
+            echo "Using pnpm to install Playwright browsers..."
+
+            # Playwrightパッケージの確認
+            if pnpm list @playwright/test >/dev/null 2>&1; then
+              echo "Playwright package found, installing browsers..."
+              pnpm exec playwright install chromium --with-deps
+            else
+              echo "Playwright package not found, installing it first..."
+              pnpm add -D @playwright/test
+              pnpm exec playwright install chromium --with-deps
+            fi
           else
+            echo "Using npx to install Playwright browsers..."
             npx playwright install chromium --with-deps
           fi
+
           echo "Playwright browsers installed successfully"
 
       - name: Check and kill existing processes
@@ -379,6 +409,10 @@ jobs:
           export PWTEST_SKIP_TEST_OUTPUT=1
           export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
+          # 正しいディレクトリに移動
+          cd tests/e2e/playwright
+          echo "Current directory: $(pwd)"
+
           # 全テストを実行（API、UI、統合テスト）
           echo "Running comprehensive E2E tests..."
 
@@ -477,8 +511,8 @@ jobs:
         with:
           name: e2e-test-results-node-${{ matrix.node-version }}
           path: |
-            tests/e2e/test-results/
-            tests/e2e/playwright-report/
+            tests/e2e/playwright/test-results/
+            tests/e2e/playwright/playwright-report/
           retention-days: 14
 
       - name: Upload Playwright HTML Report
@@ -486,7 +520,7 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: playwright-report-node-${{ matrix.node-version }}
-          path: tests/e2e/playwright-report/
+          path: tests/e2e/playwright/playwright-report/
           retention-days: 14
 
       - name: Upload server logs

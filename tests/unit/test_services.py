@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.api.models import FileStatus
+from apps.api.models import FileStatus
 
 # テストデータとフィクスチャをインポート
 from .fixtures import (
@@ -455,7 +455,7 @@ class TestPDFService:
     def test_validate_pdf_file_valid(self, pdf_service_for_test):
         """有効なPDFファイルの検証テスト"""
         # pypdf.PdfReaderをモックして、検証ロジックをテスト
-        with patch("src.api.services.pdf_service.pypdf.PdfReader") as mock_pdf_reader:
+        with patch("apps.api.services.pdf_service.pypdf.PdfReader") as mock_pdf_reader:
             # PDF読み込み成功をシミュレート
             mock_pdf_reader.return_value = Mock()  # 正常なPDFReaderインスタンス
 
@@ -681,7 +681,7 @@ class TestPDFService:
         markdown_dir = tmp_path / "markdown"
 
         # テスト実行
-        from src.api.services.pdf_service import PDFService
+        from apps.api.services.pdf_service import PDFService
 
         PDFService(upload_dir=str(upload_dir), markdown_dir=str(markdown_dir))
 

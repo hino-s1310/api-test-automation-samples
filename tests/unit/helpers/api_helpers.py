@@ -6,7 +6,7 @@ APIテストで使用される共通の処理を提供する
 
 from fastapi.testclient import TestClient
 
-from src.api.main import app
+from apps.api.main import app
 
 
 def get_test_client() -> TestClient:

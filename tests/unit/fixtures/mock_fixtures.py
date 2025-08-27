@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.api.services.file_service import FileService
+from apps.api.services.file_service import FileService
 
 from .test_data import DatabaseTestResponses, FileTestData
 
@@ -21,14 +21,14 @@ from .test_data import DatabaseTestResponses, FileTestData
 @pytest.fixture
 def mock_db_manager():
     """データベースマネージャーのモック"""
-    with patch("src.api.services.file_service.db_manager") as mock_db:
+    with patch("apps.api.services.file_service.db_manager") as mock_db:
         yield mock_db
 
 
 @pytest.fixture
 def mock_file_service_db():
     """FileService用のDBマネージャーモック"""
-    with patch("src.api.services.file_service.db_manager") as mock_db:
+    with patch("apps.api.services.file_service.db_manager") as mock_db:
         # デフォルトの戻り値を設定
         mock_db.get_file.return_value = None
         mock_db.list_files.return_value = FileTestData.empty_file_list()
@@ -40,7 +40,7 @@ def mock_file_service_db():
 @pytest.fixture
 def mock_pdf_service_db():
     """PDFService用のDBマネージャーモック"""
-    with patch("src.api.services.pdf_service.db_manager") as mock_db:
+    with patch("apps.api.services.pdf_service.db_manager") as mock_db:
         yield mock_db
 
 
@@ -58,7 +58,7 @@ def file_service(mock_db_manager):
 @pytest.fixture
 def pdf_service(mock_pdf_service_db):
     """PDFServiceのインスタンス（DB がモック済み）"""
-    from src.api.services.pdf_service import PDFService
+    from apps.api.services.pdf_service import PDFService
 
     return PDFService()
 
@@ -71,7 +71,7 @@ def pdf_service(mock_pdf_service_db):
 @pytest.fixture
 def mock_datetime():
     """datetime.nowのモック"""
-    with patch("src.api.services.file_service.datetime") as mock_dt:
+    with patch("apps.api.services.file_service.datetime") as mock_dt:
         mock_dt.now.return_value = datetime(2024, 1, 31, 12, 0, 0)
         yield mock_dt
 
@@ -80,7 +80,7 @@ def mock_datetime():
 def mock_current_time():
     """固定の現在時刻を返すモック"""
     fixed_time = datetime(2024, 1, 31, 12, 0, 0)
-    with patch("src.api.services.file_service.datetime") as mock_dt:
+    with patch("apps.api.services.file_service.datetime") as mock_dt:
         mock_dt.now.return_value = fixed_time
         mock_dt.fromisoformat = datetime.fromisoformat
         yield fixed_time
@@ -143,7 +143,7 @@ def configured_mock_db():
             getattr(self.mock, method_name).side_effect = exception
             return self
 
-    with patch("src.api.services.file_service.db_manager") as mock_db:
+    with patch("apps.api.services.file_service.db_manager") as mock_db:
         configurable = ConfigurableMockDB()
         mock_db.get_file = configurable.mock.get_file
         mock_db.list_files = configurable.mock.list_files

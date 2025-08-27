@@ -5,7 +5,9 @@ pytest 設定とテストフィクスチャ
 すべてのテストファイルで自動的に利用可能になります。
 """
 
+import os
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -13,7 +15,11 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from src.api.main import app
+# プロジェクトルートをPythonパスに追加
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+from apps.api.main import app
 from tests.unit import TEST_DATA_DIR
 from tests.unit.helpers import upload_test_pdf
 
@@ -50,8 +56,6 @@ def clean_environment():
     各テスト関数の実行前後で環境をクリーンな状態に保ちます。
     """
     # テスト実行前のセットアップ
-    import os
-
     original_env = os.environ.copy()
 
     # テスト用環境変数の設定
@@ -97,11 +101,17 @@ def sample_file_id(test_client):
 
 
 @pytest.fixture
-def pdf_service_for_test():
-    """テスト用のPDFServiceインスタンス（特定のディレクトリを指定）"""
-    from src.api.services.pdf_service import PDFService
+def pdf_service_for_test(temp_dir):
+    """テスト用のPDFServiceインスタンス（一時ディレクトリを使用）"""
+    from apps.api.services.pdf_service import PDFService
 
-    return PDFService(upload_dir="test_uploads", markdown_dir="test_markdown")
+    # 一時ディレクトリ内にサブディレクトリを作成
+    upload_dir = temp_dir / "test_uploads"
+    markdown_dir = temp_dir / "test_markdown"
+    upload_dir.mkdir()
+    markdown_dir.mkdir()
+
+    return PDFService(upload_dir=str(upload_dir), markdown_dir=str(markdown_dir))
 
 
 # ===========================
@@ -112,7 +122,7 @@ def pdf_service_for_test():
 @pytest.fixture
 def file_service():
     """FileServiceのインスタンス（DB がモック済み）"""
-    from src.api.services.file_service import FileService
+    from apps.api.services.file_service import FileService
 
     return FileService()
 
@@ -125,7 +135,7 @@ def file_service():
 @pytest.fixture
 def mock_db_manager():
     """データベースマネージャーのモック"""
-    with patch("src.api.services.file_service.db_manager") as mock_db:
+    with patch("apps.api.services.file_service.db_manager") as mock_db:
         yield mock_db
 
 
@@ -218,7 +228,7 @@ def mock_pdf_service(monkeypatch):
             }
 
     mock_service = MockPDFService()
-    monkeypatch.setattr("src.api.main.pdf_service", mock_service)
+    monkeypatch.setattr("apps.api.main.pdf_service", mock_service)
     return mock_service
 
 
@@ -248,7 +258,7 @@ def setup_test_logging():
     import logging
 
     # テスト用ログレベル設定
-    logging.getLogger("src.api").setLevel(logging.DEBUG)
+    logging.getLogger("apps.api").setLevel(logging.DEBUG)
 
     yield
 
