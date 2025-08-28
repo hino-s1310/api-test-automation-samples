@@ -166,3 +166,17 @@ sample.pdf
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Large files and uploads
+src/api/data/uploads/
+*.pdf
+*.PDF
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+
+# File size limits (files larger than 500KB)
+# This is handled by pre-commit hook check-added-large-files

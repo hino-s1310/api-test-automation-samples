@@ -1,7 +1,20 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import FileDetailModal from '@/components/FileDetailModal'
 import { useState } from 'react'
+
+// APIモック
+jest.mock('../../lib/api', () => ({
+  api: {
+    getFileList: jest.fn(),
+    getFile: jest.fn(),
+    deleteFile: jest.fn(),
+    searchFiles: jest.fn(),
+    editFile: jest.fn(),
+    uploadPdf: jest.fn(),
+  }
+}));
+
+import FileDetailModal from '../../components/FileDetailModal'
 
 const mockFile = {
   id: '1',

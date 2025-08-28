@@ -6,6 +6,8 @@ import { FileListResponse, FileListItem, FileInfo } from '@/types';
 import { useFileListPagination } from '@/hooks/useFileListPagination';
 import FileListTable from '@/components/FileListTable';
 import FileDetailModal from '@/components/FileDetailModal';
+import FileEditModal from '@/components/FileEditModal';
+import FileSearchFilter from '@/components/FileSearchFilter';
 import Pagination from '@/components/Pagination';
 
 export default function FilesPage() {
@@ -15,7 +17,10 @@ export default function FilesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFile, setSelectedFile] = useState<FileInfo | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingFile, setEditingFile] = useState<FileInfo | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   // ファイル一覧専用のレスポンシブページネーション - より少ない件数で表示
   const { itemsPerPage } = useFileListPagination({
@@ -52,6 +57,31 @@ export default function FilesPage() {
     }
   };
 
+  const searchFiles = async (query: string, status: string, isEdited: boolean | null) => {
+    try {
+      setSearchLoading(true);
+      setError(null);
+      const response = await api.searchFiles({
+        query: query || undefined,
+        status: status || undefined,
+        is_edited: isEdited,
+        page: 1,
+        per_page: itemsPerPage,
+      });
+      setFiles(response);
+      setCurrentPage(1);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'ファイル検索に失敗しました');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const resetSearch = () => {
+    fetchFiles(1);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     fetchFiles(currentPage);
   }, [currentPage, itemsPerPage]);
@@ -85,6 +115,41 @@ export default function FilesPage() {
     }
   };
 
+  const handleEditFile = async (fileId: string) => {
+    try {
+      const fileDetail = await api.getFile(fileId);
+      setEditingFile(fileDetail);
+      setIsEditModalOpen(true);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'ファイル詳細の取得に失敗しました');
+    }
+  };
+
+  const handleSaveEdit = async (fileId: string, filename: string, content: string, reason: string) => {
+    try {
+      await api.editFile(fileId, {
+        filename,
+        markdown_content: content,
+        edit_reason: reason,
+        edited_by: 'user',
+      });
+
+      // 編集後、ファイル一覧を再取得
+      await fetchFiles(currentPage);
+
+      // 成功メッセージを表示（簡易的な実装）
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'ファイルの編集に失敗しました');
+      throw err; // モーダルを閉じないようにする
+    }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedFile(null);
+  };
+
   const handleDeleteFile = async (fileId: string) => {
     if (!confirm('このファイルを削除してもよろしいですか？')) {
       return;
@@ -114,10 +179,7 @@ export default function FilesPage() {
     }
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedFile(null);
-  };
+
 
   const refreshFiles = () => {
     fetchFiles(currentPage);
@@ -189,6 +251,13 @@ export default function FilesPage() {
         </div>
       )}
 
+      {/* 検索・フィルタリング */}
+      <FileSearchFilter
+        onSearch={searchFiles}
+        onReset={resetSearch}
+        loading={searchLoading}
+      />
+
       {files && (
         <>
           {/* ファイル一覧カード - コンパクト化 */}
@@ -223,6 +292,7 @@ export default function FilesPage() {
               <FileListTable
                 files={files.files}
                 onViewFile={handleViewFile}
+                onEditFile={handleEditFile}
                 onDeleteFile={handleDeleteFile}
                 deletingFileId={deletingFileId}
               />
@@ -252,6 +322,20 @@ export default function FilesPage() {
             // モーダルの選択ファイルも更新
             setSelectedFile(updatedFile);
           }}
+        />
+      )}
+
+      {/* ファイル編集モーダル */}
+      {isEditModalOpen && editingFile && (
+        <FileEditModal
+          file={editingFile}
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingFile(null);
+          }}
+          onSave={handleSaveEdit}
+          loading={loading}
         />
       )}
     </div>

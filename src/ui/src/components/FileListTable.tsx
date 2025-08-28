@@ -5,11 +5,12 @@ import { FileListItem } from '@/types';
 interface FileListTableProps {
   files: FileListItem[];
   onViewFile: (fileId: string) => void;
+  onEditFile: (fileId: string) => void;
   onDeleteFile: (fileId: string) => void;
   deletingFileId: string | null;
 }
 
-export default function FileListTable({ files, onViewFile, onDeleteFile, deletingFileId }: FileListTableProps) {
+export default function FileListTable({ files, onViewFile, onEditFile, onDeleteFile, deletingFileId }: FileListTableProps) {
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -79,7 +80,7 @@ export default function FileListTable({ files, onViewFile, onDeleteFile, deletin
               作成日時
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-testid="header-actions">
-              削除
+              アクション
             </th>
           </tr>
         </thead>
@@ -137,25 +138,46 @@ export default function FileListTable({ files, onViewFile, onDeleteFile, deletin
                 {formatDateTime(file.created_at)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation(); // 行クリックイベントの伝播を防ぐ
-                    onDeleteFile(file.id);
-                  }}
-                  disabled={deletingFileId === file.id}
-                  className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
-                  title="ファイルを削除"
-                  aria-label={`${file.filename}を削除`}
-                  data-testid={`delete-button-${file.id}`}
-                >
-                  {deletingFileId === file.id ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" data-testid={`delete-spinner-${file.id}`}></div>
-                  ) : (
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                <div className="flex items-center space-x-2">
+                  {/* 編集ボタン */}
+                  {file.status === 'completed' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // 行クリックイベントの伝播を防ぐ
+                        onEditFile(file.id);
+                      }}
+                      className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md transition-colors"
+                      title="ファイルを編集"
+                      aria-label={`${file.filename}を編集`}
+                      data-testid={`edit-button-${file.id}`}
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
                   )}
-                </button>
+
+                  {/* 削除ボタン */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // 行クリックイベントの伝播を防ぐ
+                      onDeleteFile(file.id);
+                    }}
+                    disabled={deletingFileId === file.id}
+                    className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                    title="ファイルを削除"
+                    aria-label={`${file.filename}を削除`}
+                    data-testid={`delete-button-${file.id}`}
+                  >
+                    {deletingFileId === file.id ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" data-testid={`delete-spinner-${file.id}`}></div>
+                    ) : (
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

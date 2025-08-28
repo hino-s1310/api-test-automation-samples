@@ -25,6 +25,7 @@ const mockFiles = [
 
 describe('FileListTable', () => {
   const mockOnViewFile = jest.fn()
+  const mockOnEditFile = jest.fn()
   const mockOnDeleteFile = jest.fn()
 
   beforeEach(() => {
@@ -52,6 +53,7 @@ describe('FileListTable', () => {
       <FileListTable
         files={mockFiles}
         onViewFile={mockOnViewFile}
+        onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
         deletingFileId={null}
       />
@@ -84,6 +86,7 @@ describe('FileListTable', () => {
       <FileListTable
         files={mockFiles}
         onViewFile={mockOnViewFile}
+        onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
         deletingFileId={null}
       />
@@ -100,6 +103,7 @@ describe('FileListTable', () => {
       <FileListTable
         files={mockFiles}
         onViewFile={mockOnViewFile}
+        onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
         deletingFileId={null}
       />
@@ -119,6 +123,7 @@ describe('FileListTable', () => {
       <FileListTable
         files={mockFiles}
         onViewFile={mockOnViewFile}
+        onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
         deletingFileId={null}
       />
@@ -135,6 +140,7 @@ describe('FileListTable', () => {
       <FileListTable
         files={mockFiles}
         onViewFile={mockOnViewFile}
+        onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
         deletingFileId="1"
       />
@@ -144,11 +150,82 @@ describe('FileListTable', () => {
     expect(deleteButton).toBeDisabled()
   })
 
+  it('完了済みファイルに編集ボタンが表示される', () => {
+    render(
+      <FileListTable
+        files={mockFiles}
+        onViewFile={mockOnViewFile}
+        onEditFile={mockOnEditFile}
+        onDeleteFile={mockOnDeleteFile}
+        deletingFileId={null}
+      />
+    )
+
+    const editButton = screen.getByRole('button', { name: /test1.pdfを編集/ })
+    expect(editButton).toBeInTheDocument()
+  })
+
+  it('処理中のファイルには編集ボタンが表示されない', () => {
+    render(
+      <FileListTable
+        files={mockFiles}
+        onViewFile={mockOnViewFile}
+        onEditFile={mockOnEditFile}
+        onDeleteFile={mockOnDeleteFile}
+        deletingFileId={null}
+      />
+    )
+
+    const editButton = screen.queryByRole('button', { name: /test2.pdfを編集/ })
+    expect(editButton).not.toBeInTheDocument()
+  })
+
+  it('編集ボタンをクリックするとonEditFileが呼ばれる', async () => {
+    render(
+      <FileListTable
+        files={mockFiles}
+        onViewFile={mockOnViewFile}
+        onEditFile={mockOnEditFile}
+        onDeleteFile={mockOnDeleteFile}
+        deletingFileId={null}
+      />
+    )
+
+    const editButton = screen.getByRole('button', { name: /test1.pdfを編集/ })
+    await userEvent.click(editButton)
+
+    expect(mockOnEditFile).toHaveBeenCalledWith(mockFiles[0].id)
+  })
+
+  it('編集ボタンと削除ボタンが並列に表示される', () => {
+    render(
+      <FileListTable
+        files={mockFiles}
+        onViewFile={mockOnViewFile}
+        onEditFile={mockOnEditFile}
+        onDeleteFile={mockOnDeleteFile}
+        deletingFileId={null}
+      />
+    )
+
+    const editButton = screen.getByRole('button', { name: /test1.pdfを編集/ })
+    const deleteButton = screen.getByRole('button', { name: /test1.pdfを削除/ })
+
+    expect(editButton).toBeInTheDocument()
+    expect(deleteButton).toBeInTheDocument()
+
+    // 両方のボタンが同じ行に表示されることを確認
+    const row = editButton.closest('tr')
+    expect(row).toContainElement(editButton)
+    expect(row).toContainElement(deleteButton)
+  })
+
   it('ファイルが空の場合、テーブルボディが空になる', () => {
     render(
       <FileListTable
         files={[]}
         onViewFile={mockOnViewFile}
+        onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
         deletingFileId={null}
       />

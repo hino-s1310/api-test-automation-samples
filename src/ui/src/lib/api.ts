@@ -82,4 +82,41 @@ export const api = {
     const response = await apiClient.delete<{ message: string }>(`/files/${id}`);
     return response.data;
   },
+
+  // ファイル検索
+  async searchFiles(params: {
+    query?: string;
+    status?: string;
+    is_edited?: boolean | null;
+    page: number;
+    per_page: number;
+  }): Promise<FileListResponse> {
+    try {
+      const response = await apiClient.post<FileListResponse>('/files/search', params);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  },
+
+  // ファイル編集
+  async editFile(id: string, data: {
+    filename?: string;
+    markdown_content?: string;
+    edit_reason: string;
+    edited_by?: string;
+  }): Promise<FileInfo> {
+    try {
+      const response = await apiClient.put<FileInfo>(`/files/${id}/edit`, data);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  },
 };
