@@ -35,7 +35,8 @@ class DatabaseManager:
     def _init_database(self):
         """データベースの初期化"""
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS files (
                     id TEXT PRIMARY KEY,
                     filename TEXT NOT NULL,
@@ -47,11 +48,16 @@ class DatabaseManager:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     processing_time REAL,
-                    metadata TEXT
+                    metadata TEXT,
+                    last_edited_at TIMESTAMP,
+                    edit_count INTEGER DEFAULT 0,
+                    is_edited BOOLEAN DEFAULT FALSE
                 )
-            """)
+            """
+            )
 
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS conversion_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     file_id TEXT NOT NULL,
@@ -62,9 +68,60 @@ class DatabaseManager:
                     processing_time REAL,
                     FOREIGN KEY (file_id) REFERENCES files (id)
                 )
-            """)
+            """
+            )
+
+            # ファイル編集履歴テーブル
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS file_edit_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    file_id TEXT NOT NULL,
+                    original_filename TEXT NOT NULL,
+                    original_content TEXT NOT NULL,
+                    edited_filename TEXT NOT NULL,
+                    edited_content TEXT NOT NULL,
+                    edit_reason TEXT,
+                    edited_by TEXT DEFAULT 'system',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (file_id) REFERENCES files (id)
+                )
+            """
+            )
+
+            # 既存テーブルのマイグレーション
+            self._migrate_database(conn)
 
             conn.commit()
+
+    def _migrate_database(self, conn):
+        """データベースマイグレーション"""
+        try:
+            # 新しいカラムが存在するかチェック
+            cursor = conn.execute("PRAGMA table_info(files)")
+            columns = [row[1] for row in cursor.fetchall()]
+
+            # last_edited_atカラムの追加
+            if "last_edited_at" not in columns:
+                conn.execute("ALTER TABLE files ADD COLUMN last_edited_at TIMESTAMP")
+                print("Added last_edited_at column to files table")
+
+            # edit_countカラムの追加
+            if "edit_count" not in columns:
+                conn.execute(
+                    "ALTER TABLE files ADD COLUMN edit_count INTEGER DEFAULT 0"
+                )
+                print("Added edit_count column to files table")
+
+            # is_editedカラムの追加
+            if "is_edited" not in columns:
+                conn.execute(
+                    "ALTER TABLE files ADD COLUMN is_edited BOOLEAN DEFAULT FALSE"
+                )
+                print("Added is_edited column to files table")
+
+        except Exception as e:
+            print(f"Migration error: {e}")
 
     def insert_file(
         self,
@@ -182,7 +239,8 @@ class DatabaseManager:
                 offset = (page - 1) * per_page
                 cursor = conn.execute(
                     """
-                    SELECT id, filename, status, file_size, created_at, updated_at, processing_time
+                    SELECT id, filename, status, file_size, created_at, updated_at,
+                           processing_time, last_edited_at, edit_count, is_edited
                     FROM files
                     ORDER BY created_at DESC
                     LIMIT ? OFFSET ?
@@ -273,6 +331,186 @@ class DatabaseManager:
             print(f"Error getting conversion logs: {e}")
             return []
 
+    def add_edit_history(
+        self,
+        file_id: str,
+        original_filename: str,
+        original_content: str,
+        edited_filename: str,
+        edited_content: str,
+        edit_reason: str | None = None,
+        edited_by: str = "system",
+    ) -> bool:
+        """ファイル編集履歴を追加"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO file_edit_history
+                    (file_id, original_filename, original_content, edited_filename, edited_content, edit_reason, edited_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                    (
+                        file_id,
+                        original_filename,
+                        original_content,
+                        edited_filename,
+                        edited_content,
+                        edit_reason,
+                        edited_by,
+                    ),
+                )
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Error adding edit history: {e}")
+            return False
+
+    def get_edit_history(self, file_id: str) -> list[dict[str, Any]]:
+        """ファイル編集履歴を取得"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute(
+                    """
+                    SELECT * FROM file_edit_history
+                    WHERE file_id = ?
+                    ORDER BY created_at DESC
+                """,
+                    (file_id,),
+                )
+
+                history = []
+                for row in cursor.fetchall():
+                    history.append(dict(row))
+
+                return history
+        except Exception as e:
+            print(f"Error getting edit history: {e}")
+            return []
+
+    def update_file_content(
+        self,
+        file_id: str,
+        new_filename: str | None = None,
+        new_content: str | None = None,
+        edit_reason: str | None = None,
+        edited_by: str = "system",
+    ) -> bool:
+        """ファイル内容を更新（編集履歴も記録）"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                # 現在のファイル情報を取得
+                current_file = self.get_file(file_id)
+                if not current_file:
+                    return False
+
+                # 編集履歴を追加
+                self.add_edit_history(
+                    file_id=file_id,
+                    original_filename=current_file["filename"],
+                    original_content=current_file.get("markdown_content", ""),
+                    edited_filename=new_filename or current_file["filename"],
+                    edited_content=new_content
+                    or current_file.get("markdown_content", ""),
+                    edit_reason=edit_reason,
+                    edited_by=edited_by,
+                )
+
+                # ファイル情報を更新
+                update_fields = [
+                    "updated_at = CURRENT_TIMESTAMP",
+                    "last_edited_at = CURRENT_TIMESTAMP",
+                    "edit_count = edit_count + 1",
+                    "is_edited = TRUE",
+                ]
+                params = []
+
+                if new_filename is not None:
+                    update_fields.append("filename = ?")
+                    params.append(new_filename)
+
+                if new_content is not None:
+                    update_fields.append("markdown_content = ?")
+                    params.append(new_content)
+
+                params.append(file_id)
+
+                query = f"UPDATE files SET {', '.join(update_fields)} WHERE id = ?"
+                conn.execute(query, params)
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Error updating file content: {e}")
+            return False
+
+    def search_files(
+        self,
+        query: str | None = None,
+        status: str | None = None,
+        is_edited: bool | None = None,
+        page: int = 1,
+        per_page: int = 10,
+    ) -> dict[str, Any]:
+        """ファイルを検索・フィルタリング"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+
+                # 検索条件を構築
+                where_conditions = []
+                params = []
+
+                if query:
+                    where_conditions.append(
+                        "(filename LIKE ? OR markdown_content LIKE ?)"
+                    )
+                    params.extend([f"%{query}%", f"%{query}%"])
+
+                if status:
+                    where_conditions.append("status = ?")
+                    params.append(status)
+
+                if is_edited is not None:
+                    where_conditions.append("is_edited = ?")
+                    params.append(is_edited)
+
+                where_clause = (
+                    " AND ".join(where_conditions) if where_conditions else "1=1"
+                )
+
+                # 総件数を取得
+                count_query = f"SELECT COUNT(*) FROM files WHERE {where_clause}"
+                cursor = conn.execute(count_query, params)
+                total_count = cursor.fetchone()[0]
+
+                # ファイル一覧を取得
+                offset = (page - 1) * per_page
+                select_query = f"""
+                    SELECT id, filename, status, file_size, created_at, updated_at,
+                           processing_time, last_edited_at, edit_count, is_edited
+                    FROM files
+                    WHERE {where_clause}
+                    ORDER BY created_at DESC
+                    LIMIT ? OFFSET ?
+                """
+                params.extend([per_page, offset])
+
+                cursor = conn.execute(select_query, params)
+                files = []
+                for row in cursor.fetchall():
+                    files.append(dict(row))
+
+                return {
+                    "files": files,
+                    "total_count": total_count,
+                    "page": page,
+                    "per_page": per_page,
+                }
+        except Exception as e:
+            print(f"Error searching files: {e}")
+            return {"files": [], "total_count": 0, "page": page, "per_page": per_page}
+
     def clear_all_data(self) -> bool:
         """テスト用：全データを削除"""
         try:
@@ -283,6 +521,7 @@ class DatabaseManager:
                 # 全テーブルのデータを削除
                 conn.execute("DELETE FROM conversion_logs")
                 conn.execute("DELETE FROM files")
+                conn.execute("DELETE FROM file_edit_history")
 
                 # 外部キー制約を再有効化
                 conn.execute("PRAGMA foreign_keys = ON")
@@ -291,6 +530,10 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error clearing all data: {e}")
             return False
+
+    def _get_connection(self):
+        """データベース接続を取得（テスト用）"""
+        return sqlite3.connect(self.db_path)
 
 
 # グローバルインスタンス

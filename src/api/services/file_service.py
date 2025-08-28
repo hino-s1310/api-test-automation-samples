@@ -131,9 +131,9 @@ class FileService:
                 "total_files": total_files,
                 "status_counts": status_counts,
                 "total_size_bytes": total_size,
-                "total_size_mb": round(total_size / (1024 * 1024), 2)
-                if total_size > 0
-                else 0,
+                "total_size_mb": (
+                    round(total_size / (1024 * 1024), 2) if total_size > 0 else 0
+                ),
                 "total_processing_time": round(total_processing_time, 2),
                 "average_processing_time": average_processing_time,
             }

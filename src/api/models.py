@@ -90,3 +90,60 @@ class ConversionResponse(BaseModel):
     markdown: str = Field(..., description="変換されたMarkdown")
     status: FileStatus = Field(..., description="処理状態")
     processing_time: float = Field(..., description="処理時間（秒）")
+
+
+class FileEditRequest(BaseModel):
+    """ファイル編集リクエスト"""
+
+    filename: str | None = Field(None, description="新しいファイル名")
+    markdown_content: str | None = Field(None, description="新しいMarkdown内容")
+    edit_reason: str | None = Field(None, description="編集理由")
+    edited_by: str = Field("system", description="編集者")
+
+
+class FileEditResponse(BaseModel):
+    """ファイル編集レスポンス"""
+
+    id: str = Field(..., description="ファイルID")
+    filename: str = Field(..., description="更新されたファイル名")
+    markdown: str = Field(..., description="更新されたMarkdown")
+    status: FileStatus = Field(..., description="処理状態")
+    updated_at: datetime = Field(..., description="更新日時")
+    last_edited_at: datetime = Field(..., description="最終編集日時")
+    edit_count: int = Field(..., description="編集回数")
+    is_edited: bool = Field(..., description="編集済みフラグ")
+    message: str = Field(..., description="更新メッセージ")
+
+
+class FileEditHistoryResponse(BaseModel):
+    """ファイル編集履歴レスポンス"""
+
+    id: int = Field(..., ge=0, description="履歴ID")
+    file_id: str = Field(..., description="ファイルID")
+    original_filename: str = Field(..., description="元のファイル名")
+    original_content: str = Field(..., description="元の内容")
+    edited_filename: str = Field(..., description="編集後のファイル名")
+    edited_content: str = Field(..., description="編集後の内容")
+    edit_reason: str | None = Field(None, description="編集理由")
+    edited_by: str = Field(..., description="編集者")
+    created_at: datetime = Field(..., description="編集日時")
+
+
+class FileSearchRequest(BaseModel):
+    """ファイル検索リクエスト"""
+
+    query: str | None = Field(None, description="検索クエリ")
+    status: str | None = Field(None, description="ステータスフィルター")
+    is_edited: bool | None = Field(None, description="編集済みフィルター")
+    page: int = Field(1, gt=0, description="ページ番号")
+    per_page: int = Field(10, gt=0, description="1ページあたりの件数")
+
+
+class FileSearchResponse(BaseModel):
+    """ファイル検索レスポンス"""
+
+    files: list[dict] = Field(..., description="ファイル一覧")
+    total_count: int = Field(..., description="総ファイル数")
+    page: int = Field(1, description="現在のページ")
+    per_page: int = Field(10, description="1ページあたりの件数")
+    filters: dict = Field(..., description="適用されたフィルター")
