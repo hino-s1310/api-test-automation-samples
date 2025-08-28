@@ -201,7 +201,7 @@ class TestFileContentUpdate:
             updated_file["markdown_content"] == sample_file["content"]
         )  # 内容は変更されていない
         assert updated_file["edit_count"] == 1
-        assert updated_file["is_edited"] is True
+        assert updated_file["is_edited"] == 1  # SQLiteでは1がTrue
         assert updated_file["last_edited_at"] is not None
 
         # 編集履歴が作成されているか確認
@@ -234,7 +234,7 @@ class TestFileContentUpdate:
         )  # ファイル名は変更されていない
         assert updated_file["markdown_content"] == new_content
         assert updated_file["edit_count"] == 1
-        assert updated_file["is_edited"] is True
+        assert updated_file["is_edited"] == 1  # SQLiteでは1がTrue
 
         # 編集履歴が作成されているか確認
         history = temp_db_manager.get_edit_history(sample_file["id"])
@@ -264,7 +264,7 @@ class TestFileContentUpdate:
         assert updated_file["filename"] == new_filename
         assert updated_file["markdown_content"] == new_content
         assert updated_file["edit_count"] == 1
-        assert updated_file["is_edited"] is True
+        assert updated_file["is_edited"] == 1  # SQLiteでは1がTrue
 
         # 編集履歴が作成されているか確認
         history = temp_db_manager.get_edit_history(sample_file["id"])
@@ -311,7 +311,7 @@ class TestFileContentUpdate:
         assert final_file["filename"] == "final_version.md"
         assert final_file["markdown_content"] == "# Final version content"
         assert final_file["edit_count"] == 3
-        assert final_file["is_edited"] is True
+        assert final_file["is_edited"] == 1  # SQLiteでは1がTrue
 
         # 履歴の件数を確認
         history = temp_db_manager.get_edit_history(sample_file["id"])
@@ -525,7 +525,7 @@ class TestDatabaseMigration:
             assert file_data is not None
             assert file_data["filename"] == "test.md"
             assert file_data["edit_count"] == 0  # デフォルト値
-            assert file_data["is_edited"] is False  # デフォルト値
+            assert file_data["is_edited"] == 0  # SQLiteでは0がFalse
 
         finally:
             shutil.rmtree(temp_dir)
