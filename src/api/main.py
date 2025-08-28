@@ -13,8 +13,13 @@ from fastapi.responses import JSONResponse
 
 from .database import db_manager
 from .models import (
+    FileEditHistoryResponse,
+    FileEditRequest,
+    FileEditResponse,
     FileListResponse,
     FileResponse,
+    FileSearchRequest,
+    FileSearchResponse,
     HealthResponse,
     UploadResponse,
 )
@@ -121,6 +126,41 @@ async def list_files(
     )
 
 
+@app.post("/files/search", response_model=FileSearchResponse, tags=["File Search"])
+async def search_files(search_request: FileSearchRequest):
+    """ファイルを検索・フィルタリング"""
+    try:
+        result = file_service.search_files(
+            query=search_request.query,
+            status=search_request.status,
+            is_edited=search_request.is_edited,
+            page=search_request.page,
+            per_page=search_request.per_page,
+        )
+
+        # 適用されたフィルターを記録
+        filters = {}
+        if search_request.query:
+            filters["query"] = search_request.query
+        if search_request.status:
+            filters["status"] = search_request.status
+        if search_request.is_edited is not None:
+            filters["is_edited"] = search_request.is_edited
+
+        return FileSearchResponse(
+            files=result["files"],
+            total_count=result["total_count"],
+            page=result["page"],
+            per_page=result["per_page"],
+            filters=filters,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"ファイル検索中にエラーが発生しました: {str(e)}"
+        ) from e
+
+
 @app.put("/files/{file_id}", response_model=FileResponse, tags=["Files"])
 async def update_file(
     file_id: str = Path(..., description="ファイルID"), file: UploadFile = File(...)
@@ -180,6 +220,51 @@ async def delete_file(file_id: str = Path(..., description="ファイルID")):
     return {"message": "ファイルが正常に削除されました"}
 
 
+@app.put(
+    "/files/{file_id}/edit", response_model=FileEditResponse, tags=["File Editing"]
+)
+async def edit_file(
+    file_id: str = Path(..., description="ファイルID"),
+    edit_request: FileEditRequest = ...,
+):
+    """指定されたIDのファイルを編集（ファイル名・Markdown内容）"""
+    # ファイルIDの妥当性を検証
+    if not file_service.validate_file_id(file_id):
+        raise HTTPException(status_code=400, detail="無効なファイルID形式です")
+
+    try:
+        # ファイル編集処理
+        result = file_service.edit_file(
+            file_id=file_id,
+            new_filename=edit_request.filename,
+            new_content=edit_request.markdown_content,
+            edit_reason=edit_request.edit_reason,
+            edited_by=edit_request.edited_by,
+        )
+
+        if result["success"]:
+            return FileEditResponse(
+                id=file_id,
+                filename=result["filename"],
+                markdown=result["markdown"],
+                status=result["status"],
+                updated_at=result["updated_at"],
+                last_edited_at=result["last_edited_at"],
+                edit_count=result["edit_count"],
+                is_edited=result["is_edited"],
+                message="ファイルが正常に編集されました",
+            )
+        else:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"ファイル編集中にエラーが発生しました: {str(e)}"
+        ) from e
+
+
 @app.get("/files/{file_id}/logs", tags=["Files"])
 async def get_file_logs(file_id: str = Path(..., description="ファイルID")):
     """指定されたIDのファイルの変換ログを取得"""
@@ -192,6 +277,65 @@ async def get_file_logs(file_id: str = Path(..., description="ファイルID")):
         raise HTTPException(status_code=404, detail="ログが見つかりません")
 
     return {"logs": logs}
+
+
+@app.get(
+    "/files/{file_id}/history",
+    response_model=list[FileEditHistoryResponse],
+    tags=["File Editing"],
+)
+async def get_file_edit_history(file_id: str = Path(..., description="ファイルID")):
+    """指定されたIDのファイルの編集履歴を取得"""
+    # ファイルIDの妥当性を検証
+    if not file_service.validate_file_id(file_id):
+        raise HTTPException(status_code=400, detail="無効なファイルID形式です")
+
+    try:
+        history = file_service.get_file_edit_history(file_id)
+        return history
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"編集履歴の取得に失敗しました: {str(e)}"
+        ) from e
+
+
+@app.post(
+    "/files/{file_id}/revert", response_model=FileEditResponse, tags=["File Editing"]
+)
+async def revert_file_to_version(
+    file_id: str = Path(..., description="ファイルID"),
+    history_id: int = Query(..., description="復元したい履歴ID"),
+):
+    """指定された履歴IDのバージョンにファイルを復元"""
+    # ファイルIDの妥当性を検証
+    if not file_service.validate_file_id(file_id):
+        raise HTTPException(status_code=400, detail="無効なファイルID形式です")
+
+    try:
+        # ファイル復元処理
+        result = file_service.revert_file_to_version(file_id, history_id)
+
+        if result["success"]:
+            return FileEditResponse(
+                id=file_id,
+                filename=result["filename"],
+                markdown=result["markdown"],
+                status=result["status"],
+                updated_at=result["updated_at"],
+                last_edited_at=result["last_edited_at"],
+                edit_count=result["edit_count"],
+                is_edited=result["is_edited"],
+                message=f"ファイルが履歴ID {history_id} のバージョンに復元されました",
+            )
+        else:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"ファイル復元中にエラーが発生しました: {str(e)}"
+        ) from e
 
 
 @app.get("/statistics", tags=["Statistics"])
@@ -224,6 +368,86 @@ async def cleanup_old_files(
         "deleted_count": result["deleted_count"],
         "total_old_files": result["total_old_files"],
     }
+
+
+@app.post("/files/batch-edit", tags=["File Editing"])
+async def batch_edit_files(
+    file_ids: list[str] = Query(..., description="編集対象のファイルID一覧"),
+    new_filename: str = Query(None, description="新しいファイル名（全ファイルに適用）"),
+    new_content: str = Query(
+        None, description="新しいMarkdown内容（全ファイルに適用）"
+    ),
+    edit_reason: str = Query(..., description="編集理由"),
+    edited_by: str = Query("system", description="編集者"),
+):
+    """複数のファイルを一括編集"""
+    try:
+        if not file_ids:
+            raise HTTPException(
+                status_code=400, detail="ファイルIDが指定されていません"
+            )
+
+        if not new_filename and not new_content:
+            raise HTTPException(
+                status_code=400,
+                detail="ファイル名または内容のいずれかを指定してください",
+            )
+
+        result = file_service.batch_edit_files(
+            file_ids=file_ids,
+            new_filename=new_filename,
+            new_content=new_content,
+            edit_reason=edit_reason,
+            edited_by=edited_by,
+        )
+
+        if result["success"]:
+            return {
+                "message": f"{len(file_ids)}件のファイルが一括編集されました",
+                "edited_count": result["edited_count"],
+                "failed_count": result["failed_count"],
+                "failed_files": result["failed_files"],
+            }
+        else:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"一括編集中にエラーが発生しました: {str(e)}"
+        ) from e
+
+
+@app.delete("/files/batch-delete", tags=["File Editing"])
+async def batch_delete_files(
+    file_ids: list[str] = Query(..., description="削除対象のファイルID一覧"),
+):
+    """複数のファイルを一括削除"""
+    try:
+        if not file_ids:
+            raise HTTPException(
+                status_code=400, detail="ファイルIDが指定されていません"
+            )
+
+        result = file_service.batch_delete_files(file_ids)
+
+        if result["success"]:
+            return {
+                "message": f"{len(file_ids)}件のファイルが一括削除されました",
+                "deleted_count": result["deleted_count"],
+                "failed_count": result["failed_count"],
+                "failed_files": result["failed_files"],
+            }
+        else:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"一括削除中にエラーが発生しました: {str(e)}"
+        ) from e
 
 
 @app.post("/test/reset-db", tags=["Testing"])
