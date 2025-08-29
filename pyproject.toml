@@ -26,20 +26,18 @@ dependencies = [
     "fastapi>=0.104.1",
     "uvicorn[standard]>=0.24.0",
     "python-multipart>=0.0.6",
-
     # PDF変換関連
     "markitdown>=0.1.0",
     "pypdf>=4.0.0",
     "pdfplumber>=0.10.3",
-
     # ファイル処理関連
     "python-magic>=0.4.27",
     "aiofiles>=23.2.1",
     "Pillow>=10.1.0",
-
     # その他
     "python-dateutil>=2.8.2",
     "pydantic>=2.5.0",
+    "pre-commit>=4.3.0",
 ]
 
 [project.optional-dependencies]

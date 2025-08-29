@@ -25,8 +25,19 @@ repos:
       - id: check-json
       # マージコンフリクトマーカーの確認
       - id: check-merge-conflict
-      # ファイル名の重複確認
+      # 大きなファイルの確認（1MB制限）
       - id: check-added-large-files
+        args: ['--maxkb', '1024']
+        exclude: |
+          (?x)^(
+              src/api/data/uploads/|
+              data/uploads/|
+              tests/data/uploads/|
+              \.git/|
+              \.venv/|
+              venv/|
+              node_modules/
+          )$
 
 # グローバル設定
 default_language_version:
@@ -49,5 +60,8 @@ exclude: |
       \.coverage|
       coverage\.xml|
       htmlcov/|
-      \.ruff_cache/
+      \.ruff_cache/|
+      src/api/data/uploads/|
+      data/uploads/|
+      tests/data/uploads/
   )$

@@ -20,9 +20,15 @@ from ..models import FileStatus
 class PDFService:
     """PDF変換サービス"""
 
-    def __init__(
-        self, upload_dir: str = "data/uploads", markdown_dir: str = "data/markdown"
-    ):
+    def __init__(self, upload_dir: str = None, markdown_dir: str = None):
+        # 環境変数からディレクトリパスを取得、なければデフォルト値を使用
+        import os
+
+        if upload_dir is None:
+            upload_dir = os.environ.get("UPLOAD_DIR", "data/uploads")
+        if markdown_dir is None:
+            markdown_dir = os.environ.get("MARKDOWN_DIR", "data/markdown")
+
         self.upload_dir = Path(upload_dir)
         self.markdown_dir = Path(markdown_dir)
         self._ensure_directories()

@@ -29,7 +29,45 @@ def test_client():
     すべてのテストで同じクライアントインスタンスを使用することで、
     テスト実行時間を短縮できます。
     """
-    return TestClient(app)
+    # テスト環境用の一時ディレクトリを作成
+    import os
+    import tempfile
+
+    # テスト用の一時ディレクトリを作成
+    temp_upload_dir = tempfile.mkdtemp(prefix="test_uploads_")
+    temp_markdown_dir = tempfile.mkdtemp(prefix="test_markdown_")
+
+    # 環境変数を設定してテスト用ディレクトリを使用
+    original_upload_dir = os.environ.get("UPLOAD_DIR")
+    original_markdown_dir = os.environ.get("MARKDOWN_DIR")
+
+    os.environ["UPLOAD_DIR"] = temp_upload_dir
+    os.environ["MARKDOWN_DIR"] = temp_markdown_dir
+
+    client = TestClient(app)
+
+    # クライアントと一時ディレクトリのパスを返す
+    yield client
+
+    # セッション終了時に一時ディレクトリをクリーンアップ
+    import shutil
+
+    try:
+        shutil.rmtree(temp_upload_dir)
+        shutil.rmtree(temp_markdown_dir)
+    except Exception as e:
+        print(f"一時ディレクトリのクリーンアップエラー: {e}")
+
+    # 環境変数を元に戻す
+    if original_upload_dir:
+        os.environ["UPLOAD_DIR"] = original_upload_dir
+    else:
+        os.environ.pop("UPLOAD_DIR", None)
+
+    if original_markdown_dir:
+        os.environ["MARKDOWN_DIR"] = original_markdown_dir
+    else:
+        os.environ.pop("MARKDOWN_DIR", None)
 
 
 @pytest.fixture(scope="session")
@@ -63,6 +101,20 @@ def clean_environment():
     # テスト実行後のクリーンアップ
     os.environ.clear()
     os.environ.update(original_env)
+
+    # テスト実行後に作成された一時ファイルをクリーンアップ
+
+    # テスト用の一時ディレクトリをクリーンアップ（空の場合のみ）
+    test_dirs = ["test_markdown", "test_uploads"]
+    for dir_name in test_dirs:
+        if os.path.exists(dir_name):
+            try:
+                # ディレクトリが空の場合のみ削除
+                if not os.listdir(dir_name):
+                    os.rmdir(dir_name)
+                    print(f"空のディレクトリを削除: {dir_name}")
+            except Exception as e:
+                print(f"ディレクトリ削除エラー {dir_name}: {e}")
 
 
 @pytest.fixture
@@ -437,3 +489,32 @@ def test_session_setup():
     print("\nテストセッション開始")
     yield
     print("\nテストセッション完了")
+
+    # テストセッション終了時のクリーンアップ
+    print("\nテストセッション終了時のクリーンアップを実行中...")
+
+    # テスト実行時に作成された一時ファイルをクリーンアップ
+    import os
+    import shutil
+
+    # テスト用の一時ディレクトリをクリーンアップ
+    test_dirs = ["test_markdown", "test_uploads"]
+    for dir_name in test_dirs:
+        if os.path.exists(dir_name):
+            try:
+                shutil.rmtree(dir_name)
+                print(f"削除されたディレクトリ: {dir_name}")
+            except Exception as e:
+                print(f"ディレクトリ削除エラー {dir_name}: {e}")
+
+    # テスト用データベースファイルをクリーンアップ
+    test_db_files = ["test_database.db"]
+    for db_file in test_db_files:
+        if os.path.exists(db_file):
+            try:
+                os.remove(db_file)
+                print(f"削除されたファイル: {db_file}")
+            except Exception as e:
+                print(f"ファイル削除エラー {db_file}: {e}")
+
+    print("テストセッション終了時のクリーンアップ完了")

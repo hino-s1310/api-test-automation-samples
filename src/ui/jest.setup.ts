@@ -1,5 +1,21 @@
 import '@testing-library/jest-dom';
 
+// axiosのモック
+jest.mock('axios', () => ({
+  default: {
+    create: jest.fn(() => ({
+      get: jest.fn(),
+      post: jest.fn(),
+      put: jest.fn(),
+      delete: jest.fn(),
+      interceptors: {
+        request: { use: jest.fn() },
+        response: { use: jest.fn() }
+      }
+    }))
+  }
+}));
+
 // MSWなどのモックサーバーを使用する場合の設定
 // import { server } from './src/mocks/server';
 // beforeAll(() => server.listen());

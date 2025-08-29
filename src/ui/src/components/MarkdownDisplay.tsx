@@ -10,8 +10,9 @@ interface MarkdownDisplayProps {
 }
 
 export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplayProps) {
-  const [activeTab, setActiveTab] = useState<'preview' | 'raw'>('preview');
+  const [activeTab, setActiveTab] = useState<'preview' | 'raw' | 'editable'>('preview');
   const [copied, setCopied] = useState(false);
+  const [editableContent, setEditableContent] = useState(result.markdown);
 
   const copyToClipboard = async () => {
     try {
@@ -31,6 +32,18 @@ export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplay
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+  };
+
+  const handleContentChange = (newContent: string) => {
+    setEditableContent(newContent);
+  };
+
+  const getTabButtonClass = (tab: string) => {
+    const baseClasses = "py-2 px-1 border-b-2 font-medium text-sm";
+    const activeClasses = "border-blue-500 text-blue-600";
+    const inactiveClasses = "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300";
+
+    return `${baseClasses} ${activeTab === tab ? activeClasses : inactiveClasses}`;
   };
 
   return (
@@ -77,25 +90,24 @@ export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplay
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveTab('preview')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'preview'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={getTabButtonClass('preview')}
                 data-testid="preview-tab"
               >
                 プレビュー
               </button>
               <button
                 onClick={() => setActiveTab('raw')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'raw'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={getTabButtonClass('raw')}
                 data-testid="markdown-tab"
               >
                 Markdown
+              </button>
+              <button
+                onClick={() => setActiveTab('editable')}
+                className={getTabButtonClass('editable')}
+                data-testid="editable-tab"
+              >
+                編集可能プレビュー
               </button>
             </nav>
           </div>
@@ -109,11 +121,41 @@ export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplay
                 <ReactMarkdown>{result.markdown}</ReactMarkdown>
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'raw' ? (
             <div className="h-full overflow-hidden" data-testid="raw-content-container">
               <pre className="bg-gray-50 p-3 rounded-md text-xs lg:text-sm overflow-auto whitespace-pre-wrap font-mono h-full">
                 {result.markdown}
               </pre>
+            </div>
+          ) : (
+            <div className="h-full overflow-hidden" data-testid="editable-content-container">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+                {/* 左側: 編集可能なMarkdown */}
+                <div className="h-full">
+                  <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-700">Markdown編集</h4>
+                  </div>
+                  <textarea
+                    value={editableContent}
+                    onChange={(e) => handleContentChange(e.target.value)}
+                    className="w-full h-full p-3 font-mono text-sm border-0 resize-none focus:outline-none focus:ring-0"
+                    placeholder="Markdownを編集してください..."
+                    data-testid="editable-markdown-textarea"
+                  />
+                </div>
+
+                {/* 右側: リアルタイムプレビュー */}
+                <div className="h-full">
+                  <div className="bg-blue-50 px-3 py-2 border-b border-blue-200">
+                    <h4 className="text-sm font-medium text-blue-700">リアルタイムプレビュー</h4>
+                  </div>
+                  <div className="prose max-w-none prose-sm lg:prose-base h-full overflow-hidden">
+                    <div className="h-full overflow-y-auto p-3">
+                      <ReactMarkdown>{editableContent}</ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -128,6 +170,11 @@ export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplay
               <p className="text-xs text-blue-600">
                 文字数: {result.markdown.length.toLocaleString()}
               </p>
+              {activeTab === 'editable' && (
+                <p className="text-xs text-blue-600">
+                  編集済み文字数: {editableContent.length.toLocaleString()}
+                </p>
+              )}
             </div>
             <p className="text-xs text-blue-600">
               このIDで後からファイルの取得・更新・削除が可能

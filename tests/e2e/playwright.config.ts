@@ -5,14 +5,15 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
+  testMatch: /.*\.spec\.ts/,
   /* CI環境では並列実行を無効化してテストの安定性を向上 */
-  fullyParallel: process.env.CI ? false : true,
+  fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* CI環境ではリトライ回数を増やして安定性を向上 */
   retries: process.env.CI ? 3 : 0,
-  /* CI環境ではワーカー数を1に制限して競合状態を回避 */
-  workers: process.env.CI ? 1 : undefined,
+  /* ワーカー数を1に制限して競合状態を回避 */
+  workers: 1,
   /* Output directory for test results */
   outputDir: './test-results',
   /* Reporter configuration optimized for CI */
@@ -55,20 +56,20 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         baseURL: 'http://localhost:3000',
         // CI環境でのタイムアウトを延長
-        actionTimeout: 30000,
-        navigationTimeout: 60000,
+        actionTimeout: process.env.CI ? 60000 : 30000,
+        navigationTimeout: process.env.CI ? 120000 : 60000,
       },
     },
   ],
 
-  // CI環境ではwebServerを使用しない（手動で起動するため）
-  webServer: process.env.CI ? [] : [
+  // CI環境でもwebServerを使用してサーバーを起動
+  webServer: [
     {
       name: 'api-server',
       command: 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
       url: 'http://localhost:8000/health',
       reuseExistingServer: true,
-      timeout: 120 * 1000,
+      timeout: process.env.CI ? 300 * 1000 : 120 * 1000,
       stdout: 'pipe',
       env: {
         ENVIRONMENT: 'test'
@@ -76,13 +77,15 @@ export default defineConfig({
     },
     {
       name: 'ui-server',
-      command: 'cd ../../src/ui && pnpm install && pnpm dev',
+      command: process.env.CI
+        ? 'cd ../../src/ui && pnpm install && pnpm build && pnpm start'
+        : 'cd ../../src/ui && pnpm install && pnpm dev',
       url: 'http://localhost:3000',
       stdout: 'pipe',
       reuseExistingServer: true,
-      timeout: 180 * 1000,
+      timeout: process.env.CI ? 600 * 1000 : 180 * 1000,
       env: {
-        NODE_ENV: 'development'
+        NODE_ENV: process.env.CI ? 'production' : 'development'
       }
     }
   ],
@@ -104,10 +107,10 @@ export default defineConfig({
   },
 
   /* CI環境ではグローバルタイムアウトを延長して安定性を向上 */
-  timeout: process.env.CI ? 120000 : 30000,
+  timeout: process.env.CI ? 300000 : 30000,
 
   /* CI環境では期待値のタイムアウトも延長して安定性を向上 */
   expect: {
-    timeout: process.env.CI ? 30000 : 5000,
+    timeout: process.env.CI ? 60000 : 5000,
   },
 });

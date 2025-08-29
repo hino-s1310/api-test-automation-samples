@@ -51,6 +51,6 @@ export class FilesListPage extends BasePage {
     });
 
     // ファイル削除ボタンをクリック
-    await this.deleteButton.filter({ has: this.page.getByRole('button', { name: `${fileName}を削除` }) }).click();
+    await this.deleteButton.getByRole('button', { name: `${fileName}を削除` }).click();
   }
 }
