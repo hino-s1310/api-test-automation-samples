@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 from .database import db_manager
 from .models import (
-    FileEditHistoryResponse,
+    FileEditHistoryListResponse,
     FileEditRequest,
     FileEditResponse,
     FileListResponse,
@@ -84,6 +84,37 @@ async def upload_pdf(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"ファイル処理中にエラーが発生しました: {str(e)}"
+        ) from e
+
+
+@app.delete("/files/batch-delete", tags=["File Editing"])
+async def batch_delete_files(
+    file_ids: list[str] = Query(..., description="削除対象のファイルID一覧"),
+):
+    """複数のファイルを一括削除"""
+    try:
+        if not file_ids:
+            raise HTTPException(
+                status_code=400, detail="ファイルIDが指定されていません"
+            )
+
+        result = file_service.batch_delete_files(file_ids)
+
+        if result["success"]:
+            return {
+                "message": f"{len(file_ids)}件のファイルが一括削除されました",
+                "deleted_count": result["deleted_count"],
+                "failed_count": result["failed_count"],
+                "failed_files": result["failed_files"],
+            }
+        else:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"一括削除中にエラーが発生しました: {str(e)}"
         ) from e
 
 
@@ -273,16 +304,13 @@ async def get_file_logs(file_id: str = Path(..., description="ファイルID")):
         raise HTTPException(status_code=400, detail="無効なファイルID形式です")
 
     logs = file_service.get_conversion_logs(file_id)
-    if not logs:
-        raise HTTPException(status_code=404, detail="ログが見つかりません")
-
     return {"logs": logs}
 
 
 @app.get(
     "/files/{file_id}/history",
-    response_model=list[FileEditHistoryResponse],
-    tags=["File Editing"],
+    response_model=FileEditHistoryListResponse,
+    tags=["Files"],
 )
 async def get_file_edit_history(file_id: str = Path(..., description="ファイルID")):
     """指定されたIDのファイルの編集履歴を取得"""
@@ -290,13 +318,8 @@ async def get_file_edit_history(file_id: str = Path(..., description="ファイ�
     if not file_service.validate_file_id(file_id):
         raise HTTPException(status_code=400, detail="無効なファイルID形式です")
 
-    try:
-        history = file_service.get_file_edit_history(file_id)
-        return history
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"編集履歴の取得に失敗しました: {str(e)}"
-        ) from e
+    history = file_service.get_file_edit_history(file_id)
+    return FileEditHistoryListResponse(history=history)
 
 
 @app.post(
@@ -368,86 +391,6 @@ async def cleanup_old_files(
         "deleted_count": result["deleted_count"],
         "total_old_files": result["total_old_files"],
     }
-
-
-@app.post("/files/batch-edit", tags=["File Editing"])
-async def batch_edit_files(
-    file_ids: list[str] = Query(..., description="編集対象のファイルID一覧"),
-    new_filename: str = Query(None, description="新しいファイル名（全ファイルに適用）"),
-    new_content: str = Query(
-        None, description="新しいMarkdown内容（全ファイルに適用）"
-    ),
-    edit_reason: str = Query(..., description="編集理由"),
-    edited_by: str = Query("system", description="編集者"),
-):
-    """複数のファイルを一括編集"""
-    try:
-        if not file_ids:
-            raise HTTPException(
-                status_code=400, detail="ファイルIDが指定されていません"
-            )
-
-        if not new_filename and not new_content:
-            raise HTTPException(
-                status_code=400,
-                detail="ファイル名または内容のいずれかを指定してください",
-            )
-
-        result = file_service.batch_edit_files(
-            file_ids=file_ids,
-            new_filename=new_filename,
-            new_content=new_content,
-            edit_reason=edit_reason,
-            edited_by=edited_by,
-        )
-
-        if result["success"]:
-            return {
-                "message": f"{len(file_ids)}件のファイルが一括編集されました",
-                "edited_count": result["edited_count"],
-                "failed_count": result["failed_count"],
-                "failed_files": result["failed_files"],
-            }
-        else:
-            raise HTTPException(status_code=400, detail=result["error"])
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"一括編集中にエラーが発生しました: {str(e)}"
-        ) from e
-
-
-@app.delete("/files/batch-delete", tags=["File Editing"])
-async def batch_delete_files(
-    file_ids: list[str] = Query(..., description="削除対象のファイルID一覧"),
-):
-    """複数のファイルを一括削除"""
-    try:
-        if not file_ids:
-            raise HTTPException(
-                status_code=400, detail="ファイルIDが指定されていません"
-            )
-
-        result = file_service.batch_delete_files(file_ids)
-
-        if result["success"]:
-            return {
-                "message": f"{len(file_ids)}件のファイルが一括削除されました",
-                "deleted_count": result["deleted_count"],
-                "failed_count": result["failed_count"],
-                "failed_files": result["failed_files"],
-            }
-        else:
-            raise HTTPException(status_code=400, detail=result["error"])
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"一括削除中にエラーが発生しました: {str(e)}"
-        ) from e
 
 
 @app.post("/test/reset-db", tags=["Testing"])

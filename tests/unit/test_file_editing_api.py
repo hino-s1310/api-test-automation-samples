@@ -292,39 +292,6 @@ class TestFileSearchAPI:
 class TestBatchOperationsAPI:
     """一括操作APIのテスト"""
 
-    def test_batch_edit_files_success(self, test_client: TestClient):
-        """一括編集APIの正常系テスト"""
-        # 複数のファイルIDを指定（実際のテストでは有効なIDを使用）
-        batch_edit_data = {
-            "file_ids": ["file1", "file2"],
-            "new_filename": "batch_edited.md",
-            "edit_reason": "Batch edit test",
-            "edited_by": "test_user",
-        }
-
-        response = test_client.post("/files/batch-edit", params=batch_edit_data)
-        # 実際のファイルが存在しない場合は400が返される可能性がある
-        assert response.status_code in [200, 400, 404]
-
-    def test_batch_edit_files_missing_file_ids(self, test_client: TestClient):
-        """ファイルIDが指定されていない場合のテスト"""
-        batch_edit_data = {"new_filename": "test.md", "edit_reason": "Test"}
-
-        response = test_client.post("/files/batch-edit", params=batch_edit_data)
-        # ファイルIDが必須パラメータのため、422エラー（Validation Error）が返される
-        assert response.status_code == 422
-
-    def test_batch_edit_files_no_changes(self, test_client: TestClient):
-        """ファイル名・内容の両方が指定されていない場合のテスト"""
-        batch_edit_data = {"file_ids": ["file1"], "edit_reason": "Test"}
-
-        response = test_client.post("/files/batch-edit", params=batch_edit_data)
-        assert response.status_code == 400
-        assert (
-            "ファイル名または内容のいずれかを指定してください"
-            in response.json()["detail"]
-        )
-
     def test_batch_delete_files_success(self, test_client: TestClient):
         """一括削除APIの正常系テスト"""
         batch_delete_data = {"file_ids": ["file1", "file2"]}

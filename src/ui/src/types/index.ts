@@ -39,3 +39,50 @@ export interface UploadState {
   error: string | null;
   result: UploadResponse | null;
 }
+
+// 編集履歴関連の型定義
+export interface FileEditHistory {
+  id: number;
+  file_id: string;
+  original_filename: string;
+  original_content: string;
+  edited_filename: string;
+  edited_content: string;
+  edit_reason: string;
+  edited_by: string;
+  created_at: string;
+}
+
+export interface FileEditHistoryResponse {
+  history: FileEditHistory[];
+  total_count: number;
+}
+
+// 差分表示関連の型定義
+export interface DiffResult {
+  original: string;
+  modified: string;
+  diff: string;
+  hasChanges: boolean;
+}
+
+// 一括操作関連の型定義
+export interface BatchOperationRequest {
+  file_ids: string[];
+  operation: 'edit' | 'delete';
+  data?: {
+    filename?: string;
+    content?: string;
+    reason?: string;
+  };
+}
+
+export interface BatchOperationResponse {
+  success: boolean;
+  message: string;
+  results: {
+    file_id: string;
+    success: boolean;
+    error?: string;
+  }[];
+}

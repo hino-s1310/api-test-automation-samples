@@ -383,76 +383,10 @@ class FileService:
                 "error": str(e),
             }
 
-    def batch_edit_files(
-        self,
-        file_ids: list[str],
-        new_filename: str | None = None,
-        new_content: str | None = None,
-        edit_reason: str | None = None,
-        edited_by: str = "system",
-    ) -> dict[str, Any]:
-        """複数のファイルを一括編集"""
-        try:
-            if not file_ids:
-                return {"success": False, "error": "ファイルIDが指定されていません"}
-
-            if not new_filename and not new_content:
-                return {
-                    "success": False,
-                    "error": "ファイル名または内容のいずれかを指定してください",
-                }
-
-            edited_count = 0
-            failed_count = 0
-            failed_files = []
-
-            for file_id in file_ids:
-                # ファイルIDの妥当性を検証
-                if not self.validate_file_id(file_id):
-                    failed_count += 1
-                    failed_files.append(
-                        {"file_id": file_id, "error": "無効なファイルID形式"}
-                    )
-                    continue
-
-                # ファイルの存在確認
-                existing_file = db_manager.get_file(file_id)
-                if not existing_file:
-                    failed_count += 1
-                    failed_files.append(
-                        {"file_id": file_id, "error": "ファイルが見つかりません"}
-                    )
-                    continue
-
-                # 編集処理を実行
-                if db_manager.update_file_content(
-                    file_id=file_id,
-                    new_filename=new_filename,
-                    new_content=new_content,
-                    edit_reason=edit_reason,
-                    edited_by=edited_by,
-                ):
-                    edited_count += 1
-                else:
-                    failed_count += 1
-                    failed_files.append({"file_id": file_id, "error": "編集処理に失敗"})
-
-            return {
-                "success": True,
-                "edited_count": edited_count,
-                "failed_count": failed_count,
-                "failed_files": failed_files,
-            }
-
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"一括編集中にエラーが発生しました: {str(e)}",
-            }
-
     def batch_delete_files(self, file_ids: list[str]) -> dict[str, Any]:
         """複数のファイルを一括削除"""
         try:
+            print(f"一括削除開始: {file_ids}")  # デバッグログ
             if not file_ids:
                 return {"success": False, "error": "ファイルIDが指定されていません"}
 
@@ -461,8 +395,10 @@ class FileService:
             failed_files = []
 
             for file_id in file_ids:
+                print(f"ファイルID処理中: '{file_id}'")  # デバッグログ
                 # ファイルIDの妥当性を検証
                 if not self.validate_file_id(file_id):
+                    print(f"ファイルID検証失敗: '{file_id}'")  # デバッグログ
                     failed_count += 1
                     failed_files.append(
                         {"file_id": file_id, "error": "無効なファイルID形式"}
@@ -472,6 +408,7 @@ class FileService:
                 # ファイルの存在確認
                 existing_file = db_manager.get_file(file_id)
                 if not existing_file:
+                    print(f"ファイル存在確認失敗: '{file_id}'")  # デバッグログ
                     failed_count += 1
                     failed_files.append(
                         {"file_id": file_id, "error": "ファイルが見つかりません"}
@@ -480,11 +417,16 @@ class FileService:
 
                 # 削除処理を実行
                 if db_manager.delete_file(file_id):
+                    print(f"ファイル削除成功: '{file_id}'")  # デバッグログ
                     deleted_count += 1
                 else:
+                    print(f"ファイル削除失敗: '{file_id}'")  # デバッグログ
                     failed_count += 1
                     failed_files.append({"file_id": file_id, "error": "削除処理に失敗"})
 
+            print(
+                f"一括削除完了: 成功={deleted_count}, 失敗={failed_count}"
+            )  # デバッグログ
             return {
                 "success": True,
                 "deleted_count": deleted_count,
@@ -493,6 +435,7 @@ class FileService:
             }
 
         except Exception as e:
+            print(f"一括削除中に例外発生: {str(e)}")  # デバッグログ
             return {
                 "success": False,
                 "error": f"一括削除中にエラーが発生しました: {str(e)}",

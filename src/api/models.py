@@ -129,6 +129,12 @@ class FileEditHistoryResponse(BaseModel):
     created_at: datetime = Field(..., description="編集日時")
 
 
+class FileEditHistoryListResponse(BaseModel):
+    """ファイル編集履歴リストレスポンス"""
+
+    history: list[FileEditHistoryResponse] = Field(..., description="編集履歴のリスト")
+
+
 class FileSearchRequest(BaseModel):
     """ファイル検索リクエスト"""
 
