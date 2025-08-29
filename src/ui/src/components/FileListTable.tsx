@@ -121,7 +121,7 @@ export default function FileListTable({
   }, []);
 
   return (
-    <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+    <div className="bg-white shadow-sm rounded-lg overflow-hidden" data-testid="files-card">
       {/* 一括操作バー */}
       {selectedFiles.size > 0 && (
         <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
@@ -225,6 +225,7 @@ export default function FileListTable({
                 tabIndex={0}
                 role="button"
                 aria-label={`${file.filename}の詳細を表示`}
+                data-testid={`file-row-${file.id}`}
               >
                 <td className="px-3 sm:px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   <input
@@ -236,7 +237,7 @@ export default function FileListTable({
                   />
                 </td>
                 <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900 truncate max-w-xs">
+                  <div className="text-sm font-medium text-gray-900 truncate max-w-xs" data-testid={`filename-${file.id}`}>
                     {file.filename}
                   </div>
                 </td>
@@ -256,6 +257,7 @@ export default function FileListTable({
                       className="text-gray-700 hover:text-gray-900 p-2 rounded hover:bg-gray-100 transition-colors"
                       aria-label={`${file.filename}を編集`}
                       title="編集"
+                      data-testid={`edit-button-${file.id}`}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -266,6 +268,7 @@ export default function FileListTable({
                       className="text-gray-700 hover:text-gray-900 p-2 rounded hover:bg-gray-100 transition-colors"
                       aria-label={`${file.filename}の編集履歴を表示`}
                       title="編集履歴"
+                      data-testid={`history-button-${file.id}`}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -277,6 +280,7 @@ export default function FileListTable({
                       className="text-red-600 hover:text-red-900 p-2 rounded hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       aria-label={`${file.filename}を削除`}
                       title="削除"
+                      data-testid={`delete-button-${file.id}`}
                     >
                       {deletingFileId === file.id ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>

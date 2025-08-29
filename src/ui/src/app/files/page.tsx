@@ -256,7 +256,7 @@ export default function FilesPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
           </svg>
           <h1 className="mt-4 text-lg font-medium text-gray-900">エラーが発生しました</h1>
-          <p className="mt-2 text-sm text-gray-600">{error}</p>
+          <p className="mt-2 text-sm text-gray-600" data-testid="error-message">{error}</p>
           <button
             onClick={fetchFiles}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
@@ -270,10 +270,10 @@ export default function FilesPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen py-8">
+      <div className="min-h-screen py-8" data-testid="files-page">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* ヘッダー */}
-          <div className="mb-8">
+          <div className="mb-8" data-testid="page-header">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">ファイル一覧</h1>
             <p className="mt-2 text-sm sm:text-base text-gray-600">
               アップロードされたファイルの管理、編集、履歴確認ができます。
@@ -297,7 +297,7 @@ export default function FilesPage() {
           {/* ファイル一覧 */}
           <div className="bg-white rounded-lg shadow">
             {loading ? (
-              <div className="p-8 text-center">
+              <div className="p-8 text-center" data-testid="files-page-loading">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                 <p className="mt-2 text-gray-600">ファイルを読み込み中...</p>
               </div>

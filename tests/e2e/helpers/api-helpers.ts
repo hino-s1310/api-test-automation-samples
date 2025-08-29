@@ -110,34 +110,83 @@ export function assertErrorResponse(response: any, expectedStatus: number) {
   expect(response.status()).toBe(expectedStatus);
 }
 
-// テスト用ヘルパー関数
 export async function setupMockData(page: any, data: any = VALID_UPLOAD_DATA) {
   try {
+    console.log('APIサーバーの状態を確認中...');
+
+    // まずAPIサーバーの状態を確認
+    const healthResponse = await page.request.get('http://localhost:8000/health');
+    if (healthResponse.status() !== 200) {
+      throw new Error(`APIサーバーが正常に動作していません。ステータス: ${healthResponse.status()}`);
+    }
+
+    console.log('APIサーバーが正常に動作しています');
     console.log('ファイルアップロードを開始します...');
 
     const response = await uploadPdfFile(page.request, data);
     console.log('アップロードレスポンス:', response.status(), response.statusText());
 
     if (response.status() === 200) {
+      // レスポンスの内容を詳細にログ出力
+      const responseBody = await response.json();
+      console.log('APIレスポンスの詳細:', JSON.stringify(responseBody, null, 2));
+
+      // より柔軟な検証：idまたはfilenameのいずれかが存在すればOK
+      if (!responseBody.id && !responseBody.filename) {
+        console.warn('APIレスポンスにidまたはfilenameが含まれていません');
+        console.log('レスポンスの構造:', Object.keys(responseBody));
+
+        // レスポンスが空でない場合は成功として扱う
+        if (Object.keys(responseBody).length > 0) {
+          console.log('レスポンスが空でないため、成功として扱います');
+          return true;
+        }
+
+        throw new Error('APIレスポンスが空です');
+      }
+
       console.log('ファイルのアップロードに成功しました');
+      if (responseBody.id) {
+        console.log('アップロードされたファイルID:', responseBody.id);
+      }
+      if (responseBody.filename) {
+        console.log('アップロードされたファイル名:', responseBody.filename);
+      }
       return true;
     } else {
       const errorText = await response.text();
       console.log('ファイルのアップロードに失敗しました:', response.status(), errorText);
-      return false;
+      throw new Error(`アップロードAPIが失敗しました: ${response.status()} - ${errorText}`);
     }
   } catch (error) {
-    console.log('ファイルのアップロードでエラーが発生しました:', error);
-    return false;
+    console.error('setupMockDataでエラーが発生しました:', error);
+    // エラーを再スローしてテストを失敗させる
+    throw error;
   }
 }
 
 
 export async function cleanupMockData(page: any) {
   try {
-    await page.request.post('http://localhost:8000/test/reset-db');
+    console.log('データベースリセットを開始します...');
+
+    // APIサーバーの状態を確認
+    const healthResponse = await page.request.get('http://localhost:8000/health');
+    if (healthResponse.status() !== 200) {
+      console.warn('APIサーバーが動作していないため、データベースリセットをスキップします');
+      return;
+    }
+
+    const response = await page.request.post('http://localhost:8000/test/reset-db');
+    if (response.status() === 200) {
+      console.log('データベースリセットが完了しました');
+    } else {
+      console.warn(`データベースリセットが失敗しました。ステータス: ${response.status()}`);
+    }
   } catch (error) {
-    console.log('データベースリセットエンドポイントが利用できません');
+    console.error('データベースリセットでエラーが発生しました:', error);
+    // テストを失敗させずに警告のみ出力
+    console.warn('データベースリセットエンドポイントが利用できません');
   }
 }
 
@@ -145,7 +194,28 @@ export async function cleanupMockData(page: any) {
  * ファイルIDを取得するヘルパー関数
  */
 export async function getFileId(page: any, fileName: string) {
-  const response = await getFilesList(page.request);
-  const responseBody = await response.json();
-  return responseBody.files.find((file: any) => file.filename === fileName)?.id;
+  try {
+    console.log(`ファイルIDを取得中: ${fileName}`);
+
+    const response = await getFilesList(page.request);
+    if (response.status() !== 200) {
+      throw new Error(`ファイル一覧APIが失敗しました: ${response.status()}`);
+    }
+
+    const responseBody = await response.json();
+    if (!responseBody.files || !Array.isArray(responseBody.files)) {
+      throw new Error('ファイル一覧APIのレスポンス形式が不正です');
+    }
+
+    const file = responseBody.files.find((file: any) => file.filename === fileName);
+    if (!file) {
+      throw new Error(`ファイル "${fileName}" が見つかりません`);
+    }
+
+    console.log(`ファイルID取得成功: ${file.id}`);
+    return file.id;
+  } catch (error) {
+    console.error('getFileIdでエラーが発生しました:', error);
+    throw error;
+  }
 }

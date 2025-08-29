@@ -77,7 +77,6 @@ describe('FileEditModal', () => {
     );
 
     expect(screen.getByText(/ファイルID:/)).toBeInTheDocument();
-    expect(screen.getByText(/現在のステータス:/)).toBeInTheDocument();
     expect(screen.getByText(/作成日時:/)).toBeInTheDocument();
   });
 
@@ -198,6 +197,11 @@ describe('FileEditModal', () => {
       />
     );
 
+    // ファイル名を変更
+    const filenameInput = screen.getByTestId('edit-filename-input');
+    await user.clear(filenameInput);
+    await user.type(filenameInput, 'new-filename.md');
+
     // 編集理由を入力
     const reasonInput = screen.getByTestId('edit-reason-input');
     await user.type(reasonInput, 'Content improvement');
@@ -208,7 +212,7 @@ describe('FileEditModal', () => {
 
     expect(mockOnSave).toHaveBeenCalledWith(
       'test-file-id',
-      'test-file.md',
+      'new-filename.md',
       '# Test Content\n\nThis is test content.',
       'Content improvement'
     );

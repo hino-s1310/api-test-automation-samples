@@ -5,14 +5,15 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
+  testMatch: /.*\.spec\.ts/,
   /* CI環境では並列実行を無効化してテストの安定性を向上 */
-  fullyParallel: process.env.CI ? false : true,
+  fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* CI環境ではリトライ回数を増やして安定性を向上 */
   retries: process.env.CI ? 3 : 0,
-  /* CI環境ではワーカー数を1に制限して競合状態を回避 */
-  workers: process.env.CI ? 1 : undefined,
+  /* ワーカー数を1に制限して競合状態を回避 */
+  workers: 1,
   /* Output directory for test results */
   outputDir: './test-results',
   /* Reporter configuration optimized for CI */

@@ -2,6 +2,16 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import FileHistoryModal from '../../components/FileHistoryModal';
 
+// APIモック
+jest.mock('../../lib/api', () => ({
+  api: {
+    getFileEditHistory: jest.fn(),
+  }
+}));
+
+import { api } from '../../lib/api';
+const mockApi = api as jest.Mocked<typeof api>;
+
 // Mock DiffViewer component
 jest.mock('../../components/DiffViewer', () => {
   return function MockDiffViewer() {
@@ -45,13 +55,8 @@ describe('FileHistoryModal', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Mock fetch for history API
-    global.fetch = jest.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ history: mockHistory, total_count: 2 }),
-      })
-    ) as jest.Mock;
+    // Mock API for history
+    mockApi.getFileEditHistory.mockResolvedValue({ history: mockHistory });
   });
 
   it('renders when open', () => {
@@ -140,12 +145,8 @@ describe('FileHistoryModal', () => {
   });
 
   it('shows empty state when no history', async () => {
-    global.fetch = jest.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ history: [], total_count: 0 }),
-      })
-    ) as jest.Mock;
+    // 空の履歴をモック
+    mockApi.getFileEditHistory.mockResolvedValue({ history: [] });
 
     render(<FileHistoryModal {...mockProps} />);
 
@@ -189,18 +190,15 @@ describe('FileHistoryModal', () => {
   });
 
   it('handles API error gracefully', async () => {
-    global.fetch = jest.fn(() =>
-      Promise.resolve({
-        ok: false,
-      })
-    ) as jest.Mock;
+    // APIエラーをモック
+    mockApi.getFileEditHistory.mockRejectedValue(new Error('API Error'));
 
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     render(<FileHistoryModal {...mockProps} />);
 
     await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith('履歴の取得に失敗しました');
+      expect(consoleSpy).toHaveBeenCalledWith('履歴の取得中にエラーが発生しました:', expect.any(Error));
     });
 
     consoleSpy.mockRestore();

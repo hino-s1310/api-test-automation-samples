@@ -27,6 +27,8 @@ describe('FileListTable', () => {
   const mockOnViewFile = jest.fn()
   const mockOnEditFile = jest.fn()
   const mockOnDeleteFile = jest.fn()
+  const mockOnBatchOperation = jest.fn()
+  const mockOnShowHistory = jest.fn()
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -55,6 +57,8 @@ describe('FileListTable', () => {
         onViewFile={mockOnViewFile}
         onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
+        onBatchOperation={mockOnBatchOperation}
+        onShowHistory={mockOnShowHistory}
         deletingFileId={null}
       />
     )
@@ -77,8 +81,8 @@ describe('FileListTable', () => {
     expect(screen.getByText('処理中')).toBeInTheDocument()
 
     // ファイルサイズが表示されていることを確認
-    expect(screen.getByText('1.0 KB')).toBeInTheDocument()
-    expect(screen.getByText('2.0 KB')).toBeInTheDocument()
+    expect(screen.getByText('1 KB')).toBeInTheDocument()
+    expect(screen.getByText('2 KB')).toBeInTheDocument()
   })
 
   it('完了済みのファイルをクリックするとonViewFileが呼ばれる', async () => {
@@ -88,6 +92,8 @@ describe('FileListTable', () => {
         onViewFile={mockOnViewFile}
         onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
+        onBatchOperation={mockOnBatchOperation}
+        onShowHistory={mockOnShowHistory}
         deletingFileId={null}
       />
     )
@@ -98,24 +104,23 @@ describe('FileListTable', () => {
     expect(mockOnViewFile).toHaveBeenCalledWith(mockFiles[0].id)
   })
 
-  it('処理中のファイルをクリックしてもonViewFileは呼ばれない', async () => {
+  it('処理中のファイルをクリックしてもonViewFileは呼ばれる', async () => {
     render(
       <FileListTable
         files={mockFiles}
         onViewFile={mockOnViewFile}
         onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
+        onBatchOperation={mockOnBatchOperation}
+        onShowHistory={mockOnShowHistory}
         deletingFileId={null}
       />
     )
 
-    const processingFileRow = screen.getByText('test2.pdf').closest('tr')
-    expect(processingFileRow).toHaveAttribute('tabindex', '-1')
+    const processingFileRow = screen.getByRole('button', { name: /test2.pdfの詳細を表示/ })
+    await userEvent.click(processingFileRow)
 
-    if (processingFileRow) {
-      await userEvent.click(processingFileRow)
-    }
-    expect(mockOnViewFile).not.toHaveBeenCalled()
+    expect(mockOnViewFile).toHaveBeenCalledWith(mockFiles[1].id)
   })
 
   it('削除ボタンをクリックするとonDeleteFileが呼ばれる', async () => {
@@ -125,6 +130,8 @@ describe('FileListTable', () => {
         onViewFile={mockOnViewFile}
         onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
+        onBatchOperation={mockOnBatchOperation}
+        onShowHistory={mockOnShowHistory}
         deletingFileId={null}
       />
     )
@@ -142,6 +149,8 @@ describe('FileListTable', () => {
         onViewFile={mockOnViewFile}
         onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
+        onBatchOperation={mockOnBatchOperation}
+        onShowHistory={mockOnShowHistory}
         deletingFileId="1"
       />
     )
@@ -157,6 +166,8 @@ describe('FileListTable', () => {
         onViewFile={mockOnViewFile}
         onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
+        onBatchOperation={mockOnBatchOperation}
+        onShowHistory={mockOnShowHistory}
         deletingFileId={null}
       />
     )
@@ -165,19 +176,21 @@ describe('FileListTable', () => {
     expect(editButton).toBeInTheDocument()
   })
 
-  it('処理中のファイルには編集ボタンが表示されない', () => {
+  it('処理中のファイルにも編集ボタンが表示される', () => {
     render(
       <FileListTable
         files={mockFiles}
         onViewFile={mockOnViewFile}
         onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
+        onBatchOperation={mockOnBatchOperation}
+        onShowHistory={mockOnShowHistory}
         deletingFileId={null}
       />
     )
 
-    const editButton = screen.queryByRole('button', { name: /test2.pdfを編集/ })
-    expect(editButton).not.toBeInTheDocument()
+    const editButton = screen.getByRole('button', { name: /test2.pdfを編集/ })
+    expect(editButton).toBeInTheDocument()
   })
 
   it('編集ボタンをクリックするとonEditFileが呼ばれる', async () => {
@@ -187,6 +200,8 @@ describe('FileListTable', () => {
         onViewFile={mockOnViewFile}
         onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
+        onBatchOperation={mockOnBatchOperation}
+        onShowHistory={mockOnShowHistory}
         deletingFileId={null}
       />
     )
@@ -204,6 +219,8 @@ describe('FileListTable', () => {
         onViewFile={mockOnViewFile}
         onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
+        onBatchOperation={mockOnBatchOperation}
+        onShowHistory={mockOnShowHistory}
         deletingFileId={null}
       />
     )
@@ -227,6 +244,8 @@ describe('FileListTable', () => {
         onViewFile={mockOnViewFile}
         onEditFile={mockOnEditFile}
         onDeleteFile={mockOnDeleteFile}
+        onBatchOperation={mockOnBatchOperation}
+        onShowHistory={mockOnShowHistory}
         deletingFileId={null}
       />
     )

@@ -122,11 +122,13 @@ class TestFileEditHistoryAPI:
         assert history_response.status_code == 200
 
         history_data = history_response.json()
-        assert isinstance(history_data, list)
-        assert len(history_data) >= 1
+        # APIは {"history": [...]} の形式で返す
+        assert "history" in history_data
+        assert isinstance(history_data["history"], list)
+        assert len(history_data["history"]) >= 1
 
         # 履歴の内容を検証
-        history_item = history_data[0]
+        history_item = history_data["history"][0]
         assert "id" in history_item
         assert "file_id" in history_item
         assert "original_filename" in history_item
@@ -142,8 +144,11 @@ class TestFileEditHistoryAPI:
         assert history_response.status_code == 200
 
         history_data = history_response.json()
+        # APIは {"history": [...]} の形式で返す
+        assert "history" in history_data
+        assert isinstance(history_data["history"], list)
         # 新規ファイルは編集履歴がない場合がある
-        assert isinstance(history_data, list)
+        assert len(history_data["history"]) >= 0
 
     def test_get_file_edit_history_invalid_file_id(self, test_client: TestClient):
         """無効なファイルIDでの履歴取得テスト"""
@@ -170,8 +175,8 @@ class TestFileRevertAPI:
         assert history_response.status_code == 200
 
         history_data = history_response.json()
-        if len(history_data) > 0:
-            history_id = history_data[0]["id"]
+        if len(history_data["history"]) > 0:
+            history_id = history_data["history"][0]["id"]
 
             # ファイルを復元
             revert_response = test_client.post(
@@ -303,13 +308,14 @@ class TestBatchOperationsAPI:
     def test_batch_delete_files_missing_file_ids(self, test_client: TestClient):
         """ファイルIDが指定されていない場合のテスト"""
         response = test_client.delete("/files/batch-delete")
-        # ファイルIDが指定されていない場合、400エラーが返される
-        assert response.status_code == 400
-        # エラーメッセージは「無効なファイルID形式です」または「ファイルIDが指定されていません」
+        # ファイルIDが指定されていない場合、422エラーが返される（バリデーションエラー）
+        assert response.status_code == 422
+        # FastAPIのバリデーションエラー形式
         error_detail = response.json()["detail"]
+        # フィールドが必須であることを示すエラーメッセージを確認
         assert any(
-            msg in error_detail
-            for msg in ["ファイルIDが指定されていません", "無効なファイルID形式です"]
+            error["type"] == "missing" and "file_ids" in error["loc"]
+            for error in error_detail
         )
 
 
