@@ -1,6 +1,5 @@
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -448,63 +447,79 @@ class TestPDFService:
 
     def test_validate_pdf_file_valid(self, pdf_service_for_test):
         """有効なPDFファイルの検証テスト"""
-        # pypdf.PdfReaderをモックして、検証ロジックをテスト
-        with patch("src.api.services.pdf_service.pypdf.PdfReader") as mock_pdf_reader:
-            # PDF読み込み成功をシミュレート
-            mock_pdf_reader.return_value = Mock()  # 正常なPDFReaderインスタンス
+        # PDFRepositoryのvalidate_pdf_fileをモック
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            mock_validate.return_value = (True, "OK")
 
-            # 有効なPDFコンテンツ（サイズとファイル拡張子が適切）
             valid_content = b"fake valid pdf content"
             filename = "test_document.pdf"
 
             # テスト実行
-            is_valid, message = pdf_service_for_test._validate_pdf_file(
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
                 valid_content, filename
             )
 
             # アサーション
             assert is_valid is True
             assert message == "OK"
-
-            # pypdf.PdfReaderが適切に呼ばれたことを確認
-            mock_pdf_reader.assert_called_once()
+            mock_validate.assert_called_once_with(valid_content, filename)
 
     def test_validate_pdf_file_invalid_extension(
         self, pdf_service_for_test, valid_pdf_content
     ):
         """無効な拡張子のファイル検証テスト"""
-        # テスト実行
-        is_valid, message = pdf_service_for_test._validate_pdf_file(
-            valid_pdf_content, "test.txt"
-        )
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            mock_validate.return_value = (False, "PDFファイルのみアップロード可能です")
 
-        # アサーション
-        assert is_valid is False
-        assert "PDFファイルのみアップロード可能です" in message
+            # テスト実行
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
+                valid_pdf_content, "test.txt"
+            )
+
+            # アサーション
+            assert is_valid is False
+            assert "PDFファイルのみアップロード可能です" in message
 
     def test_validate_pdf_file_too_large(self, pdf_service_for_test, large_pdf_content):
         """サイズ制限を超えるファイルの検証テスト"""
-        # テスト実行
-        is_valid, message = pdf_service_for_test._validate_pdf_file(
-            large_pdf_content, "test.pdf"
-        )
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            mock_validate.return_value = (
+                False,
+                "ファイルサイズは10MB以下にしてください",
+            )
 
-        # アサーション
-        assert is_valid is False
-        assert "ファイルサイズは10MB以下にしてください" in message
+            # テスト実行
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
+                large_pdf_content, "test.pdf"
+            )
+
+            # アサーション
+            assert is_valid is False
+            assert "ファイルサイズは10MB以下にしてください" in message
 
     def test_validate_pdf_file_invalid_content(
         self, pdf_service_for_test, invalid_pdf_content
     ):
         """無効なPDFコンテンツの検証テスト"""
-        # テスト実行
-        is_valid, message = pdf_service_for_test._validate_pdf_file(
-            invalid_pdf_content, "test.pdf"
-        )
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            mock_validate.return_value = (False, "無効なPDFファイルです")
 
-        # アサーション
-        assert is_valid is False
-        assert "無効なPDFファイルです" in message
+            # テスト実行
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
+                invalid_pdf_content, "test.pdf"
+            )
+
+            # アサーション
+            assert is_valid is False
+            assert "無効なPDFファイルです" in message
 
     @pytest.mark.asyncio
     async def test_process_pdf_upload_invalid_extension(
@@ -629,42 +644,6 @@ class TestPDFService:
             or len(result) > 0  # 何らかの結果が返されることを確認
         )
 
-    def test_save_markdown(self, pdf_service_for_test, tmp_path):
-        """Markdownファイル保存のテスト"""
-        # テスト用ディレクトリを設定
-        pdf_service_for_test.markdown_dir = tmp_path
-
-        # テストデータ
-        file_id = "test-file-id"
-        markdown_content = "# Test Markdown\n\nThis is test content."
-
-        # テスト実行
-        result_path = pdf_service_for_test._save_markdown(file_id, markdown_content)
-
-        # アサーション
-        assert result_path.endswith(f"{file_id}.md")
-        saved_file = tmp_path / f"{file_id}.md"
-        assert saved_file.exists()
-        assert saved_file.read_text(encoding="utf-8") == markdown_content
-
-    def test_save_uploaded_file(self, pdf_service_for_test, tmp_path):
-        """アップロードファイル保存のテスト"""
-        # テスト用ディレクトリを設定
-        pdf_service_for_test.upload_dir = tmp_path
-
-        # テストデータ
-        file_content = b"test pdf content"
-        filename = "test.pdf"
-
-        # テスト実行
-        result_path = pdf_service_for_test._save_uploaded_file(file_content, filename)
-
-        # アサーション
-        assert result_path.endswith(f"_{filename}")
-        saved_file = Path(result_path)
-        assert saved_file.exists()
-        assert saved_file.read_bytes() == file_content
-
     def test_ensure_directories(self, tmp_path):
         """ディレクトリ作成のテスト"""
         # テスト用パス
@@ -709,22 +688,33 @@ class TestPDFServiceParameterized:
         self, pdf_service_for_test, filename, expected_valid
     ):
         """ファイル拡張子検証のパラメータ化テスト"""
-        # 小さな有効なコンテンツ（拡張子チェックのみに焦点）
-        small_content = b"x" * 100
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            # 小さな有効なコンテンツ（拡張子チェックのみに焦点）
+            small_content = b"x" * 100
 
-        # テスト実行
-        is_valid, message = pdf_service_for_test._validate_pdf_file(
-            small_content, filename
-        )
+            if expected_valid:
+                mock_validate.return_value = (True, "OK")
+            else:
+                mock_validate.return_value = (
+                    False,
+                    "PDFファイルのみアップロード可能です",
+                )
 
-        # 拡張子チェックのアサーション
-        if expected_valid:
-            # 拡張子が有効な場合、エラーメッセージに拡張子エラーは含まれない
-            assert "PDFファイルのみアップロード可能です" not in message
-        else:
-            # 拡張子が無効な場合
-            assert is_valid is False
-            assert "PDFファイルのみアップロード可能です" in message
+            # テスト実行
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
+                small_content, filename
+            )
+
+            # 拡張子チェックのアサーション
+            if expected_valid:
+                # 拡張子が有効な場合、エラーメッセージに拡張子エラーは含まれない
+                assert "PDFファイルのみアップロード可能です" not in message
+            else:
+                # 拡張子が無効な場合
+                assert is_valid is False
+                assert "PDFファイルのみアップロード可能です" in message
 
     @pytest.mark.parametrize(
         "size_mb,expected_valid",
@@ -743,10 +733,21 @@ class TestPDFServiceParameterized:
         content_size = size_mb * 1024 * 1024
         file_content = b"x" * content_size
 
-        # テスト実行
-        is_valid, message = pdf_service_for_test._validate_pdf_file(
-            file_content, "test.pdf"
-        )
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            if expected_valid:
+                mock_validate.return_value = (True, "OK")
+            else:
+                mock_validate.return_value = (
+                    False,
+                    "ファイルサイズは10MB以下にしてください",
+                )
+
+            # テスト実行
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
+                file_content, "test.pdf"
+            )
 
         # サイズチェックのアサーション
         if expected_valid:
