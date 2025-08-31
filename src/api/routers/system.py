@@ -76,3 +76,34 @@ async def reset_test_database():
         raise HTTPException(
             status_code=500, detail="データベースのリセットに失敗しました"
         )
+
+
+@router.get("/test/db-state/{file_id}", tags=["Testing"])
+async def get_database_state(file_id: str):
+    """テスト用：特定ファイルのデータベース状態を確認（テスト環境のみ）"""
+    if os.getenv("ENVIRONMENT") != "test":
+        raise HTTPException(
+            status_code=403, detail="この操作はテスト環境でのみ利用可能です"
+        )
+
+    try:
+        file_data = db_manager.get_file(file_id)
+        if not file_data:
+            raise HTTPException(status_code=404, detail="ファイルが見つかりません")
+
+        return {
+            "id": file_data["id"],
+            "filename": file_data["filename"],
+            "status": file_data["status"],
+            "markdown_content": file_data.get("markdown_content"),
+            "file_size": file_data["file_size"],
+            "created_at": file_data["created_at"],
+            "updated_at": file_data["updated_at"],
+            "processing_time": file_data.get("processing_time"),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"データベース状態の取得に失敗しました: {str(e)}"
+        )

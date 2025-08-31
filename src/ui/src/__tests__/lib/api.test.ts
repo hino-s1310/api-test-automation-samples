@@ -72,7 +72,7 @@ jest.mock('../../lib/api', () => {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await mockApiClient.post('/upload', formData, {
+        const response = await mockApiClient.post('/files/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         return response.data;
@@ -365,7 +365,7 @@ describe('API Client', () => {
 
       const result = await api.uploadPdf(file);
 
-      expect(mockApiClient.post).toHaveBeenCalledWith('/upload', expect.any(FormData), {
+      expect(mockApiClient.post).toHaveBeenCalledWith('/files/upload', expect.any(FormData), {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -459,7 +459,7 @@ describe('API Client', () => {
       // ファイルアップロード
       const file = new File(['test'], 'test.pdf');
       await api.uploadPdf(file);
-      expect(mockApiClient.post).toHaveBeenCalledWith('/upload', expect.any(FormData), {
+      expect(mockApiClient.post).toHaveBeenCalledWith('/files/upload', expect.any(FormData), {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     });

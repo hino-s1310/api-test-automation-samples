@@ -101,7 +101,7 @@ async def get_file(file_id: str = Path(..., description="ファイルID")):
         return FileResponse(
             id=file_data["id"],
             filename=file_data["filename"],
-            markdown=file_data.get("markdown_content", ""),
+            markdown=file_data.get("markdown", ""),
             status=file_data["status"],
             created_at=file_data["created_at"],
             updated_at=file_data["updated_at"],
@@ -194,7 +194,7 @@ async def update_file(
             return FileResponse(
                 id=file_data["id"],
                 filename=file_data["filename"],
-                markdown=file_data.get("markdown_content", ""),
+                markdown=file_data.get("markdown", ""),
                 status=file_data["status"],
                 created_at=file_data["created_at"],
                 updated_at=file_data["updated_at"],

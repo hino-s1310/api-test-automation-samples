@@ -7,7 +7,7 @@ test.describe('UIサーバーとAPIサーバーのヘルスチェックテスト
 
   test('APIサーバーの状態を確認する', async ({ page }) => {
     // APIサーバーが動作しているか確認
-    const healthResponse = await page.request.get('http://localhost:8000/health');
+    const healthResponse = await page.request.get('http://localhost:8000/system/health');
     expect(healthResponse.status()).toBe(200);
 
     const healthData = await healthResponse.json();

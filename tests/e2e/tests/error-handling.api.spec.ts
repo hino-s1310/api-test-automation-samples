@@ -2,14 +2,14 @@ import { test, expect } from '@playwright/test';
 
 test.describe('エラーハンドリングテスト', () => {
   test.beforeAll(async ({ request }) => {
-    await request.post('/test/reset-db');
+    await request.post('/system/test/reset-db');
   });
 
   test('無効なファイル形式のアップロード', async ({ request }) => {
     // 無効なファイル（テキストファイル）をアップロード
     const invalidFile = Buffer.from('This is not a PDF file');
 
-    const response = await request.post('/upload', {
+    const response = await request.post('/files/upload', {
       multipart: {
         file: {
           name: 'invalid.txt',
@@ -28,7 +28,7 @@ test.describe('エラーハンドリングテスト', () => {
     // 10MBを超えるファイルを作成
     const oversizedFile = Buffer.alloc(11 * 1024 * 1024, 'A');
 
-    const response = await request.post('/upload', {
+    const response = await request.post('/files/upload', {
       multipart: {
         file: {
           name: 'oversized.pdf',
@@ -67,16 +67,16 @@ test.describe('エラーハンドリングテスト', () => {
 
   test('無効なクリーンアップパラメータ', async ({ request }) => {
     // 範囲外の日数
-    const response = await request.post('/cleanup?days=0');
+    const response = await request.post('/system/cleanup?days=0');
     expect(response.status()).toBe(422);
 
-    const response2 = await request.post('/cleanup?days=366');
+    const response2 = await request.post('/system/cleanup?days=366');
     expect(response2.status()).toBe(422);
   });
 
   test('テスト環境以外でのDBリセット', async ({ request }) => {
     // 環境変数を一時的に変更（実際のテストではモックを使用）
-    const response = await request.post('/test/reset-db');
+    const response = await request.post('/system/test/reset-db');
     // テスト環境では成功するはず
     expect(response.status()).toBe(200);
   });
