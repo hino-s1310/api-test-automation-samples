@@ -2,24 +2,26 @@
 ファイル管理サービス
 
 ファイルの取得、一覧表示、削除などの処理を担当
+リポジトリ層との連携により、データアクセスロジックを分離
 """
 
 from datetime import datetime
 from typing import Any
 
-from ..database import db_manager
 from ..models import FileStatus
+from ..repositories.file_repository import FileRepository
 
 
 class FileService:
     """ファイル管理サービス"""
 
-    def __init__(self):
-        pass
+    def __init__(self, file_repository: FileRepository = None):
+        """FileRepositoryのインスタンスを初期化"""
+        self.file_repository = file_repository or FileRepository()
 
     def get_file(self, file_id: str) -> dict[str, Any] | None:
         """ファイル情報を取得"""
-        file_info = db_manager.get_file(file_id)
+        file_info = self.file_repository.get_file(file_id)
         if not file_info:
             return None
 
@@ -37,7 +39,7 @@ class FileService:
 
     def list_files(self, page: int = 1, per_page: int = 10) -> dict[str, Any]:
         """ファイル一覧を取得"""
-        result = db_manager.list_files(page, per_page)
+        result = self.file_repository.list_files(page, per_page)
 
         # レスポンス用のデータを整形
         files = []
@@ -64,12 +66,12 @@ class FileService:
     def update_file(self, file_id: str, markdown_content: str) -> dict[str, Any] | None:
         """ファイル情報を更新"""
         # 既存ファイルの確認
-        existing_file = db_manager.get_file(file_id)
+        existing_file = self.file_repository.get_file(file_id)
         if not existing_file:
             return None
 
         # 更新処理
-        if db_manager.update_file_status(
+        if self.file_repository.update_file_status(
             file_id, FileStatus.COMPLETED, markdown_content
         ):
             # 更新後のファイル情報を取得
@@ -79,64 +81,35 @@ class FileService:
 
     def delete_file(self, file_id: str) -> bool:
         """ファイルを削除"""
-        return db_manager.delete_file(file_id)
+        return self.file_repository.delete_file(file_id)
 
     def get_file_status(self, file_id: str) -> str | None:
         """ファイルの状態を取得"""
-        file_info = db_manager.get_file(file_id)
+        file_info = self.file_repository.get_file(file_id)
         return file_info["status"] if file_info else None
 
     def get_conversion_logs(self, file_id: str) -> list[dict[str, Any]]:
         """変換ログを取得"""
-        return db_manager.get_conversion_logs(file_id)
+        return self.file_repository.get_conversion_logs(file_id)
 
     def get_file_statistics(self) -> dict[str, Any]:
-        """ファイル統計情報を取得"""
+        """ファイル統計情報を取得（リポジトリ層を活用）"""
         try:
-            # 全ファイル数を取得
-            all_files = db_manager.list_files(page=1, per_page=10000)
-            total_files = all_files["total_count"]
+            # リポジトリ層の統計情報取得メソッドを使用
+            stats = self.file_repository.get_file_statistics()
 
-            # 状態別のファイル数を集計
-            status_counts = {"processing": 0, "completed": 0, "failed": 0}
-            total_size = 0
-            total_processing_time = 0
-
-            # ファイルリストが存在する場合のみ処理
-            if all_files["files"]:
-                for file_info in all_files["files"]:
-                    status = file_info.get("status", "unknown")
-                    if status in status_counts:
-                        status_counts[status] += 1
-
-                    # ファイルサイズの安全な取得
-                    file_size = file_info.get("file_size", 0)
-                    if isinstance(file_size, int | float) and file_size >= 0:
-                        total_size += file_size
-
-                    # 処理時間の安全な取得
-                    processing_time = file_info.get("processing_time")
-                    if (
-                        isinstance(processing_time, int | float)
-                        and processing_time >= 0
-                    ):
-                        total_processing_time += processing_time
-
-            # 平均処理時間の安全な計算
-            average_processing_time = 0
-            if total_files > 0 and total_processing_time > 0:
-                average_processing_time = round(total_processing_time / total_files, 2)
-
-            return {
-                "total_files": total_files,
-                "status_counts": status_counts,
-                "total_size_bytes": total_size,
-                "total_size_mb": (
-                    round(total_size / (1024 * 1024), 2) if total_size > 0 else 0
-                ),
-                "total_processing_time": round(total_processing_time, 2),
-                "average_processing_time": average_processing_time,
-            }
+            # 必要に応じてサービス層でデータを整形
+            if "error" not in stats:
+                return {
+                    "total_files": stats.get("total_files", 0),
+                    "status_counts": stats.get("status_counts", {}),
+                    "total_size_bytes": stats.get("total_size_bytes", 0),
+                    "total_size_mb": stats.get("total_size_mb", 0),
+                    "total_processing_time": stats.get("total_processing_time", 0),
+                    "average_processing_time": stats.get("average_processing_time", 0),
+                }
+            else:
+                return stats
 
         except Exception as e:
             return {
@@ -150,37 +123,18 @@ class FileService:
             }
 
     def cleanup_old_files(self, days: int = 30) -> dict[str, Any]:
-        """古いファイルをクリーンアップ"""
+        """古いファイルをクリーンアップ（リポジトリ層を活用）"""
         try:
-            # 指定日数より古いファイルを検索
-            from datetime import timedelta
+            # リポジトリ層のクリーンアップメソッドを使用
+            result = self.file_repository.cleanup_old_files(days)
 
-            cutoff_date = datetime.now() - timedelta(days=days)
+            # サービス層でビジネスロジックを追加
+            if result.get("success"):
+                # クリーンアップ後の統計情報を取得
+                stats = self.get_file_statistics()
+                result["post_cleanup_stats"] = stats
 
-            # データベースから古いファイルを取得
-            # 注: 実際の実装では、より効率的なクエリを使用
-            all_files = db_manager.list_files(page=1, per_page=10000)
-            old_files = []
-
-            for file_info in all_files["files"]:
-                created_at = datetime.fromisoformat(
-                    file_info["created_at"].replace("Z", "+00:00")
-                )
-                if created_at < cutoff_date:
-                    old_files.append(file_info["id"])
-
-            # 古いファイルを削除
-            deleted_count = 0
-            for file_id in old_files:
-                if db_manager.delete_file(file_id):
-                    deleted_count += 1
-
-            return {
-                "success": True,
-                "deleted_count": deleted_count,
-                "total_old_files": len(old_files),
-                "cutoff_date": cutoff_date.isoformat(),
-            }
+            return result
 
         except Exception as e:
             return {"success": False, "error": str(e), "deleted_count": 0}
@@ -200,6 +154,44 @@ class FileService:
         )
         return bool(uuid_pattern.match(file_id))
 
+    def get_files_by_status(self, status: str) -> list[dict[str, Any]]:
+        """指定されたステータスのファイルを取得"""
+        try:
+            result = self.file_repository.get_files_by_status(status)
+            return result.get("files", [])
+        except Exception:
+            return []
+
+    def get_files_created_after(self, date: datetime) -> list[dict[str, Any]]:
+        """指定された日付以降に作成されたファイルを取得"""
+        try:
+            result = self.file_repository.get_files_created_after(date)
+            return result.get("files", [])
+        except Exception:
+            return []
+
+    def get_files_created_before(self, date: datetime) -> list[dict[str, Any]]:
+        """指定された日付以前に作成されたファイルを取得"""
+        try:
+            result = self.file_repository.get_files_created_before(date)
+            return result.get("files", [])
+        except Exception:
+            return []
+
+    def get_orphaned_files(self) -> dict[str, Any]:
+        """孤立したファイルを取得（リポジトリ層を活用）"""
+        try:
+            return self.file_repository.get_orphaned_files()
+        except Exception as e:
+            return {"error": str(e), "orphaned_files": [], "total_orphaned": 0}
+
+    def get_database_info(self) -> dict[str, Any]:
+        """データベース情報を取得（リポジトリ層を活用）"""
+        try:
+            return self.file_repository.get_database_info()
+        except Exception as e:
+            return {"error": str(e)}
+
     def edit_file(
         self,
         file_id: str,
@@ -211,12 +203,12 @@ class FileService:
         """ファイルを編集（ファイル名・Markdown内容）"""
         try:
             # ファイルの存在確認
-            existing_file = db_manager.get_file(file_id)
+            existing_file = self.file_repository.get_file(file_id)
             if not existing_file:
                 return {"success": False, "error": "ファイルが見つかりません"}
 
             # 編集処理を実行
-            if db_manager.update_file_content(
+            if self.file_repository.update_file_content(
                 file_id=file_id,
                 new_filename=new_filename,
                 new_content=new_content,
@@ -224,7 +216,7 @@ class FileService:
                 edited_by=edited_by,
             ):
                 # 更新後のファイル情報を取得
-                updated_file = db_manager.get_file(file_id)
+                updated_file = self.file_repository.get_file(file_id)
 
                 return {
                     "success": True,
@@ -250,12 +242,12 @@ class FileService:
         """ファイルの編集履歴を取得"""
         try:
             # ファイルの存在確認
-            existing_file = db_manager.get_file(file_id)
+            existing_file = self.file_repository.get_file(file_id)
             if not existing_file:
                 return []
 
             # 編集履歴を取得
-            history = db_manager.get_edit_history(file_id)
+            history = self.file_repository.get_edit_history(file_id)
 
             # レスポンス用のデータを整形
             formatted_history = []
@@ -284,12 +276,12 @@ class FileService:
         """指定された履歴IDのバージョンにファイルを復元"""
         try:
             # ファイルの存在確認
-            existing_file = db_manager.get_file(file_id)
+            existing_file = self.file_repository.get_file(file_id)
             if not existing_file:
                 return {"success": False, "error": "ファイルが見つかりません"}
 
             # 指定された履歴を取得
-            history = db_manager.get_edit_history(file_id)
+            history = self.file_repository.get_edit_history(file_id)
             target_history = None
 
             for history_item in history:
@@ -301,7 +293,7 @@ class FileService:
                 return {"success": False, "error": "指定された履歴が見つかりません"}
 
             # ファイルを履歴の状態に復元
-            if db_manager.update_file_content(
+            if self.file_repository.update_file_content(
                 file_id=file_id,
                 new_filename=target_history["original_filename"],
                 new_content=target_history["original_content"],
@@ -309,7 +301,7 @@ class FileService:
                 edited_by="system",
             ):
                 # 復元後のファイル情報を取得
-                reverted_file = db_manager.get_file(file_id)
+                reverted_file = self.file_repository.get_file(file_id)
 
                 return {
                     "success": True,
@@ -341,7 +333,7 @@ class FileService:
     ) -> dict[str, Any]:
         """ファイルを検索・フィルタリング"""
         try:
-            result = db_manager.search_files(
+            result = self.file_repository.search_files(
                 query=query,
                 status=status,
                 is_edited=is_edited,
@@ -384,58 +376,23 @@ class FileService:
             }
 
     def batch_delete_files(self, file_ids: list[str]) -> dict[str, Any]:
-        """複数のファイルを一括削除"""
+        """複数のファイルを一括削除（リポジトリ層を活用）"""
         try:
-            print(f"一括削除開始: {file_ids}")  # デバッグログ
             if not file_ids:
                 return {"success": False, "error": "ファイルIDが指定されていません"}
 
-            deleted_count = 0
-            failed_count = 0
-            failed_files = []
+            # リポジトリ層のバッチ削除メソッドを使用
+            result = self.file_repository.batch_delete_files(file_ids)
 
-            for file_id in file_ids:
-                print(f"ファイルID処理中: '{file_id}'")  # デバッグログ
-                # ファイルIDの妥当性を検証
-                if not self.validate_file_id(file_id):
-                    print(f"ファイルID検証失敗: '{file_id}'")  # デバッグログ
-                    failed_count += 1
-                    failed_files.append(
-                        {"file_id": file_id, "error": "無効なファイルID形式"}
-                    )
-                    continue
+            # サービス層でビジネスロジックを追加
+            if result.get("success"):
+                # 削除後の統計情報を取得
+                stats = self.get_file_statistics()
+                result["post_deletion_stats"] = stats
 
-                # ファイルの存在確認
-                existing_file = db_manager.get_file(file_id)
-                if not existing_file:
-                    print(f"ファイル存在確認失敗: '{file_id}'")  # デバッグログ
-                    failed_count += 1
-                    failed_files.append(
-                        {"file_id": file_id, "error": "ファイルが見つかりません"}
-                    )
-                    continue
-
-                # 削除処理を実行
-                if db_manager.delete_file(file_id):
-                    print(f"ファイル削除成功: '{file_id}'")  # デバッグログ
-                    deleted_count += 1
-                else:
-                    print(f"ファイル削除失敗: '{file_id}'")  # デバッグログ
-                    failed_count += 1
-                    failed_files.append({"file_id": file_id, "error": "削除処理に失敗"})
-
-            print(
-                f"一括削除完了: 成功={deleted_count}, 失敗={failed_count}"
-            )  # デバッグログ
-            return {
-                "success": True,
-                "deleted_count": deleted_count,
-                "failed_count": failed_count,
-                "failed_files": failed_files,
-            }
+            return result
 
         except Exception as e:
-            print(f"一括削除中に例外発生: {str(e)}")  # デバッグログ
             return {
                 "success": False,
                 "error": f"一括削除中にエラーが発生しました: {str(e)}",

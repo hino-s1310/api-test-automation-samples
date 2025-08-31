@@ -54,12 +54,32 @@ class FileRepository:
                     )
 
             # その他の更新処理
-            return self.db_manager.update_file_content(
+            return self.update_file_content(
                 file_id=file_id,
                 new_filename=update_data.get("filename"),
                 new_content=update_data.get("markdown_content"),
                 edit_reason=update_data.get("edit_reason"),
                 edited_by=update_data.get("edited_by", "system"),
+            )
+        except Exception:
+            return False
+
+    def update_file_content(
+        self,
+        file_id: str,
+        new_filename: str | None = None,
+        new_content: str | None = None,
+        edit_reason: str | None = None,
+        edited_by: str = "system",
+    ) -> bool:
+        """ファイルの内容を更新（編集履歴も含む）"""
+        try:
+            return self.db_manager.update_file_content(
+                file_id=file_id,
+                new_filename=new_filename,
+                new_content=new_content,
+                edit_reason=edit_reason,
+                edited_by=edited_by,
             )
         except Exception:
             return False
@@ -243,12 +263,19 @@ class FileRepository:
         except Exception:
             return False
 
+    def get_edit_history(self, file_id: str) -> list[dict[str, Any]]:
+        """指定されたファイルの編集履歴を取得"""
+        try:
+            return self.db_manager.get_edit_history(file_id)
+        except Exception:
+            return []
+
     def get_edit_history_by_id(self, history_id: int) -> dict[str, Any] | None:
         """指定された履歴IDの編集履歴を取得"""
         # 全ファイルの編集履歴から該当するものを検索
         # 注: より効率的な実装が必要な場合は、データベースにインデックスを追加
         for file_info in self.db_manager.list_files(page=1, per_page=10000)["files"]:
-            history = self.get_file_edit_history(file_info["id"])
+            history = self.get_edit_history(file_info["id"])
             for history_item in history:
                 if history_item["id"] == history_id:
                     return history_item
