@@ -63,7 +63,7 @@ def upload_test_pdf(
         content = load_test_pdf()
 
     response = client.post(
-        "/upload", files={"file": (filename, content, "application/pdf")}
+        "/files/upload", files={"file": (filename, content, "application/pdf")}
     )
     assert response.status_code == 200, f"Upload failed: {response.content}"
     return response.json()

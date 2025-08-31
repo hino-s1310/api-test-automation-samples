@@ -68,16 +68,16 @@ class InvalidTestData:
 class APIEndpoints:
     """APIエンドポイント定義"""
 
-    HEALTH = "/health"
-    UPLOAD = "/upload"
+    HEALTH = "/system/health"
+    UPLOAD = "/files/upload"
     FILES = "/files"
     LIST_FILES = "/files"
     FILES_BY_ID = "/files/{file_id}"
     FILES_LOGS = "/files/{file_id}/logs"
-    STATISTICS = "/statistics"
-    GET_STATISTICS = "/statistics"
-    CLEANUP = "/cleanup"
-    CLEANUP_OLD_FILES = "/cleanup"
+    STATISTICS = "/system/statistics"
+    GET_STATISTICS = "/system/statistics"
+    CLEANUP = "/system/cleanup"
+    CLEANUP_OLD_FILES = "/system/cleanup"
 
     @classmethod
     def get_file_endpoint(cls, file_id: str) -> str:
@@ -93,7 +93,7 @@ class APIEndpoints:
 class ExpectedResponses:
     """期待されるレスポンス構造"""
 
-    HEALTH_RESPONSE_KEYS = {"status", "version", "timestamp", "uptime"}
+    HEALTH_RESPONSE_KEYS = {"status", "version", "uptime"}
     UPLOAD_RESPONSE_KEYS = {"message", "file_id", "status"}
     FILE_RESPONSE_KEYS = {
         "id",

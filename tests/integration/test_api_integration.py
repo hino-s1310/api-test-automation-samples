@@ -1,17 +1,17 @@
 """
-API統合テスト（Unit Test用）
+API統合テスト
 
-統合的な動作確認を行うテスト
-バリデーションテストは既存のルーターUnit Testsでカバー済み
+実際のデータベース操作、ファイル操作、サービス間の連携をテスト
+統合的な動作確認を行う
 """
 
-from .helpers import (
+from tests.unit.helpers import (
     assert_file_response,
     assert_update_response,
     assert_upload_response,
     upload_test_pdf,
 )
-from .helpers.test_data import APIEndpoints
+from tests.unit.helpers.test_data import APIEndpoints
 
 
 # PDFファイルをMarkdownに変換するAPIの統合テスト（正常系）
@@ -59,7 +59,9 @@ def test_update_file_success(sample_file_id, test_client):
     # sample_file_id フィクスチャで既にファイルが作成済み
 
     # 実際のPDFファイルを使用してファイル更新APIを呼び出す
-    from .helpers import load_test_pdf
+    from tests.unit.helpers import (
+        load_test_pdf,  # pyright: ignore[reportMissingImports]
+    )
 
     pdf_content = load_test_pdf()
 
@@ -169,7 +171,9 @@ def test_file_lifecycle_integration(test_client):
     assert file_data["id"] == file_id
 
     # 3. ファイル更新
-    from .helpers import load_test_pdf
+    from tests.unit.helpers import (
+        load_test_pdf,  # pyright: ignore[reportMissingImports]
+    )
 
     pdf_content = load_test_pdf()
     response = test_client.put(
