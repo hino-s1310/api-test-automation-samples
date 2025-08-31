@@ -1,7 +1,8 @@
 """
-データベース拡張機能のテスト
+データベース拡張機能の統合テスト
 
-新しく追加したファイル編集関連のデータベース機能のテストを実装
+新しく追加したファイル編集関連のデータベース機能の統合テストを実装
+実際のSQLiteデータベースを使用してテスト
 """
 
 import shutil
@@ -14,7 +15,7 @@ from src.api.database import DatabaseManager
 
 
 class TestFileEditHistory:
-    """ファイル編集履歴機能のテスト"""
+    """ファイル編集履歴機能の統合テスト"""
 
     @pytest.fixture
     def temp_db_manager(self):
@@ -60,7 +61,7 @@ class TestFileEditHistory:
         }
 
     def test_add_edit_history_success(self, temp_db_manager, sample_file):
-        """編集履歴の追加テスト（成功）"""
+        """編集履歴の追加統合テスト（成功）"""
         # 編集履歴を追加
         result = temp_db_manager.add_edit_history(
             file_id=sample_file["id"],
@@ -139,7 +140,7 @@ class TestFileEditHistory:
 
 
 class TestFileContentUpdate:
-    """ファイル内容更新機能のテスト"""
+    """ファイル内容更新機能の統合テスト"""
 
     @pytest.fixture
     def temp_db_manager(self):
@@ -319,7 +320,7 @@ class TestFileContentUpdate:
 
 
 class TestFileSearchAndFilter:
-    """ファイル検索・フィルタリング機能のテスト"""
+    """ファイル検索・フィルタリング機能の統合テスト"""
 
     @pytest.fixture
     def temp_db_manager(self):
@@ -473,7 +474,7 @@ class TestFileSearchAndFilter:
 
 
 class TestDatabaseMigration:
-    """データベースマイグレーション機能のテスト"""
+    """データベースマイグレーション機能の統合テスト"""
 
     def test_migration_adds_new_columns(self):
         """新しいカラムが追加されるマイグレーションテスト"""

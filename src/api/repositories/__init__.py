@@ -6,5 +6,6 @@
 """
 
 from .file_repository import FileRepository
+from .pdf_repository import PDFRepository
 
-__all__ = ["FileRepository"]
+__all__ = ["FileRepository", "PDFRepository"]

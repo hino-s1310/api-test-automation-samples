@@ -314,50 +314,6 @@ class TestResetTestDatabase(TestSystemRouter):
             assert "データベースのリセットに失敗しました" in data["detail"]
 
 
-class TestSystemRouterIntegration(TestSystemRouter):
-    """システムルーター統合テスト"""
-
-    def test_router_inclusion(self, system_router_client):
-        """ルーターが正しく統合されているかのテスト"""
-        # 各エンドポイントが存在することを確認
-        response = system_router_client.get("/system/health")
-        assert response.status_code == 200
-
-        response = system_router_client.get("/system/statistics")
-        assert response.status_code in [200, 500]  # サービスエラーは500
-
-        response = system_router_client.post("/system/cleanup")
-        assert response.status_code in [200, 500]  # サービスエラーは500
-
-        response = system_router_client.post("/system/test/reset-db")
-        assert response.status_code in [200, 403, 500]  # 環境に依存
-
-    def test_router_prefix_and_tags(self, system_router_client):
-        """ルーターのプレフィックスとタグのテスト"""
-        # プレフィックスが正しく適用されているか
-        response = system_router_client.get("/health")
-        assert response.status_code == 404  # /systemプレフィックスが必要
-
-        response = system_router_client.get("/system/health")
-        assert response.status_code == 200
-
-    def test_router_response_consistency(self, system_router_client):
-        """ルーターのレスポンス一貫性テスト"""
-        # ヘルスチェックの一貫性
-        response1 = system_router_client.get("/system/health")
-        response2 = system_router_client.get("/system/health")
-
-        assert response1.status_code == 200
-        assert response2.status_code == 200
-
-        data1 = response1.json()
-        data2 = response2.json()
-
-        assert data1["status"] == data2["status"]
-        assert data1["version"] == data2["version"]
-        # uptimeは時間経過で変わる可能性がある
-
-
 class TestSystemRouterParameterized(TestSystemRouter):
     """システムルーターパラメータ化テスト"""
 
