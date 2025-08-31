@@ -229,11 +229,50 @@ jobs:
 
           # APIサーバーを起動
           echo "Starting API server..."
-          nohup uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000 > api_server.log 2>&1 &
+          echo "Current directory: $(pwd)"
+          echo "Python path: $PYTHONPATH"
+
+          # 既存のプロセスを確認
+          echo "Checking for existing processes on port 8000..."
+          lsof -i :8000 || echo "No existing process on port 8000"
+
+          # ファイルの存在確認
+          echo "Checking main.py existence:"
+          ls -la src/api/main.py || echo "main.py not found"
+
+          # Pythonパッケージの確認
+          echo "Checking Python packages:"
+          uv pip list | grep -E "(fastapi|uvicorn)" || echo "FastAPI/Uvicorn not found"
+
+          # APIサーバーを起動
+          echo "Starting uvicorn server..."
+          nohup uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --log-level info > api_server.log 2>&1 &
           echo $! > api_server.pid
 
+          echo "API server started with PID: $(cat api_server.pid)"
+
+          # プロセスが起動しているか確認
+          sleep 5
+          if kill -0 $(cat api_server.pid) 2>/dev/null; then
+            echo "API server process is running"
+          else
+            echo "API server process failed to start"
+            echo "=== API Server Log ==="
+            cat api_server.log
+            echo "=== Process Status ==="
+            ps aux | grep uvicorn | grep -v grep || echo "No uvicorn process found"
+            echo "=== Port Status ==="
+            lsof -i :8000 || echo "Port 8000 is not in use"
+            echo "=== Directory Contents ==="
+            ls -la src/api/
+            echo "=== Main.py Contents (first 20 lines) ==="
+            head -20 src/api/main.py || echo "Could not read main.py"
+            exit 1
+          fi
+
           # サーバー起動を待機
-          sleep 20
+          echo "Waiting for API server to be ready..."
+          sleep 15
 
           # ログを確認
           echo "API server log:"
@@ -246,12 +285,34 @@ jobs:
         run: |
           cd ../../
           echo "Checking API server health..."
-          timeout 60s bash -c 'until curl -f http://localhost:8000/health 2>/dev/null; do sleep 2; echo "Waiting for API server..."; done'
+
+          # プロセス状態の確認
+          if [ -f api_server.pid ]; then
+            if kill -0 $(cat api_server.pid) 2>/dev/null; then
+              echo "API server process is running with PID: $(cat api_server.pid)"
+            else
+              echo "API server process is not running"
+              cat api_server.log
+              exit 1
+            fi
+          fi
+
+          # ポートの確認
+          echo "Checking port 8000..."
+          lsof -i :8000 || echo "Port 8000 is not in use"
+
+          # ヘルスチェックの実行
+          echo "Starting health check..."
+          timeout 60s bash -c 'until curl -f http://localhost:8000/system/health 2>/dev/null; do sleep 2; echo "Waiting for API server..."; done'
           echo "API server is running successfully"
 
           # ヘルスチェックの詳細を確認
           echo "API server health check:"
-          curl -v http://localhost:8000/health
+          curl -v http://localhost:8000/system/health
+
+          # 利用可能なエンドポイントの確認
+          echo "Available endpoints:"
+          curl -s http://localhost:8000/docs 2>/dev/null | grep -o 'href="[^"]*"' | head -10 || echo "Could not fetch OpenAPI docs"
 
       - name: Start UI server with Next.js dev server
         run: |

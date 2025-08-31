@@ -6,17 +6,17 @@ import { assertSuccessResponse } from '../helpers/api-helpers';
 test.describe('クリーンアップテスト', () => {
   test.beforeEach(async ({ request }) => {
     // 各テスト前にデータベースをリセット
-    await request.post('/test/reset-db');
+    await request.post('/system/test/reset-db');
   });
 
   test('古いファイルがクリーンアップされることを確認する', async ({ request }) => {
     // クリーンアップ前のファイル数を取得
-    const beforeStats = await request.get('/statistics');
+    const beforeStats = await request.get('/system/statistics');
     const beforeData = await beforeStats.json();
     const fileCountBefore = beforeData.total_files;
 
     // クリーンアップを実行
-    const responseCleanup = await request.post('/cleanup', {
+    const responseCleanup = await request.post('/system/cleanup', {
       params: {
         days: CLEANUP_TEST_DATA.DAYS
       }
@@ -35,7 +35,7 @@ test.describe('クリーンアップテスト', () => {
     expect(responseBody.message).toContain('クリーンアップが完了しました')
 
     // クリーンアップ後のファイル数を確認
-    const afterStats = await request.get('/statistics');
+    const afterStats = await request.get('/system/statistics');
     const afterData = await afterStats.json();
     const fileCountAfter = afterData.total_files;
 

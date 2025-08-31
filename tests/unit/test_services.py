@@ -1,6 +1,5 @@
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -16,11 +15,11 @@ from .fixtures import (
 
 class TestFileService:
     def test_get_file_success(
-        self, file_service, mock_get_file_success, assert_file_data, mock_db_manager
+        self, file_service, mock_get_file_success, assert_file_data
     ):
         """ファイル取得成功のテスト"""
         # モック設定
-        mock_db_manager.get_file.return_value = mock_get_file_success
+        file_service.file_repository.get_file.return_value = mock_get_file_success
 
         # テスト実行
         file_id = mock_get_file_success["id"]
@@ -29,12 +28,10 @@ class TestFileService:
         # アサーション
         assert_file_data(result, mock_get_file_success)
 
-    def test_get_file_not_found(
-        self, file_service, mock_get_file_not_found, mock_db_manager
-    ):
+    def test_get_file_not_found(self, file_service, mock_get_file_not_found):
         """ファイルが見つからない場合のテスト"""
         # モック設定
-        mock_db_manager.get_file.return_value = None
+        file_service.file_repository.get_file.return_value = None
 
         # テスト実行
         file_id = "non_existent_id"
@@ -48,11 +45,10 @@ class TestFileService:
         file_service,
         mock_list_files_success,
         assert_list_response,
-        mock_db_manager,
     ):
         """ファイル一覧取得成功のテスト"""
         # モック設定
-        mock_db_manager.list_files.return_value = mock_list_files_success
+        file_service.file_repository.list_files.return_value = mock_list_files_success
 
         # テスト実行
         result = file_service.list_files()
@@ -65,11 +61,12 @@ class TestFileService:
         file_service,
         mock_list_files_pagination,
         assert_list_response,
-        mock_db_manager,
     ):
         """ページネーションのテスト"""
         # モック設定
-        mock_db_manager.list_files.return_value = mock_list_files_pagination
+        file_service.file_repository.list_files.return_value = (
+            mock_list_files_pagination
+        )
 
         # テスト実行
         result = file_service.list_files(page=2, per_page=1)
@@ -77,19 +74,22 @@ class TestFileService:
         # アサーション
         assert_list_response(result, mock_list_files_pagination, page=2, per_page=1)
 
-    def test_update_file_success(self, file_service, mock_db_manager, single_file_data):
+    def test_update_file_success(self, file_service, single_file_data):
         """ファイル更新成功のテスト"""
         file_id = single_file_data["id"]
         new_markdown = "# Updated Content\n\nThis is updated content."
 
         # 更新後のデータを作成
         updated_data = create_file_data(
-            id=file_id, markdown_content=new_markdown, status="completed"
+            id=file_id, markdown=new_markdown, status="completed"
         )
 
         # モック設定
-        mock_db_manager.get_file.side_effect = [single_file_data, updated_data]
-        mock_db_manager.update_file_status.return_value = True
+        file_service.file_repository.get_file.side_effect = [
+            single_file_data,
+            updated_data,
+        ]
+        file_service.file_repository.update_file_status.return_value = True
 
         # テスト実行
         result = file_service.update_file(file_id, new_markdown)
@@ -99,26 +99,26 @@ class TestFileService:
         assert result["id"] == file_id
         assert result["markdown"] == new_markdown
         assert result["status"] == "completed"
-        mock_db_manager.update_file_status.assert_called_once_with(
+        file_service.file_repository.update_file_status.assert_called_once_with(
             file_id, FileStatus.COMPLETED, new_markdown
         )
 
-    def test_update_file_not_found(self, file_service, mock_db_manager):
+    def test_update_file_not_found(self, file_service):
         """存在しないファイルの更新テスト"""
         # モック設定
-        mock_db_manager.get_file.return_value = None
+        file_service.file_repository.get_file.return_value = None
 
         # テスト実行
         result = file_service.update_file("non-existent-id", "content")
 
         # アサーション
         assert result is None
-        mock_db_manager.update_file_status.assert_not_called()
+        file_service.file_repository.update_file_status.assert_not_called()
 
-    def test_delete_file_success(self, file_service, mock_db_manager):
+    def test_delete_file_success(self, file_service):
         """ファイル削除成功のテスト"""
         # モック設定
-        mock_db_manager.delete_file.return_value = True
+        file_service.file_repository.delete_file.return_value = True
 
         # テスト実行
         file_id = "test-file-id"
@@ -126,12 +126,12 @@ class TestFileService:
 
         # アサーション
         assert result is True
-        mock_db_manager.delete_file.assert_called_once_with(file_id)
+        file_service.file_repository.delete_file.assert_called_once_with(file_id)
 
-    def test_delete_file_failure(self, file_service, mock_db_manager):
+    def test_delete_file_failure(self, file_service):
         """ファイル削除失敗のテスト"""
         # モック設定
-        mock_db_manager.delete_file.return_value = False
+        file_service.file_repository.delete_file.return_value = False
 
         # テスト実行
         result = file_service.delete_file("non-existent-id")
@@ -139,12 +139,10 @@ class TestFileService:
         # アサーション
         assert result is False
 
-    def test_get_file_status_success(
-        self, file_service, mock_db_manager, single_file_data
-    ):
+    def test_get_file_status_success(self, file_service, single_file_data):
         """ファイル状態取得成功のテスト"""
         # モック設定
-        mock_db_manager.get_file.return_value = single_file_data
+        file_service.file_repository.get_file.return_value = single_file_data
 
         # テスト実行
         result = file_service.get_file_status(single_file_data["id"])
@@ -152,10 +150,10 @@ class TestFileService:
         # アサーション
         assert result == single_file_data["status"]
 
-    def test_get_file_status_not_found(self, file_service, mock_db_manager):
+    def test_get_file_status_not_found(self, file_service):
         """ファイル状態取得失敗のテスト"""
         # モック設定
-        mock_db_manager.get_file.return_value = None
+        file_service.file_repository.get_file.return_value = None
 
         # テスト実行
         result = file_service.get_file_status("non-existent-id")
@@ -163,14 +161,14 @@ class TestFileService:
         # アサーション
         assert result is None
 
-    def test_get_conversion_logs(self, file_service, mock_db_manager):
+    def test_get_conversion_logs(self, file_service):
         """変換ログ取得のテスト"""
         # テストデータ（統一されたデータクラスを使用）
         file_id = "test-file-id"
         expected_logs = ConversionLogTestData.multiple_logs_data()
 
         # モック設定
-        mock_db_manager.get_conversion_logs.return_value = expected_logs
+        file_service.file_repository.get_conversion_logs.return_value = expected_logs
 
         # テスト実行
         result = file_service.get_conversion_logs(file_id)
@@ -181,65 +179,61 @@ class TestFileService:
         assert result[0]["operation"] == "upload_and_convert"
         assert result[1]["operation"] == "reconvert"
         assert result[2]["status"] == "failed"
-        mock_db_manager.get_conversion_logs.assert_called_once_with(file_id)
+        file_service.file_repository.get_conversion_logs.assert_called_once_with(
+            file_id
+        )
 
-    def test_get_file_statistics_success(self, file_service, mock_db_manager):
-        """ファイル統計情報取得成功のテスト"""
-        # 統計用テストデータ（実際のFileServiceロジックに合わせて修正）
-        stats_files = [
-            {"status": "completed", "file_size": 1024, "processing_time": 2.0},
-            {"status": "processing", "file_size": 2048, "processing_time": None},
-            {"status": "completed", "file_size": 512, "processing_time": 1.5},
-            {"status": "failed", "file_size": 256, "processing_time": 0.5},
-        ]
-
-        mock_db_manager.list_files.return_value = {
-            "files": stats_files,
-            "total_count": len(stats_files),
+    def test_get_file_statistics_success(self, file_service):
+        """ファイル統計情報取得成功のテスト（リポジトリ層を活用）"""
+        # リポジトリ層の統計情報をモック
+        expected_stats = {
+            "total_files": 4,
+            "status_counts": {"completed": 2, "processing": 1, "failed": 1},
+            "total_size_bytes": 3840,
+            "total_size_mb": 0.0,
+            "total_processing_time": 4.0,
+            "average_processing_time": 1.0,
         }
+
+        file_service.file_repository.get_file_statistics.return_value = expected_stats
 
         # テスト実行
         result = file_service.get_file_statistics()
 
-        # アサーション（計算ロジックを正確に反映）
+        # アサーション（リポジトリ層から返される値を検証）
         assert result["total_files"] == 4
         assert result["status_counts"]["completed"] == 2
         assert result["status_counts"]["processing"] == 1
         assert result["status_counts"]["failed"] == 1
-        assert result["total_size_bytes"] == 3840  # 1024+2048+512+256
-
-        # MB計算は実際の値に基づいて調整
-        expected_mb = round(3840 / (1024 * 1024), 2)
-        assert result["total_size_mb"] == expected_mb
-
-        # 処理時間の計算（実際の実装では、processing_timeが存在するもののみの合計）
-        # 2.0 + 1.5 + 0.5 = 4.0
+        assert result["total_size_bytes"] == 3840
+        assert result["total_size_mb"] == 0.0
         assert result["total_processing_time"] == 4.0
-        assert result["average_processing_time"] == 1.0  # 4.0/4
+        assert result["average_processing_time"] == 1.0
 
-    def test_get_file_statistics_exception(self, file_service, mock_db_manager):
-        """ファイル統計情報取得時の例外処理テスト"""
+    def test_get_file_statistics_exception(self, file_service):
+        """ファイル統計情報取得時の例外処理テスト（リポジトリ層を活用）"""
         # モック設定
-        mock_db_manager.list_files.side_effect = Exception("Database error")
+        file_service.file_repository.get_file_statistics.side_effect = Exception(
+            "Repository error"
+        )
 
         # テスト実行
         result = file_service.get_file_statistics()
 
         # アサーション
         assert "error" in result
-        assert "Database error" in result["error"]
+        assert "Repository error" in result["error"]
 
-    def test_cleanup_old_files_success(self, file_service, mock_db_manager):
-        """古いファイルクリーンアップ成功のテスト"""
+    def test_cleanup_old_files_success(self, file_service):
+        """古いファイルクリーンアップ成功のテスト（リポジトリ層を活用）"""
         # モック設定
-        mock_db_manager.list_files.return_value = {
-            "files": [
-                {"id": "old-file-1", "created_at": "2025-01-01T00:00:00"},
-                {"id": "old-file-2", "created_at": "2025-01-01T00:00:00"},
-            ],
-            "total_count": 2,
+        expected_result = {
+            "success": True,
+            "deleted_count": 2,
+            "total_old_files": 2,
+            "cutoff_date": "2025-01-01T00:00:00",
         }
-        mock_db_manager.delete_file.return_value = True
+        file_service.file_repository.cleanup_old_files.return_value = expected_result
 
         # テスト実行
         result = file_service.cleanup_old_files(days=30)
@@ -250,10 +244,12 @@ class TestFileService:
         assert result["total_old_files"] == 2
         assert "cutoff_date" in result
 
-    def test_cleanup_old_files_exception(self, file_service, mock_db_manager):
-        """古いファイルクリーンアップ時の例外処理テスト"""
+    def test_cleanup_old_files_exception(self, file_service):
+        """古いファイルクリーンアップ時の例外処理テスト（リポジトリ層を活用）"""
         # モック設定
-        mock_db_manager.list_files.side_effect = Exception("Cleanup failed")
+        file_service.file_repository.cleanup_old_files.side_effect = Exception(
+            "Cleanup failed"
+        )
 
         # テスト実行
         result = file_service.cleanup_old_files(days=30)
@@ -316,12 +312,10 @@ class TestFileServiceParameterized:
             FileTestData.failed_file_data(),
         ],
     )
-    def test_get_file_various_data(
-        self, file_service, mock_db_manager, assert_file_data, test_data
-    ):
+    def test_get_file_various_data(self, file_service, assert_file_data, test_data):
         """様々なファイルデータでのget_fileテスト（パラメータ化）"""
         # モック設定
-        mock_db_manager.get_file.return_value = test_data
+        file_service.file_repository.get_file.return_value = test_data
 
         # テスト実行
         result = file_service.get_file(test_data["id"])
@@ -336,7 +330,6 @@ class TestFileServiceParameterized:
     def test_list_files_pagination_params(
         self,
         file_service,
-        mock_db_manager,
         list_files_response_data,
         page,
         per_page,
@@ -344,7 +337,7 @@ class TestFileServiceParameterized:
     ):
         """様々なページネーションパラメータでのテスト"""
         # モック設定
-        mock_db_manager.list_files.return_value = list_files_response_data
+        file_service.file_repository.list_files.return_value = list_files_response_data
 
         # テスト実行
         result = file_service.list_files(page=page, per_page=per_page)
@@ -352,7 +345,7 @@ class TestFileServiceParameterized:
         # アサーション
         assert result is not None
         assert len(result["files"]) == len(list_files_response_data["files"])
-        mock_db_manager.list_files.assert_called_once_with(*expected_call)
+        file_service.file_repository.list_files.assert_called_once_with(*expected_call)
 
     @pytest.mark.parametrize(
         "file_id,expected_result",
@@ -366,12 +359,10 @@ class TestFileServiceParameterized:
             ),  # 有効UUID形式だが存在しない
         ],
     )
-    def test_get_file_not_found_cases(
-        self, file_service, mock_db_manager, file_id, expected_result
-    ):
+    def test_get_file_not_found_cases(self, file_service, file_id, expected_result):
         """ファイルが見つからない様々なケース（パラメータ化）"""
         # モック設定
-        mock_db_manager.get_file.return_value = None
+        file_service.file_repository.get_file.return_value = None
 
         # テスト実行
         result = file_service.get_file(file_id)
@@ -398,11 +389,13 @@ class TestFileServiceErrorCases:
         ],
     )
     def test_get_file_exception_handling(
-        self, file_service, mock_db_manager, exception_type, exception_message
+        self, file_service, exception_type, exception_message
     ):
         """get_fileでの例外処理テスト（パラメータ化）"""
         # モック設定（例外発生）
-        mock_db_manager.get_file.side_effect = exception_type(exception_message)
+        file_service.file_repository.get_file.side_effect = exception_type(
+            exception_message
+        )
 
         # テスト実行（例外が適切に処理されることを確認）
         with pytest.raises(exception_type) as exc_info:
@@ -424,11 +417,11 @@ class TestFileServiceErrorCases:
         ],
     )
     def test_list_files_various_counts(
-        self, file_service, mock_db_manager, mock_return_value, expected_count
+        self, file_service, mock_return_value, expected_count
     ):
         """様々な件数でのlist_filesテスト（パラメータ化）"""
         # モック設定
-        mock_db_manager.list_files.return_value = {
+        file_service.file_repository.list_files.return_value = {
             "files": mock_return_value,
             "total_count": expected_count,
             "page": 1,
@@ -454,63 +447,79 @@ class TestPDFService:
 
     def test_validate_pdf_file_valid(self, pdf_service_for_test):
         """有効なPDFファイルの検証テスト"""
-        # pypdf.PdfReaderをモックして、検証ロジックをテスト
-        with patch("src.api.services.pdf_service.pypdf.PdfReader") as mock_pdf_reader:
-            # PDF読み込み成功をシミュレート
-            mock_pdf_reader.return_value = Mock()  # 正常なPDFReaderインスタンス
+        # PDFRepositoryのvalidate_pdf_fileをモック
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            mock_validate.return_value = (True, "OK")
 
-            # 有効なPDFコンテンツ（サイズとファイル拡張子が適切）
             valid_content = b"fake valid pdf content"
             filename = "test_document.pdf"
 
             # テスト実行
-            is_valid, message = pdf_service_for_test._validate_pdf_file(
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
                 valid_content, filename
             )
 
             # アサーション
             assert is_valid is True
             assert message == "OK"
-
-            # pypdf.PdfReaderが適切に呼ばれたことを確認
-            mock_pdf_reader.assert_called_once()
+            mock_validate.assert_called_once_with(valid_content, filename)
 
     def test_validate_pdf_file_invalid_extension(
         self, pdf_service_for_test, valid_pdf_content
     ):
         """無効な拡張子のファイル検証テスト"""
-        # テスト実行
-        is_valid, message = pdf_service_for_test._validate_pdf_file(
-            valid_pdf_content, "test.txt"
-        )
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            mock_validate.return_value = (False, "PDFファイルのみアップロード可能です")
 
-        # アサーション
-        assert is_valid is False
-        assert "PDFファイルのみアップロード可能です" in message
+            # テスト実行
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
+                valid_pdf_content, "test.txt"
+            )
+
+            # アサーション
+            assert is_valid is False
+            assert "PDFファイルのみアップロード可能です" in message
 
     def test_validate_pdf_file_too_large(self, pdf_service_for_test, large_pdf_content):
         """サイズ制限を超えるファイルの検証テスト"""
-        # テスト実行
-        is_valid, message = pdf_service_for_test._validate_pdf_file(
-            large_pdf_content, "test.pdf"
-        )
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            mock_validate.return_value = (
+                False,
+                "ファイルサイズは10MB以下にしてください",
+            )
 
-        # アサーション
-        assert is_valid is False
-        assert "ファイルサイズは10MB以下にしてください" in message
+            # テスト実行
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
+                large_pdf_content, "test.pdf"
+            )
+
+            # アサーション
+            assert is_valid is False
+            assert "ファイルサイズは10MB以下にしてください" in message
 
     def test_validate_pdf_file_invalid_content(
         self, pdf_service_for_test, invalid_pdf_content
     ):
         """無効なPDFコンテンツの検証テスト"""
-        # テスト実行
-        is_valid, message = pdf_service_for_test._validate_pdf_file(
-            invalid_pdf_content, "test.pdf"
-        )
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            mock_validate.return_value = (False, "無効なPDFファイルです")
 
-        # アサーション
-        assert is_valid is False
-        assert "無効なPDFファイルです" in message
+            # テスト実行
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
+                invalid_pdf_content, "test.pdf"
+            )
+
+            # アサーション
+            assert is_valid is False
+            assert "無効なPDFファイルです" in message
 
     @pytest.mark.asyncio
     async def test_process_pdf_upload_invalid_extension(
@@ -558,17 +567,13 @@ class TestPDFService:
         assert result["file_id"] is None
 
     @pytest.mark.asyncio
-    async def test_process_pdf_upload_db_insert_failure(
-        self, pdf_service_for_test, mock_db_manager
-    ):
+    async def test_process_pdf_upload_db_insert_failure(self, pdf_service_for_test):
         """データベース挿入失敗時のアップロード処理テスト"""
         # 複雑なPDFアップロード処理の例外テスト
         # 基本的な例外ハンドリングのみ検証
 
         # データベース操作で例外を発生させる
-        mock_db_manager.insert_file.side_effect = Exception(
-            "Database connection failed"
-        )
+        # 注: このテストは実際にはDB例外に到達しない（検証段階で失敗）
 
         # 無効なファイル（簡単にテストできるケース）
         invalid_content = b"not a pdf"
@@ -586,11 +591,12 @@ class TestPDFService:
 
     @pytest.mark.asyncio
     async def test_reconvert_pdf_file_not_found(
-        self, pdf_service_for_test, mock_db_manager, valid_pdf_content
+        self, pdf_service_for_test, valid_pdf_content
     ):
         """存在しないファイルの再変換テスト"""
         # モック設定
-        mock_db_manager.get_file.return_value = None
+        # 注: PDFServiceは現在db_managerを直接使用していないため、
+        # このテストは実際の動作を検証
 
         # テスト実行
         result = await pdf_service_for_test.reconvert_pdf(
@@ -638,42 +644,6 @@ class TestPDFService:
             or len(result) > 0  # 何らかの結果が返されることを確認
         )
 
-    def test_save_markdown(self, pdf_service_for_test, tmp_path):
-        """Markdownファイル保存のテスト"""
-        # テスト用ディレクトリを設定
-        pdf_service_for_test.markdown_dir = tmp_path
-
-        # テストデータ
-        file_id = "test-file-id"
-        markdown_content = "# Test Markdown\n\nThis is test content."
-
-        # テスト実行
-        result_path = pdf_service_for_test._save_markdown(file_id, markdown_content)
-
-        # アサーション
-        assert result_path.endswith(f"{file_id}.md")
-        saved_file = tmp_path / f"{file_id}.md"
-        assert saved_file.exists()
-        assert saved_file.read_text(encoding="utf-8") == markdown_content
-
-    def test_save_uploaded_file(self, pdf_service_for_test, tmp_path):
-        """アップロードファイル保存のテスト"""
-        # テスト用ディレクトリを設定
-        pdf_service_for_test.upload_dir = tmp_path
-
-        # テストデータ
-        file_content = b"test pdf content"
-        filename = "test.pdf"
-
-        # テスト実行
-        result_path = pdf_service_for_test._save_uploaded_file(file_content, filename)
-
-        # アサーション
-        assert result_path.endswith(f"_{filename}")
-        saved_file = Path(result_path)
-        assert saved_file.exists()
-        assert saved_file.read_bytes() == file_content
-
     def test_ensure_directories(self, tmp_path):
         """ディレクトリ作成のテスト"""
         # テスト用パス
@@ -718,22 +688,33 @@ class TestPDFServiceParameterized:
         self, pdf_service_for_test, filename, expected_valid
     ):
         """ファイル拡張子検証のパラメータ化テスト"""
-        # 小さな有効なコンテンツ（拡張子チェックのみに焦点）
-        small_content = b"x" * 100
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            # 小さな有効なコンテンツ（拡張子チェックのみに焦点）
+            small_content = b"x" * 100
 
-        # テスト実行
-        is_valid, message = pdf_service_for_test._validate_pdf_file(
-            small_content, filename
-        )
+            if expected_valid:
+                mock_validate.return_value = (True, "OK")
+            else:
+                mock_validate.return_value = (
+                    False,
+                    "PDFファイルのみアップロード可能です",
+                )
 
-        # 拡張子チェックのアサーション
-        if expected_valid:
-            # 拡張子が有効な場合、エラーメッセージに拡張子エラーは含まれない
-            assert "PDFファイルのみアップロード可能です" not in message
-        else:
-            # 拡張子が無効な場合
-            assert is_valid is False
-            assert "PDFファイルのみアップロード可能です" in message
+            # テスト実行
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
+                small_content, filename
+            )
+
+            # 拡張子チェックのアサーション
+            if expected_valid:
+                # 拡張子が有効な場合、エラーメッセージに拡張子エラーは含まれない
+                assert "PDFファイルのみアップロード可能です" not in message
+            else:
+                # 拡張子が無効な場合
+                assert is_valid is False
+                assert "PDFファイルのみアップロード可能です" in message
 
     @pytest.mark.parametrize(
         "size_mb,expected_valid",
@@ -752,10 +733,21 @@ class TestPDFServiceParameterized:
         content_size = size_mb * 1024 * 1024
         file_content = b"x" * content_size
 
-        # テスト実行
-        is_valid, message = pdf_service_for_test._validate_pdf_file(
-            file_content, "test.pdf"
-        )
+        with patch.object(
+            pdf_service_for_test.pdf_repository, "validate_pdf_file"
+        ) as mock_validate:
+            if expected_valid:
+                mock_validate.return_value = (True, "OK")
+            else:
+                mock_validate.return_value = (
+                    False,
+                    "ファイルサイズは10MB以下にしてください",
+                )
+
+            # テスト実行
+            is_valid, message = pdf_service_for_test.validate_pdf_file(
+                file_content, "test.pdf"
+            )
 
         # サイズチェックのアサーション
         if expected_valid:

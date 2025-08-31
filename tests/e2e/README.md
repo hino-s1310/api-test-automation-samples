@@ -99,7 +99,7 @@ pnpm test:report
 
 1. **APIサーバー** (`api-server`)
    - ポート: 8000
-   - ヘルスチェック: `/health`
+   - ヘルスチェック: `/system/health`
 
 2. **UIサーバー** (`ui-server`)
    - ポート: 3000

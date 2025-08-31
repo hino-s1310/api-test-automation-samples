@@ -115,7 +115,7 @@ export async function setupMockData(page: any, data: any = VALID_UPLOAD_DATA) {
     console.log('APIサーバーの状態を確認中...');
 
     // まずAPIサーバーの状態を確認
-    const healthResponse = await page.request.get('http://localhost:8000/health');
+    const healthResponse = await page.request.get('http://localhost:8000/system/health');
     if (healthResponse.status() !== 200) {
       throw new Error(`APIサーバーが正常に動作していません。ステータス: ${healthResponse.status()}`);
     }
@@ -171,13 +171,13 @@ export async function cleanupMockData(page: any) {
     console.log('データベースリセットを開始します...');
 
     // APIサーバーの状態を確認
-    const healthResponse = await page.request.get('http://localhost:8000/health');
+    const healthResponse = await page.request.get('http://localhost:8000/system/health');
     if (healthResponse.status() !== 200) {
       console.warn('APIサーバーが動作していないため、データベースリセットをスキップします');
       return;
     }
 
-    const response = await page.request.post('http://localhost:8000/test/reset-db');
+    const response = await page.request.post('http://localhost:8000/system/test/reset-db');
     if (response.status() === 200) {
       console.log('データベースリセットが完了しました');
     } else {
@@ -218,4 +218,78 @@ export async function getFileId(page: any, fileName: string) {
     console.error('getFileIdでエラーが発生しました:', error);
     throw error;
   }
+}
+
+/**
+ * データベースの状態を確認するヘルパー関数
+ */
+export async function checkDatabaseState(request: APIRequestContext, fileId: string) {
+  try {
+    // システムAPIを使用してデータベースの状態を確認
+    const response = await request.get(`/system/test/db-state/${fileId}`);
+    if (response.ok()) {
+      return await response.json();
+    }
+    return null;
+  } catch (error) {
+    console.error('データベース状態確認エラー:', error);
+    return null;
+  }
+}
+
+/**
+ * PDF変換の完了を待機するヘルパー関数
+ */
+export async function waitForPdfConversion(
+  request: APIRequestContext,
+  fileId: string,
+  timeoutSeconds: number = 30
+): Promise<any> {
+  const startTime = Date.now();
+  const timeoutMs = timeoutSeconds * 1000;
+
+  console.log(`PDF変換完了待機開始: fileId=${fileId}, timeout=${timeoutSeconds}s`);
+
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      const response = await getFileDetail(request, fileId);
+      if (response.ok()) {
+        const fileData = await response.json();
+
+        // デバッグ情報を出力
+        console.log(`変換チェック - Status: ${fileData.status}, Markdown length: ${fileData.markdown?.length || 0}`);
+
+        // 変換が完了し、markdownが存在する場合
+        if (fileData.status === 'completed' && fileData.markdown && fileData.markdown.length > 0) {
+          console.log(`PDF変換完了: fileId=${fileId}, markdown length=${fileData.markdown.length}`);
+          return fileData;
+        }
+
+        // 失敗状態の場合はエラーを投げる
+        if (fileData.status === 'failed') {
+          throw new Error(`PDF変換が失敗しました: fileId=${fileId}`);
+        }
+      } else {
+        console.log(`ファイル詳細取得失敗: status=${response.status()}`);
+      }
+
+      // 1秒待機
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.error('変換完了待機中にエラー:', error);
+    }
+  }
+
+  // タイムアウト時の詳細情報を取得
+  try {
+    const finalResponse = await getFileDetail(request, fileId);
+    if (finalResponse.ok()) {
+      const finalData = await finalResponse.json();
+      console.error('タイムアウト時のファイル状態:', finalData);
+    }
+  } catch (error) {
+    console.error('タイムアウト時の状態確認エラー:', error);
+  }
+
+  throw new Error(`PDF変換が${timeoutSeconds}秒以内に完了しませんでした: fileId=${fileId}`);
 }

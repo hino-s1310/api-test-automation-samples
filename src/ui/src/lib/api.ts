@@ -3,7 +3,7 @@ import { FileInfo, FileListResponse, UploadResponse } from '@/types';
 
 // APIクライアントの作成
 const apiClient = axios.create({
-  baseURL: process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '/api'),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,7 +19,7 @@ export const api = {
     formData.append('file', file);
 
     try {
-      const response = await apiClient.post<UploadResponse>('/upload', formData, {
+      const response = await apiClient.post<UploadResponse>('/files/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

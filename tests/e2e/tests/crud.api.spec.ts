@@ -13,15 +13,20 @@ import {
   deleteFile,
   assertSuccessResponse,
   assertErrorResponse,
+  waitForPdfConversion,
+  checkDatabaseState,
 } from '../helpers/api-helpers';
 
 // ファイル内のテストを基本的に直列実行するよう設定
 test.describe.configure({ mode: 'serial' });
 
 test.describe('CRUDテスト', () => {
+  // テストのタイムアウトを延長（PDF変換処理の完了を待つため）
+  test.setTimeout(120000); // 2分
+
   test.beforeEach(async ({ request }) => {
     // 各テスト前にデータベースをリセット
-    await request.post('/test/reset-db');
+    await request.post('/system/test/reset-db');
   });
 
   test('ファイルをアップロードする', async ({ request }) => {
@@ -69,23 +74,37 @@ test.describe('CRUDテスト', () => {
     const uploadData = await uploadResponse.json();
     const testFileId = uploadData.id;
 
-    // ファイル詳細を取得する
-    const response = await getFileDetail(request, testFileId)
+    // PDF変換が完了するまで待機（最大30秒）
+    let responseBody;
+    let attempts = 0;
+    const maxAttempts = 30;
 
-    // レスポンスのステータスコードとメッセージを検証
-    await assertSuccessResponse(response, EXPECTED_RESPONSES.GET_FILE_SUCCESS.status)
+    while (attempts < maxAttempts) {
+      const response = await getFileDetail(request, testFileId);
+      await assertSuccessResponse(response, EXPECTED_RESPONSES.GET_FILE_SUCCESS.status);
+
+      responseBody = await response.json();
+
+      // markdownが存在し、PDF変換結果を含む場合は完了
+      if (responseBody.markdown && responseBody.markdown.includes('PDF変換結果')) {
+        break;
+      }
+
+      // 1秒待機してから再試行
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
+    }
 
     // レスポンスのデータを検証
-    const responseBody = await response.json()
-    expect(responseBody.id).toBeDefined()
-    expect(responseBody.filename).toEqual(uniqueTestData.filename)
-    expect(responseBody.markdown).toContain('PDF変換結果')
-    expect(responseBody.status).toEqual('completed')
-    expect(responseBody.created_at).toBeDefined()
-    expect(responseBody.updated_at).toBeDefined()
-    expect(responseBody.file_size).toBeGreaterThan(0)
-    expect(responseBody.processing_time).toBeGreaterThan(0)
-  })
+    expect(responseBody.id).toBeDefined();
+    expect(responseBody.filename).toEqual(uniqueTestData.filename);
+    expect(responseBody.markdown).toContain('PDF変換結果');
+    expect(responseBody.status).toEqual('completed');
+    expect(responseBody.created_at).toBeDefined();
+    expect(responseBody.updated_at).toBeDefined();
+    expect(responseBody.file_size).toBeGreaterThan(0);
+    expect(responseBody.processing_time).toBeGreaterThan(0);
+  });
 
   test('指定されたIDのファイルの変換ログを取得', async ({ request }) => {
     // このテスト専用にファイルをアップロード
@@ -206,6 +225,6 @@ test.describe('CRUDテスト', () => {
 
   test.afterEach(async ({ request }) => {
     // 各テスト後にデータベースをリセット
-    await request.post('/test/reset-db');
+    await request.post('/system/test/reset-db');
   })
 });

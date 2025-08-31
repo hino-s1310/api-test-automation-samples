@@ -2,6 +2,7 @@
 PDF変換サービス
 
 PDFファイルをMarkdown形式に変換する処理を担当
+リポジトリ層との連携により、データアクセス処理を分離
 """
 
 import time
@@ -10,17 +11,21 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import pdfplumber
-import pypdf
-
-from ..database import db_manager
-from ..models import FileStatus
+from ..repositories.pdf_repository import PDFRepository
 
 
 class PDFService:
-    """PDF変換サービス"""
+    """PDF変換サービス（リポジトリ層との連携）"""
 
-    def __init__(self, upload_dir: str = None, markdown_dir: str = None):
+    def __init__(
+        self,
+        pdf_repository: PDFRepository = None,
+        upload_dir: str = None,
+        markdown_dir: str = None,
+    ):
+        # リポジトリ層の注入（依存性注入パターン）
+        self.pdf_repository = pdf_repository or PDFRepository(upload_dir, markdown_dir)
+
         # 環境変数からディレクトリパスを取得、なければデフォルト値を使用
         import os
 
@@ -38,256 +43,210 @@ class PDFService:
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         self.markdown_dir.mkdir(parents=True, exist_ok=True)
 
-    def _validate_pdf_file(
-        self, file_content: bytes, filename: str
-    ) -> tuple[bool, str]:
-        """PDFファイルの検証"""
-        # ファイルサイズチェック（10MB制限）
-        if len(file_content) > 10 * 1024 * 1024:
-            return False, "ファイルサイズは10MB以下にしてください"
-
-        # ファイル拡張子チェック
-        if not filename.lower().endswith(".pdf"):
-            return False, "PDFファイルのみアップロード可能です"
-
-        # PDFファイルの内容チェック
+    def validate_pdf_file(self, file_content: bytes, filename: str) -> tuple[bool, str]:
+        """PDFファイルの検証（リポジトリ層を活用）"""
         try:
-            from io import BytesIO
-
-            pypdf.PdfReader(BytesIO(file_content))
-            return True, "OK"
-        except Exception:
-            return False, "無効なPDFファイルです"
-
-    def _save_uploaded_file(self, file_content: bytes, filename: str) -> str:
-        """アップロードされたファイルを保存"""
-        file_id = str(uuid.uuid4())
-        file_path = self.upload_dir / f"{file_id}_{filename}"
-
-        with open(file_path, "wb") as f:
-            f.write(file_content)
-
-        return str(file_path)
-
-    def _convert_pdf_to_markdown(self, file_path: str) -> str:
-        """PDFをMarkdownに変換"""
-        markdown_content = []
-
-        try:
-            try:
-                from markitdown import MarkItDown
-
-                markitdown_converter = MarkItDown()
-                result = markitdown_converter.convert(file_path)
-                if result and result.text_content and result.text_content.strip():
-                    return result.text_content
-            except Exception as e:
-                print(f"MarkItDownでの変換に失敗: {e}")
-
-            # フォールバック1: pdfplumberを使用
-            try:
-                with pdfplumber.open(file_path) as pdf:
-                    for page_num, page in enumerate(pdf.pages, 1):
-                        text = page.extract_text()
-                        if text:
-                            # ページ区切りを追加
-                            if page_num > 1:
-                                markdown_content.append("\n---\n")
-
-                            # テキストをMarkdown形式に整形
-                            lines = text.split("\n")
-                            for line in lines:
-                                line = line.strip()
-                                if line:
-                                    # 見出しっぽい行を検出
-                                    if len(line) < 100 and line.isupper():
-                                        markdown_content.append(f"## {line}")
-                                    elif len(line) < 50 and line.endswith(":"):
-                                        markdown_content.append(f"### {line}")
-                                    else:
-                                        markdown_content.append(line)
-
-                            markdown_content.append("")  # 空行を追加
-            except Exception as e:
-                print(f"pdfplumberでの変換に失敗: {e}")
-
-            # フォールバック2: pypdfを使用
-            if not markdown_content or all(
-                not line.strip() for line in markdown_content
-            ):
-                try:
-                    with open(file_path, "rb") as f:
-                        pdf_reader = pypdf.PdfReader(f)
-                        for page_num, page in enumerate(pdf_reader.pages, 1):
-                            text = page.extract_text()
-                            if text:
-                                if page_num > 1:
-                                    markdown_content.append("\n---\n")
-                                markdown_content.append(text)
-                                markdown_content.append("")
-                except Exception as e:
-                    print(f"pypdfでの変換に失敗: {e}")
-
-            return (
-                "\n".join(markdown_content)
-                if markdown_content
-                else "# PDF変換結果\n\nテキストを抽出できませんでした。"
-            )
-
+            return self.pdf_repository.validate_pdf_file(file_content, filename)
         except Exception as e:
-            return f"# PDF変換エラー\n\n変換中にエラーが発生しました: {str(e)}"
+            return False, f"ファイル検証中にエラーが発生しました: {str(e)}"
 
-    def _save_markdown(self, file_id: str, markdown_content: str) -> str:
-        """Markdownをファイルに保存"""
-        markdown_path = self.markdown_dir / f"{file_id}.md"
+    def get_conversion_statistics(self) -> dict[str, Any]:
+        """変換統計情報を取得（リポジトリ層を活用）"""
+        try:
+            return self.pdf_repository.get_conversion_statistics()
+        except Exception as e:
+            return {
+                "error": str(e),
+                "total_conversions": 0,
+                "successful_conversions": 0,
+                "failed_conversions": 0,
+                "average_processing_time": 0,
+            }
 
-        with open(markdown_path, "w", encoding="utf-8") as f:
-            f.write(markdown_content)
+    def get_orphaned_files(self) -> dict[str, Any]:
+        """孤立したファイルを取得（リポジトリ層を活用）"""
+        try:
+            return self.pdf_repository.get_orphaned_files()
+        except Exception as e:
+            return {"error": str(e), "orphaned_files": [], "total_orphaned": 0}
 
-        return str(markdown_path)
+    def cleanup_old_files(self, days: int = 30) -> dict[str, Any]:
+        """古いファイルをクリーンアップ（リポジトリ層を活用）"""
+        try:
+            result = self.pdf_repository.cleanup_old_files(days)
+
+            # サービス層でビジネスロジックを追加
+            if result.get("success"):
+                # クリーンアップ後の統計情報を取得
+                stats = self.get_conversion_statistics()
+                result["post_cleanup_stats"] = stats
+
+            return result
+        except Exception as e:
+            return {"success": False, "error": str(e), "deleted_count": 0}
 
     async def process_pdf_upload(
         self, file_content: bytes, filename: str
     ) -> dict[str, Any]:
-        """PDFアップロード処理"""
+        """PDFアップロード処理（リポジトリ層を活用）"""
         start_time = time.time()
 
-        # ファイル検証
-        is_valid, message = self._validate_pdf_file(file_content, filename)
-        if not is_valid:
-            return {"success": False, "error": message, "file_id": None}
-
-        # ファイルID生成
-        file_id = str(uuid.uuid4())
-
         try:
-            # ファイル保存
-            file_path = self._save_uploaded_file(file_content, filename)
-            file_size = len(file_content)
+            # ファイル検証
+            is_valid, message = self.validate_pdf_file(file_content, filename)
+            if not is_valid:
+                return {"success": False, "error": message, "file_id": None}
 
-            # データベースにファイル情報を登録
-            metadata = {
-                "original_filename": filename,
-                "upload_timestamp": datetime.now().isoformat(),
-            }
+            # ファイルID生成
+            file_id = str(uuid.uuid4())
 
-            if not db_manager.insert_file(
-                file_id, filename, file_path, file_size, metadata
-            ):
-                raise Exception("データベースへの登録に失敗しました")
-
-            # 変換処理
-            db_manager.update_file_status(file_id, FileStatus.PROCESSING)
-            markdown_content = self._convert_pdf_to_markdown(file_path)
-
-            # Markdown保存
-            self._save_markdown(file_id, markdown_content)
-
-            # 処理時間計算
-            processing_time = time.time() - start_time
-
-            # データベース更新
-            db_manager.update_file_status(
-                file_id, FileStatus.COMPLETED, markdown_content, processing_time
+            # リポジトリ層のアップロード処理を使用
+            result = await self.pdf_repository.process_pdf_upload(
+                file_content, filename
             )
 
-            # ログ記録
-            db_manager.add_conversion_log(
-                file_id,
-                "upload_and_convert",
-                "success",
-                "PDF to Markdown conversion completed",
-                processing_time,
-            )
+            if result["success"]:
+                # 処理時間計算
+                processing_time = time.time() - start_time
 
-            return {
-                "success": True,
-                "file_id": file_id,
-                "filename": filename,
-                "markdown": markdown_content,
-                "file_size": file_size,
-                "processing_time": processing_time,
-                "status": FileStatus.COMPLETED,
-            }
+                # サービス層でビジネスロジックを追加
+                result["processing_time"] = processing_time
+                result["upload_timestamp"] = datetime.now().isoformat()
+
+                return result
+            else:
+                return result
 
         except Exception as e:
             # エラー処理
             processing_time = time.time() - start_time
-            db_manager.update_file_status(file_id, FileStatus.FAILED)
-            db_manager.add_conversion_log(
-                file_id, "upload_and_convert", "failed", str(e), processing_time
-            )
 
-            return {"success": False, "error": str(e), "file_id": file_id}
+            # リポジトリ層のログ記録を使用
+            if "file_id" in locals():
+                self.pdf_repository.add_conversion_log(
+                    file_id, "upload_and_convert", "failed", str(e), processing_time
+                )
+
+            return {
+                "success": False,
+                "error": str(e),
+                "file_id": file_id if "file_id" in locals() else None,
+            }
 
     async def reconvert_pdf(
         self, file_id: str, file_content: bytes, filename: str
     ) -> dict[str, Any]:
-        """PDFの再変換処理（新しいファイル名で更新）"""
+        """PDFの再変換処理（リポジトリ層を活用）"""
         start_time = time.time()
 
-        # ファイル検証
-        is_valid, message = self._validate_pdf_file(file_content, filename)
-        if not is_valid:
-            return {"success": False, "error": message, "file_id": file_id}
-
         try:
-            # 既存ファイルの確認
-            existing_file = db_manager.get_file(file_id)
-            if not existing_file:
-                return {
-                    "success": False,
-                    "error": "ファイルが見つかりません",
-                    "file_id": file_id,
-                }
+            # ファイル検証
+            is_valid, message = self.validate_pdf_file(file_content, filename)
+            if not is_valid:
+                return {"success": False, "error": message, "file_id": file_id}
 
-            # 新しいファイルを保存
-            file_path = self._save_uploaded_file(file_content, filename)
-            file_size = len(file_content)
-
-            # 変換処理
-            db_manager.update_file_status(file_id, FileStatus.PROCESSING)
-            markdown_content = self._convert_pdf_to_markdown(file_path)
-
-            # Markdown保存
-            self._save_markdown(file_id, markdown_content)
-
-            # 処理時間計算
-            processing_time = time.time() - start_time
-
-            # データベース更新（ファイル名も更新）
-            db_manager.update_file_status(
-                file_id, FileStatus.COMPLETED, markdown_content, processing_time
+            # リポジトリ層の再変換処理を使用
+            result = await self.pdf_repository.reconvert_pdf(
+                file_id, file_content, filename
             )
 
-            # ファイル名を更新
-            db_manager.update_filename(file_id, filename)
+            if result["success"]:
+                # 処理時間計算
+                processing_time = time.time() - start_time
 
-            # ログ記録
-            db_manager.add_conversion_log(
-                file_id,
-                "reconvert",
-                "success",
-                f"PDF reconversion completed with new filename: {filename}",
-                processing_time,
-            )
+                # サービス層でビジネスロジックを追加
+                result["processing_time"] = processing_time
+                result["reconversion_timestamp"] = datetime.now().isoformat()
 
-            return {
-                "success": True,
-                "file_id": file_id,
-                "filename": filename,
-                "markdown": markdown_content,
-                "file_size": file_size,
-                "processing_time": processing_time,
-                "status": FileStatus.COMPLETED,
-            }
+                return result
+            else:
+                return result
 
         except Exception as e:
             # エラー処理
             processing_time = time.time() - start_time
-            db_manager.update_file_status(file_id, FileStatus.FAILED)
-            db_manager.add_conversion_log(
+
+            # リポジトリ層のログ記録を使用
+            self.pdf_repository.add_conversion_log(
                 file_id, "reconvert", "failed", str(e), processing_time
             )
 
             return {"success": False, "error": str(e), "file_id": file_id}
+
+    async def batch_reconvert_files(
+        self, file_ids: list[str], file_contents: list[bytes], filenames: list[str]
+    ) -> dict[str, Any]:
+        """複数のPDFファイルを一括再変換（リポジトリ層を活用）"""
+        try:
+            if (
+                not file_ids
+                or len(file_ids) != len(file_contents)
+                or len(file_ids) != len(filenames)
+            ):
+                return {
+                    "success": False,
+                    "error": "ファイルID、コンテンツ、ファイル名の数が一致しません",
+                }
+
+            # リポジトリ層のバッチ処理を使用
+            result = await self.pdf_repository.batch_reconvert_files(
+                file_ids, file_contents, filenames
+            )
+
+            # サービス層でビジネスロジックを追加
+            if result.get("success"):
+                result["batch_timestamp"] = datetime.now().isoformat()
+                result["total_files"] = len(file_ids)
+
+            return result
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"一括再変換中にエラーが発生しました: {str(e)}",
+                "processed_count": 0,
+                "failed_count": len(file_ids),
+            }
+
+    def get_conversion_logs(
+        self, file_id: str = None, action: str = None, status: str = None
+    ) -> list[dict[str, Any]]:
+        """変換ログを取得（リポジトリ層を活用）"""
+        try:
+            if file_id:
+                return self.pdf_repository.get_conversion_logs(file_id)
+            elif action:
+                return self.pdf_repository.get_conversion_logs_by_action(action)
+            elif status:
+                return self.pdf_repository.get_conversion_logs_by_status(status)
+            else:
+                # 全ログを取得（制限付き）
+                return self.pdf_repository.get_conversion_logs()
+        except Exception:
+            return []
+
+    def get_database_info(self) -> dict[str, Any]:
+        """データベース情報を取得（リポジトリ層を活用）"""
+        try:
+            return self.pdf_repository.get_database_info()
+        except Exception as e:
+            return {"error": str(e)}
+
+    # 後方互換性のためのメソッド（既存のテストが動作するように）
+    def _validate_pdf_file(
+        self, file_content: bytes, filename: str
+    ) -> tuple[bool, str]:
+        """PDFファイルの検証（後方互換性）"""
+        return self.validate_pdf_file(file_content, filename)
+
+    def _save_uploaded_file(self, file_content: bytes, filename: str) -> str:
+        """アップロードされたファイルを保存（後方互換性）"""
+        return self.pdf_repository.save_uploaded_file(file_content, filename)
+
+    def _convert_pdf_to_markdown(self, file_path: str) -> str:
+        """PDFをMarkdownに変換（後方互換性）"""
+        return self.pdf_repository.convert_pdf_to_markdown(file_path)
+
+    def _save_markdown(self, file_id: str, markdown_content: str) -> str:
+        """Markdownをファイルに保存（後方互換性）"""
+        return self.pdf_repository.save_markdown(file_id, markdown_content)

@@ -67,7 +67,7 @@ export default defineConfig({
     {
       name: 'api-server',
       command: 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
-      url: 'http://localhost:8000/health',
+      url: 'http://localhost:8000/system/health',
       reuseExistingServer: true,
       timeout: process.env.CI ? 300 * 1000 : 120 * 1000,
       stdout: 'pipe',
@@ -99,7 +99,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
 
     /* Record video on failure */
-    video: 'retain-on-failure',
+    video: 'on',
 
     /* CI環境ではタイムアウトを延長して安定性を向上 */
     actionTimeout: process.env.CI ? 30000 : 5000,

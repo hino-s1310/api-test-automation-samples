@@ -32,7 +32,7 @@ test.describe('ファイルアップロードの統合テスト', () => {
     await uploadPage.uploadFile(filePath);
 
     // リダイレクト完了を明示的に待機（最終的な200レスポンスまで）
-    const finalResponse = await uploadPage.waitForResponse('/upload', {
+    const finalResponse = await uploadPage.waitForResponse('/files/upload', {
       waitForSuccess: true,
       timeout: 30000
     });
@@ -48,11 +48,11 @@ test.describe('ファイルアップロードの統合テスト', () => {
 
     // 正しいAPIレスポンス（localhost:8000/upload）を選択
     const apiResponse = apiResponses.find(response =>
-      response.url().includes('localhost:8000/upload')
+      response.url().includes('localhost:8000/files/upload')
     );
 
     if (!apiResponse) {
-      throw new Error('APIレスポンス（localhost:8000/upload）が見つかりません');
+      throw new Error('APIレスポンス（localhost:8000/files/upload）が見つかりません');
     }
 
     // APIレスポンスからfile_idを取得

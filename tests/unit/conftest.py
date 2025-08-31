@@ -8,7 +8,6 @@ pytest 設定とテストフィクスチャ
 import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -162,11 +161,13 @@ def pdf_service_for_test():
 
 
 @pytest.fixture
-def file_service():
-    """FileServiceのインスタンス（DB がモック済み）"""
+def file_service(mock_db_manager):
+    """FileServiceのインスタンス（モックされたFileRepositoryを使用）"""
     from src.api.services.file_service import FileService
 
-    return FileService()
+    # モックされたFileRepositoryを注入
+    service = FileService(file_repository=mock_db_manager)
+    return service
 
 
 # ===========================
@@ -176,9 +177,64 @@ def file_service():
 
 @pytest.fixture
 def mock_db_manager():
-    """データベースマネージャーのモック"""
-    with patch("src.api.services.file_service.db_manager") as mock_db:
-        yield mock_db
+    """FileRepositoryのモック（改良後のサービス層に対応）"""
+    from unittest.mock import Mock
+
+    # FileRepositoryのモックを作成
+    mock_repo = Mock()
+
+    # 基本的なメソッドのデフォルト戻り値を設定
+    mock_repo.get_file.return_value = None
+    mock_repo.list_files.return_value = {
+        "files": [],
+        "total_count": 0,
+        "page": 1,
+        "per_page": 10,
+    }
+    mock_repo.update_file_status.return_value = True
+    mock_repo.delete_file.return_value = True
+    mock_repo.get_conversion_logs.return_value = []
+    mock_repo.get_file_statistics.return_value = {
+        "total_files": 0,
+        "status_counts": {"processing": 0, "completed": 0, "failed": 0},
+        "total_size_bytes": 0,
+        "total_size_mb": 0,
+        "total_processing_time": 0,
+        "average_processing_time": 0,
+    }
+    mock_repo.cleanup_old_files.return_value = {
+        "success": True,
+        "deleted_count": 0,
+        "total_old_files": 0,
+    }
+    mock_repo.update_file_content.return_value = True
+    mock_repo.get_edit_history.return_value = []
+    mock_repo.search_files.return_value = {
+        "files": [],
+        "total_count": 0,
+        "page": 1,
+        "per_page": 10,
+    }
+    mock_repo.batch_delete_files.return_value = {
+        "success": True,
+        "deleted_count": 0,
+        "failed_count": 0,
+        "failed_files": [],
+    }
+    mock_repo.get_files_by_status.return_value = {"files": [], "total_count": 0}
+    mock_repo.get_files_created_after.return_value = {"files": [], "total_count": 0}
+    mock_repo.get_files_created_before.return_value = {"files": [], "total_count": 0}
+    mock_repo.get_orphaned_files.return_value = {
+        "orphaned_files": [],
+        "total_orphaned": 0,
+    }
+    mock_repo.get_database_info.return_value = {"total_files": 0, "status_counts": {}}
+
+    # 編集履歴関連のモック
+    mock_repo.get_edit_history.return_value = []
+    mock_repo.get_edit_history_by_id.return_value = None
+
+    return mock_repo
 
 
 @pytest.fixture
@@ -419,10 +475,8 @@ def assert_file_data():
         assert actual["id"] == expected["id"]
         assert actual["filename"] == expected["filename"]
 
-        # markdown_contentキーが存在する場合はmarkdownと比較
-        if "markdown_content" in expected:
-            assert actual["markdown"] == expected["markdown_content"]
-        elif "markdown" in expected:
+        # markdownフィールドの比較
+        if "markdown" in expected:
             assert actual["markdown"] == expected["markdown"]
 
         assert actual["status"] == expected["status"]
