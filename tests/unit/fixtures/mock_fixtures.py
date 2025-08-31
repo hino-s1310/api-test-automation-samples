@@ -287,9 +287,9 @@ def assert_file_data():
         assert result["id"] == expected_data["id"]
         assert result["filename"] == expected_data["filename"]
 
-        # markdown_content キーが存在する場合のみチェック
-        if "markdown_content" in expected_data:
-            assert result["markdown"] == expected_data["markdown_content"]
+        # markdownフィールドの比較
+        if "markdown" in expected_data:
+            assert result["markdown"] == expected_data["markdown"]
         else:
             # キーが存在しない場合、デフォルト値（空文字）を想定
             assert result["markdown"] == ""

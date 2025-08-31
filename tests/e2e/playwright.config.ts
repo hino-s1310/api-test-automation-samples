@@ -99,7 +99,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
 
     /* Record video on failure */
-    video: 'retain-on-failure',
+    video: 'on',
 
     /* CI環境ではタイムアウトを延長して安定性を向上 */
     actionTimeout: process.env.CI ? 30000 : 5000,

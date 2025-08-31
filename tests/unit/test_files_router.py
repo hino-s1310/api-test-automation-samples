@@ -167,7 +167,7 @@ class TestGetFile(TestFilesRouter):
         data = response.json()
         assert data["id"] == sample_file_data["id"]
         assert data["filename"] == sample_file_data["filename"]
-        assert data["markdown"] == sample_file_data["markdown_content"]
+        assert data["markdown"] == sample_file_data["markdown"]
         assert data["status"] == sample_file_data["status"]
 
     def test_get_file_invalid_id(self, files_router_client, mock_file_service):
@@ -338,7 +338,7 @@ class TestUpdateFile(TestFilesRouter):
         updated_file_data = create_file_data(
             id=sample_file_id,
             filename="updated.pdf",
-            markdown_content="# Updated Content",
+            markdown="# Updated Content",
             status="completed",
         )
         mock_file_service.get_file.return_value = updated_file_data

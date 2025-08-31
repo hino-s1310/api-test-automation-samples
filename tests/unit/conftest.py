@@ -475,10 +475,8 @@ def assert_file_data():
         assert actual["id"] == expected["id"]
         assert actual["filename"] == expected["filename"]
 
-        # markdown_contentキーが存在する場合はmarkdownと比較
-        if "markdown_content" in expected:
-            assert actual["markdown"] == expected["markdown_content"]
-        elif "markdown" in expected:
+        # markdownフィールドの比較
+        if "markdown" in expected:
             assert actual["markdown"] == expected["markdown"]
 
         assert actual["status"] == expected["status"]

@@ -29,7 +29,9 @@ class FileService:
         return {
             "id": file_info["id"],
             "filename": file_info["filename"],
-            "markdown": file_info.get("markdown_content", ""),
+            "markdown": file_info.get(
+                "markdown", file_info.get("markdown_content", "")
+            ),
             "status": file_info["status"],
             "created_at": file_info["created_at"],
             "updated_at": file_info["updated_at"],

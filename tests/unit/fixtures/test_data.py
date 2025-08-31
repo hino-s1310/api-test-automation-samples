@@ -20,7 +20,7 @@ class FileTestData:
         return {
             "id": "12345678-1234-5678-9abc-123456789def",
             "filename": "test_markdown.pdf",
-            "markdown_content": "# Test Markdown Content\n\nThis is a test document.",
+            "markdown": "# Test Markdown Content\n\nThis is a test document.",
             "status": "completed",
             "created_at": "2024-01-01T00:00:00Z",
             "updated_at": "2024-01-01T00:30:00Z",
@@ -46,7 +46,7 @@ class FileTestData:
         return {
             "id": "processing-file-id",
             "filename": "processing_document.pdf",
-            "markdown_content": "",
+            "markdown": "",
             "status": "processing",
             "created_at": "2024-01-01T00:00:00Z",
             "updated_at": "2024-01-01T00:00:00Z",
@@ -60,10 +60,10 @@ class FileTestData:
         return {
             "id": "failed-file-id",
             "filename": "corrupted_file.pdf",
-            "markdown_content": "",
+            "markdown": "",
             "status": "failed",
             "created_at": "2024-01-01T00:00:00Z",
-            "updated_at": "2024-01-01T01:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
             "file_size": 256,
             "processing_time": 5.0,
             "error_message": "PDF parsing failed",

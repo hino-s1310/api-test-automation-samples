@@ -81,7 +81,7 @@ class TestFileService:
 
         # 更新後のデータを作成
         updated_data = create_file_data(
-            id=file_id, markdown_content=new_markdown, status="completed"
+            id=file_id, markdown=new_markdown, status="completed"
         )
 
         # モック設定
