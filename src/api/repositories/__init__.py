@@ -1,10 +1,10 @@
 """
 リポジトリ層
 
-データアクセスと永続化を管理
+データアクセス処理を担当
+データベース操作の抽象化とカプセル化
 """
 
 from .file_repository import FileRepository
-from .pdf_repository import PDFRepository
 
-__all__ = ["FileRepository", "PDFRepository"]
+__all__ = ["FileRepository"]
