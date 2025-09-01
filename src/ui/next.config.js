@@ -2,7 +2,7 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // standaloneモードを有効化（CI環境での起動改善）
+  // CI環境用の設定
   output: 'standalone',
 
   // 画像最適化を有効化
@@ -42,6 +42,10 @@ const nextConfig = {
     outputFileTracingRoot: path.join(__dirname, '../../'),
     // サーバーコンポーネントの最適化
     serverComponentsExternalPackages: [],
+    // 静的エクスポートを無効化
+    isrMemoryCacheSize: 0,
+    // 静的生成を無効化
+    staticPageGeneration: false,
   },
 
   // ビルド出力の最適化
