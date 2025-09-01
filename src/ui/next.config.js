@@ -38,14 +38,6 @@ const nextConfig = {
     optimizeCss: false,
     // パッケージインポートの最適化
     optimizePackageImports: ['@/components', '@/hooks', '@/lib'],
-    // standaloneモードの設定
-    outputFileTracingRoot: path.join(__dirname, '../../'),
-    // サーバーコンポーネントの最適化
-    serverComponentsExternalPackages: [],
-    // 静的エクスポートを無効化
-    isrMemoryCacheSize: 0,
-    // 静的生成を無効化
-    staticPageGeneration: false,
   },
 
   // ビルド出力の最適化
@@ -58,15 +50,6 @@ const nextConfig = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, 'src'),
     };
-
-    // standaloneモードでの最適化
-    if (isServer) {
-      config.externals = config.externals || [];
-      config.externals.push({
-        'utf-8-validate': 'commonjs utf-8-validate',
-        'bufferutil': 'commonjs bufferutil',
-      });
-    }
 
     return config;
   },

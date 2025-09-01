@@ -484,16 +484,6 @@ jobs:
           # 本番サーバーを起動
           echo "Starting Next.js production server..."
 
-          # standaloneモードでの起動
-          cd ../../src/ui
-          export PORT=3000
-          export HOSTNAME=0.0.0.0
-          export NODE_ENV=production
-
-          echo "Starting server with standalone mode..."
-          echo "Current directory: $(pwd)"
-          echo "Standalone server path: .next/standalone/server.js"
-
           # 既存のプロセスを確認・停止
           echo "Checking for existing processes on port 3000..."
           if lsof -i :3000 > /dev/null 2>&1; then
@@ -502,97 +492,38 @@ jobs:
             sleep 3
           fi
 
-          # standaloneサーバーファイルの存在確認
+          # 本番サーバーの起動（standaloneモードまたはpnpm start）
           if [ -f ".next/standalone/server.js" ]; then
-            echo "Standalone server file found, starting..."
-            ls -la .next/standalone/
+            echo "Starting standalone server..."
+            export PORT=3000
+            export HOSTNAME=0.0.0.0
+            export NODE_ENV=production
 
-            # standaloneサーバーを起動
             nohup node .next/standalone/server.js > ../../ui_server.log 2>&1 &
             SERVER_PID=$!
             echo $SERVER_PID > ../../ui_server.pid
 
             echo "Standalone server started with PID: $SERVER_PID"
           else
-            echo "Standalone server file not found, checking .next directory..."
-            ls -la .next/ || echo "No .next directory"
+            echo "Standalone server not available, using pnpm start..."
+            export PORT=3000
+            export HOSTNAME=0.0.0.0
+            export NODE_ENV=production
 
-            echo "Falling back to pnpm start..."
             nohup pnpm start > ../../ui_server.log 2>&1 &
             SERVER_PID=$!
             echo $SERVER_PID > ../../ui_server.pid
 
-            echo "Fallback server started with PID: $SERVER_PID"
+            echo "Production server started with PID: $SERVER_PID"
           fi
 
           # プロセスIDの確認
           echo "UI server PID: $SERVER_PID"
           echo "PID file created: ../../ui_server.pid"
 
-          # サーバー起動を待機（本番ビルドは起動が早い）
+          # サーバー起動を待機
           echo "Waiting for Next.js production server to start..."
           sleep 30
-
-          # 追加の起動確認（段階的に確認）
-          echo "Additional startup verification..."
-          for i in {1..10}; do
-            echo "Startup check $i/10..."
-
-            # プロセスが生きているか確認
-            if ! kill -0 $(cat ../../ui_server.pid) 2>/dev/null; then
-              echo "Process died during startup check $i"
-              cat ../../ui_server.log
-              exit 1
-            fi
-
-            # ポート3000が利用可能か確認
-            if lsof -i :3000 > /dev/null 2>&1; then
-              echo "Port 3000 is now available after $i checks"
-              break
-            fi
-
-            echo "Port 3000 not ready yet, waiting..."
-            sleep 3
-          done
-
-          # ポート3000が利用できない場合の代替手段
-          if ! lsof -i :3000 > /dev/null 2>&1; then
-            echo "Port 3000 still not available, trying alternative startup method..."
-
-            # 既存のプロセスを停止
-            if [ -f ../../ui_server.pid ]; then
-              echo "Stopping existing process..."
-              kill $(cat ../../ui_server.pid) 2>/dev/null || true
-              rm -f ../../ui_server.pid
-              sleep 3
-            fi
-
-            # ポート3000の確認
-            echo "Checking port 3000 availability..."
-            if lsof -i :3000 > /dev/null 2>&1; then
-              echo "Port 3000 still in use, forcing cleanup..."
-              lsof -ti :3000 | xargs kill -9 || true
-              sleep 3
-            fi
-
-            # 従来の開発サーバーで起動
-            echo "Starting with development server..."
-            cd ../../src/ui
-            export NODE_ENV=development
-            export PORT=3000
-            export HOSTNAME=0.0.0.0
-
-            # 開発サーバーを起動
-            nohup pnpm dev > ../../ui_server.log 2>&1 &
-            SERVER_PID=$!
-            echo $SERVER_PID > ../../ui_server.pid
-
-            echo "Development server started with PID: $SERVER_PID"
-
-            # 開発サーバーの起動を待機
-            echo "Waiting for development server to start..."
-            sleep 45
-          fi
 
           # ログを確認
           echo "UI server log:"
