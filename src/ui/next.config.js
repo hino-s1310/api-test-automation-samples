@@ -2,19 +2,19 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // CI環境では静的エクスポートを無効化
-  output: process.env.CI ? undefined : 'export',
+  // CI環境では静的エクスポートを完全に無効化
+  output: undefined,
 
-  // 画像最適化を無効化（静的エクスポートでは使用できない）
+  // 画像最適化を有効化（サーバー起動時）
   images: {
-    unoptimized: true,
+    unoptimized: false,
   },
 
-  // トレーリングスラッシュを有効化
-  trailingSlash: true,
+  // トレーリングスラッシュを無効化（サーバー起動時）
+  trailingSlash: false,
 
   // 静的ファイルのベースパス設定
-  assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
+  assetPrefix: '',
 
   // ビルド時の警告を抑制
   eslint: {
@@ -25,10 +25,14 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // 静的エクスポート用の設定
+  // App Routerの有効化
   experimental: {
     appDir: true,
   },
+
+  // CI環境での最適化
+  swcMinify: true,
+  compress: true,
 }
 
 module.exports = nextConfig
