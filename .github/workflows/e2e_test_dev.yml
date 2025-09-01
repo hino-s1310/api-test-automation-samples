@@ -474,6 +474,26 @@ jobs:
           if [ -f ../../ui_server.pid ]; then
             if kill -0 $(cat ../../ui_server.pid) 2>/dev/null; then
               echo "UI server process is running"
+
+              # プロセスの詳細確認
+              echo "Process details:"
+              ps -p $(cat ../../ui_server.pid) -o pid,ppid,cmd,etime
+
+              # プロセスが使用しているポートを確認
+              echo "Ports used by the process:"
+              netstat -tlnp 2>/dev/null | grep $(cat ../../ui_server.pid) || echo "No ports found for this process"
+
+              # ポート3000の状況を確認
+              echo "Port 3000 status:"
+              lsof -i :3000 || echo "Port 3000 is not in use"
+
+              # プロセスの子プロセスも確認
+              echo "Child processes:"
+              ps --forest -g $(cat ../../ui_server.pid) 2>/dev/null || echo "No child processes found"
+
+              # 起動ログの詳細確認
+              echo "Recent server logs:"
+              tail -20 ../../ui_server.log
             else
               echo "UI server process is not running"
               exit 1

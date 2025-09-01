@@ -3,7 +3,7 @@ const path = require('path');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // 静的エクスポートを完全に無効化（CI環境用）
-  output: undefined,
+  output: 'standalone',
 
   // 画像最適化を有効化
   images: {
