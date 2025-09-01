@@ -2,7 +2,7 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 静的エクスポートを完全に無効化（CI環境用）
+  // standaloneモードを有効化（CI環境での起動改善）
   output: 'standalone',
 
   // 画像最適化を有効化
@@ -38,6 +38,10 @@ const nextConfig = {
     optimizeCss: false,
     // パッケージインポートの最適化
     optimizePackageImports: ['@/components', '@/hooks', '@/lib'],
+    // standaloneモードの設定
+    outputFileTracingRoot: path.join(__dirname, '../../'),
+    // サーバーコンポーネントの最適化
+    serverComponentsExternalPackages: [],
   },
 
   // ビルド出力の最適化
@@ -50,6 +54,16 @@ const nextConfig = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, 'src'),
     };
+
+    // standaloneモードでの最適化
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push({
+        'utf-8-validate': 'commonjs utf-8-validate',
+        'bufferutil': 'commonjs bufferutil',
+      });
+    }
+
     return config;
   },
 }

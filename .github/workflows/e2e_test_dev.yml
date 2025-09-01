@@ -456,15 +456,94 @@ jobs:
 
           # 本番サーバーを起動
           echo "Starting Next.js production server..."
-          nohup pnpm start > ../../ui_server.log 2>&1 &
-          echo $! > ../../ui_server.pid
+
+          # standaloneモードでの起動
+          cd ../../src/ui
+          export PORT=3000
+          export HOSTNAME=0.0.0.0
+          export NODE_ENV=production
+
+          echo "Starting server with standalone mode..."
+          echo "Current directory: $(pwd)"
+          echo "Standalone server path: .next/standalone/server.js"
+
+          # standaloneサーバーファイルの存在確認
+          if [ -f ".next/standalone/server.js" ]; then
+            echo "Standalone server file found, starting..."
+            ls -la .next/standalone/
+
+            # standaloneサーバーを起動
+            nohup node .next/standalone/server.js > ../../ui_server.log 2>&1 &
+            SERVER_PID=$!
+            echo $SERVER_PID > ../../ui_server.pid
+
+            echo "Standalone server started with PID: $SERVER_PID"
+          else
+            echo "Standalone server file not found, checking .next directory..."
+            ls -la .next/ || echo "No .next directory"
+
+            echo "Falling back to pnpm start..."
+            nohup pnpm start > ../../ui_server.log 2>&1 &
+            SERVER_PID=$!
+            echo $SERVER_PID > ../../ui_server.pid
+
+            echo "Fallback server started with PID: $SERVER_PID"
+          fi
 
           # プロセスIDの確認
-          echo "UI server PID: $(cat ../../ui_server.pid)"
+          echo "UI server PID: $SERVER_PID"
+          echo "PID file created: ../../ui_server.pid"
 
           # サーバー起動を待機（本番ビルドは起動が早い）
           echo "Waiting for Next.js production server to start..."
           sleep 30
+
+          # 追加の起動確認（段階的に確認）
+          echo "Additional startup verification..."
+          for i in {1..10}; do
+            echo "Startup check $i/10..."
+
+            # プロセスが生きているか確認
+            if ! kill -0 $(cat ../../ui_server.pid) 2>/dev/null; then
+              echo "Process died during startup check $i"
+              cat ../../ui_server.log
+              exit 1
+            fi
+
+            # ポート3000が利用可能か確認
+            if lsof -i :3000 > /dev/null 2>&1; then
+              echo "Port 3000 is now available after $i checks"
+              break
+            fi
+
+            echo "Port 3000 not ready yet, waiting..."
+            sleep 3
+          done
+
+          # ポート3000が利用できない場合の代替手段
+          if ! lsof -i :3000 > /dev/null 2>&1; then
+            echo "Port 3000 still not available, trying alternative startup method..."
+
+            # 既存のプロセスを停止
+            if [ -f ../../ui_server.pid ]; then
+              kill $(cat ../../ui_server.pid) 2>/dev/null || true
+              rm -f ../../ui_server.pid
+            fi
+
+            # 従来の開発サーバーで起動
+            echo "Starting with development server..."
+            cd ../../src/ui
+            export NODE_ENV=development
+            nohup pnpm dev > ../../ui_server.log 2>&1 &
+            SERVER_PID=$!
+            echo $SERVER_PID > ../../ui_server.pid
+
+            echo "Development server started with PID: $SERVER_PID"
+
+            # 開発サーバーの起動を待機
+            echo "Waiting for development server to start..."
+            sleep 45
+          fi
 
           # ログを確認
           echo "UI server log:"
@@ -494,6 +573,23 @@ jobs:
               # 起動ログの詳細確認
               echo "Recent server logs:"
               tail -20 ../../ui_server.log
+
+              # standaloneモードの詳細確認
+              echo "Standalone mode verification:"
+              if [ -f ".next/standalone/server.js" ]; then
+                echo "Standalone server file exists"
+                ls -la .next/standalone/
+                echo "Standalone package.json:"
+                cat .next/standalone/package.json 2>/dev/null || echo "No standalone package.json"
+              else
+                echo "Standalone server file not found"
+              fi
+
+              # 環境変数の確認
+              echo "Environment variables:"
+              echo "PORT: $PORT"
+              echo "HOSTNAME: $HOSTNAME"
+              echo "NODE_ENV: $NODE_ENV"
             else
               echo "UI server process is not running"
               exit 1
