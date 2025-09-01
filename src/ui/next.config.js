@@ -2,8 +2,8 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 静的エクスポートの設定（必須）
-  output: 'export',
+  // CI環境では静的エクスポートを無効化
+  output: process.env.CI ? undefined : 'export',
 
   // 画像最適化を無効化（静的エクスポートでは使用できない）
   images: {
