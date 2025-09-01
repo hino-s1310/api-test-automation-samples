@@ -66,35 +66,57 @@ const mockFileDetail = {
   processing_time: 1.5,
 };
 
+// テスト用のコンポーネントラッパー
+const TestWrapper = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div data-testid="test-wrapper">
+      {children}
+    </div>
+  );
+};
+
 describe('FilesPageClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // デフォルトのAPIモック
-    mockApi.searchFiles.mockResolvedValue(mockFiles);
+    // デフォルトのAPIモック - getFileListを正しくモック
+    mockApi.getFileList.mockResolvedValue(mockFiles);
     mockApi.getFile.mockResolvedValue(mockFileDetail);
     mockApi.deleteFile.mockResolvedValue({ message: 'File deleted' });
     mockApi.editFile.mockResolvedValue(mockFileDetail);
     mockApi.getFileEditHistory.mockResolvedValue({ history: [] });
+    mockApi.searchFiles.mockResolvedValue(mockFiles);
   });
 
   it('renders files page with title and description', async () => {
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByText('ファイル一覧')).toBeInTheDocument();
     });
-    expect(screen.getByText('アップロードされたファイルの管理、編集、履歴確認ができます。')).toBeInTheDocument();
+    expect(screen.getByText('アップロードされたPDFファイルの一覧です')).toBeInTheDocument();
   });
 
   it('shows loading state initially', () => {
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
-    expect(screen.getByText('ファイルを読み込み中...')).toBeInTheDocument();
+    expect(screen.getByText('読み込み中...')).toBeInTheDocument();
   });
 
   it('displays files after loading', async () => {
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -105,7 +127,11 @@ describe('FilesPageClient', () => {
   });
 
   it('displays search filter component', async () => {
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId('file-search-filter')).toBeInTheDocument();
@@ -119,7 +145,11 @@ describe('FilesPageClient', () => {
 
   it('handles search functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId('file-search-filter')).toBeInTheDocument();
@@ -149,7 +179,11 @@ describe('FilesPageClient', () => {
 
   it('handles search reset functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId('file-search-filter')).toBeInTheDocument();
@@ -160,12 +194,16 @@ describe('FilesPageClient', () => {
     await user.click(resetButton);
 
     // ファイル一覧が再取得されることを確認
-    expect(mockApi.searchFiles).toHaveBeenCalled();
+    expect(mockApi.getFileList).toHaveBeenCalled();
   });
 
   it('handles file view functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -180,7 +218,11 @@ describe('FilesPageClient', () => {
 
   it('handles file edit functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -199,7 +241,11 @@ describe('FilesPageClient', () => {
     // confirmダイアログをモック
     global.confirm = jest.fn(() => true);
 
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -215,7 +261,11 @@ describe('FilesPageClient', () => {
 
   it('handles file edit modal functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -232,20 +282,28 @@ describe('FilesPageClient', () => {
   });
 
   it('shows error message when API calls fail', async () => {
-    mockApi.searchFiles.mockRejectedValue(new Error('API Error'));
+    mockApi.getFileList.mockRejectedValue(new Error('API Error'));
 
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
-      expect(screen.getByText('エラーが発生しました')).toBeInTheDocument();
+      expect(screen.getByText('API Error')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('エラーが発生しました')).toBeInTheDocument();
+    expect(screen.getByText('API Error')).toBeInTheDocument();
   });
 
   it('handles refresh functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -255,7 +313,7 @@ describe('FilesPageClient', () => {
     const resetButton = screen.getByRole('button', { name: 'リセット' });
     await user.click(resetButton);
 
-    expect(mockApi.searchFiles).toHaveBeenCalled();
+    expect(mockApi.getFileList).toHaveBeenCalled();
   });
 
   it('displays pagination when there are many files', async () => {
@@ -265,9 +323,13 @@ describe('FilesPageClient', () => {
       per_page: 10,
     };
 
-    mockApi.searchFiles.mockResolvedValue(manyFiles);
+    mockApi.getFileList.mockResolvedValue(manyFiles);
 
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -285,9 +347,13 @@ describe('FilesPageClient', () => {
       per_page: 10,
     };
 
-    mockApi.searchFiles.mockResolvedValue(emptyFiles);
+    mockApi.getFileList.mockResolvedValue(emptyFiles);
 
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByText('ファイルがありません')).toBeInTheDocument();
@@ -298,7 +364,11 @@ describe('FilesPageClient', () => {
   });
 
   it('maintains accessibility features', async () => {
-    render(<FilesPageClient />);
+    render(
+      <TestWrapper>
+        <FilesPageClient />
+      </TestWrapper>
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId('file-search-filter')).toBeInTheDocument();

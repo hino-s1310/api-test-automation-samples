@@ -43,6 +43,15 @@ const nextConfig = {
   // ビルド出力の最適化
   poweredByHeader: false,
   generateEtags: false,
+
+  // Webpack設定でパスエイリアスを設定
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname, 'src'),
+    };
+    return config;
+  },
 }
 
 module.exports = nextConfig

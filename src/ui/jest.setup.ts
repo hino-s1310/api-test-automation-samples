@@ -16,24 +16,32 @@ jest.mock('axios', () => ({
   }
 }));
 
-// MSWなどのモックサーバーを使用する場合の設定
-// import { server } from './src/mocks/server';
-// beforeAll(() => server.listen());
-// afterEach(() => server.resetHandlers());
-// afterAll(() => server.close());
-
-// グローバルなモックの設定
-jest.mock('next/router', () => ({
+// Next.js App Routerのモック
+jest.mock('next/navigation', () => ({
   useRouter() {
     return {
       route: '/',
-      pathname: '',
-      query: '',
-      asPath: '',
+      pathname: '/',
+      query: {},
+      asPath: '/',
       push: jest.fn(),
       replace: jest.fn(),
+      prefetch: jest.fn(),
+      back: jest.fn(),
+      forward: jest.fn(),
+      refresh: jest.fn(),
     };
   },
+  usePathname() {
+    return '/';
+  },
+  useSearchParams() {
+    return new URLSearchParams();
+  },
+  useParams() {
+    return {};
+  },
+  redirect: jest.fn(),
 }));
 
 // windowのmatchMediaのモック
@@ -50,3 +58,17 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: jest.fn(),
   })),
 });
+
+// ResizeObserverのモック
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));
+
+// IntersectionObserverのモック
+global.IntersectionObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));

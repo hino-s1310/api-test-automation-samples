@@ -195,12 +195,33 @@ export default function FilesPageClient() {
   };
 
   // 検索・フィルター
-  const handleSearch = (query: string, status: string, isEdited: boolean | null) => {
-    setSearchQuery(query);
-    setStatusFilter(status);
-    setIsEditedFilter(isEdited);
-    setCurrentPage(1); // 検索時は1ページ目に戻る
-    // 実際の検索APIを呼び出す場合はここで実装
+  const handleSearch = async (query: string, status: string, isEdited: boolean | null) => {
+    try {
+      setLoading(true);
+      setSearchQuery(query);
+      setStatusFilter(status);
+      setIsEditedFilter(isEdited);
+      setCurrentPage(1); // 検索時は1ページ目に戻る
+
+      // 検索APIを呼び出し
+      const response = await api.searchFiles({
+        query,
+        status,
+        is_edited: isEdited,
+        page: 1,
+        per_page: itemsPerPage,
+      });
+
+      setFiles(response.files);
+      setTotalCount(response.total_count);
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '検索に失敗しました';
+      setError(errorMessage);
+      showError('エラー', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ページ変更

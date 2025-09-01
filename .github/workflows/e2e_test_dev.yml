@@ -161,8 +161,8 @@ jobs:
           echo "Package.json exists: $(test -f package.json && echo 'Yes' || echo 'No')"
           echo "pnpm version: $(pnpm --version)"
 
-          # 依存関係のインストール
-          if pnpm install --frozen-lockfile --prefer-offline; then
+          # 依存関係のインストール（本番依存関係も含む）
+          if pnpm install --frozen-lockfile --prefer-offline --prod=false; then
             echo "UI dependencies installed successfully"
           else
             echo "pnpm install failed, trying with npm..."
@@ -172,6 +172,10 @@ jobs:
           # Next.jsの確認
           echo "Checking Next.js installation..."
           pnpm list next || npm list next
+
+          # Tailwind CSSの確認
+          echo "Checking Tailwind CSS installation..."
+          pnpm list tailwindcss || npm list tailwindcss
 
           # package.jsonの確認
           echo "Package.json scripts:"
@@ -328,9 +332,40 @@ jobs:
           echo "Checking UI dependencies..."
           if [ ! -d "node_modules" ] || [ ! -f "node_modules/.pnpm/next" ]; then
             echo "Installing UI dependencies..."
-            pnpm install --frozen-lockfile
+            pnpm install --frozen-lockfile --prod=false
           else
             echo "UI dependencies already installed, skipping..."
+          fi
+
+          # ビルドに必要な依存関係の確認
+          echo "Verifying build dependencies..."
+          echo "Checking Next.js:"
+          pnpm list next
+          echo "Checking Tailwind CSS:"
+          pnpm list tailwindcss
+          echo "Checking PostCSS:"
+          pnpm list postcss
+          echo "Checking Autoprefixer:"
+          pnpm list autoprefixer
+
+          # Tailwind CSS設定ファイルの確認
+          echo "Checking Tailwind CSS configuration..."
+          if [ -f "tailwind.config.js" ]; then
+            echo "Tailwind config exists:"
+            cat tailwind.config.js
+          else
+            echo "Tailwind config not found!"
+            exit 1
+          fi
+
+          # PostCSS設定ファイルの確認
+          echo "Checking PostCSS configuration..."
+          if [ -f "postcss.config.js" ]; then
+            echo "PostCSS config exists:"
+            cat postcss.config.js
+          else
+            echo "PostCSS config not found!"
+            exit 1
           fi
 
           # ビルドキャッシュの設定
@@ -339,6 +374,26 @@ jobs:
           if [ -d ".next/cache" ]; then
             echo "Build cache directory created"
           fi
+
+          # ビルド前のクリーンアップ
+          echo "Cleaning up before build..."
+          if [ -d ".next" ]; then
+            echo "Removing existing .next directory..."
+            rm -rf .next
+          fi
+
+          # ビルドキャッシュの再作成
+          echo "Recreating build cache..."
+          mkdir -p .next/cache
+
+          # 依存関係の最終確認
+          echo "Final dependency check before build..."
+          echo "Node modules structure:"
+          ls -la node_modules/.pnpm/ | head -10
+          echo "Next.js location:"
+          find node_modules -name "next" -type d 2>/dev/null | head -5
+          echo "Tailwind CSS location:"
+          find node_modules -name "tailwindcss" -type d 2>/dev/null | head -5
 
           # Next.jsの確認
           echo "Checking Next.js installation..."
@@ -365,7 +420,37 @@ jobs:
           else
             echo "Build failed, checking logs..."
             echo "Build error details:"
+
+            # ビルドログの詳細確認
+            echo "=== Build Error Analysis ==="
+            echo "1. Checking .next directory:"
+            ls -la .next/ 2>/dev/null || echo "No .next directory found"
+
+            echo "2. Checking build manifest:"
             cat .next/build-manifest.json 2>/dev/null || echo "No build manifest"
+
+            echo "3. Checking package.json dependencies:"
+            cat package.json | grep -A 20 -B 5 "dependencies"
+
+            echo "4. Checking node_modules structure:"
+            ls -la node_modules/.pnpm/ | head -20
+
+            echo "5. Checking specific package installations:"
+            echo "Next.js:"
+            pnpm list next || echo "Next.js not found"
+            echo "Tailwind CSS:"
+            pnpm list tailwindcss || echo "Tailwind CSS not found"
+            echo "PostCSS:"
+            pnpm list postcss || echo "PostCSS not found"
+
+            echo "6. Checking configuration files:"
+            echo "Tailwind config:"
+            cat tailwind.config.js 2>/dev/null || echo "Tailwind config not found"
+            echo "PostCSS config:"
+            cat postcss.config.js 2>/dev/null || echo "PostCSS config not found"
+            echo "Next.js config:"
+            cat next.config.js 2>/dev/null || echo "Next.js config not found"
+
             exit 1
           fi
 
