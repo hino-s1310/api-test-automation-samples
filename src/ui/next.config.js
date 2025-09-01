@@ -2,15 +2,15 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // CI環境では静的エクスポートを完全に無効化
+  // 静的エクスポートを完全に無効化（CI環境用）
   output: undefined,
 
-  // 画像最適化を有効化（サーバー起動時）
+  // 画像最適化を有効化
   images: {
     unoptimized: false,
   },
 
-  // トレーリングスラッシュを無効化（サーバー起動時）
+  // トレーリングスラッシュを無効化
   trailingSlash: false,
 
   // 静的ファイルのベースパス設定
@@ -25,14 +25,24 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // App Routerの有効化
-  experimental: {
-    appDir: true,
-  },
-
   // CI環境での最適化
   swcMinify: true,
   compress: true,
+
+  // 静的ページ生成のタイムアウト設定
+  staticPageGenerationTimeout: 120,
+
+  // ビルド最適化設定
+  experimental: {
+    // CSS最適化を無効化（crittersの問題を回避）
+    optimizeCss: false,
+    // パッケージインポートの最適化
+    optimizePackageImports: ['@/components', '@/hooks', '@/lib'],
+  },
+
+  // ビルド出力の最適化
+  poweredByHeader: false,
+  generateEtags: false,
 }
 
 module.exports = nextConfig

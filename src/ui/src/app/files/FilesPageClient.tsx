@@ -1,190 +1,147 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { FileListItem, FileListResponse, FileInfo } from '@/types';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { FileListItem, FileInfo, FileEditHistory } from '@/types';
 import { api } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
+import { useFileListPagination } from '@/hooks/useFileListPagination';
 import FileListTable from '@/components/FileListTable';
-import FileEditModal from '@/components/FileEditModal';
-import FileDetailModal from '@/components/FileDetailModal';
-import FileHistoryModal from '@/components/FileHistoryModal';
-import BatchOperations from '@/components/BatchOperations';
 import FileSearchFilter from '@/components/FileSearchFilter';
 import Pagination from '@/components/Pagination';
-import ErrorBoundary from '@/components/ErrorBoundary';
+import FileDetailModal from '@/components/FileDetailModal';
+import FileEditModal from '@/components/FileEditModal';
+import FileHistoryModal from '@/components/FileHistoryModal';
+import BatchOperations from '@/components/BatchOperations';
 import ToastContainer from '@/components/Toast';
-import { useToast } from '@/hooks/useToast';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 export default function FilesPageClient() {
+  const router = useRouter();
   const [files, setFiles] = useState<FileListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<FileListItem | null>(null);
-  const [selectedFileDetail, setSelectedFileDetail] = useState<FileInfo | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [historyFile, setHistoryFile] = useState<FileListItem | null>(null);
-  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [isEditedFilter, setIsEditedFilter] = useState<boolean | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [selectedFilesForBatch, setSelectedFilesForBatch] = useState<string[]>([]);
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [isEditedFilter, setIsEditedFilter] = useState<boolean | null>(null);
-  const [itemsPerPage] = useState(10);
-  const [isClient, setIsClient] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<FileListItem | null>(null);
+  const [selectedFileDetail, setSelectedFileDetail] = useState<FileInfo | null>(null);
+  const [historyFile, setHistoryFile] = useState<FileListItem | null>(null);
 
-  // クライアントサイドでのみトーストフックを使用
+  // トーストフックを使用
   const toastHook = useToast();
   const { toasts, removeToast, success, error: showError } = toastHook;
 
-  // クライアントサイドの判定
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  // ページネーション設定
+  const { itemsPerPage } = useFileListPagination({
+    minItemsPerPage: 5,
+    maxItemsPerPage: 20,
+    itemHeight: 70,
+  });
 
   // ファイル一覧を取得
   const fetchFiles = async () => {
     try {
       setLoading(true);
-      setError(null);
-
-      const response = await api.searchFiles({
-        query: searchTerm || undefined,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-        is_edited: isEditedFilter,
-        page: currentPage,
-        per_page: itemsPerPage,
-      });
+      const response = await api.getFileList(currentPage, itemsPerPage);
       setFiles(response.files);
-      setTotalPages(Math.ceil(response.total_count / itemsPerPage));
+      setTotalCount(response.total_count);
+      setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'ファイルの取得に失敗しました';
       setError(errorMessage);
-      if (isClient) {
-        showError('エラー', errorMessage);
-      }
+      showError('エラー', errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  // 初期化
   useEffect(() => {
     fetchFiles();
-  }, [currentPage, searchTerm, statusFilter, isEditedFilter]);
+  }, [currentPage, itemsPerPage]);
 
-  // ファイル表示
+  // ファイル詳細を表示
   const handleViewFile = async (fileId: string) => {
     try {
       const file = await api.getFile(fileId);
-      // FileInfoをFileListItemに変換
-      const fileListItem: FileListItem = {
-        id: file.id,
-        filename: file.filename || '無名ファイル',
-        status: 'completed', // 編集可能なファイルは完了済みと仮定
-        created_at: file.created_at,
-        updated_at: file.updated_at,
-        file_size: 0, // サイズ情報がない場合は0
-        processing_time: null
-      };
+      const fileListItem = files.find(f => f.id === fileId);
+      if (!fileListItem) return;
+
       setSelectedFile(fileListItem);
       setSelectedFileDetail(file); // 詳細情報を別途保存
       setIsDetailModalOpen(true);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'ファイルの取得に失敗しました';
-      if (isClient) {
-        showError('エラー', errorMessage);
-      }
+      showError('エラー', errorMessage);
     }
   };
 
-  // ファイル編集
+  // ファイル編集を開始
   const handleEditFile = async (fileId: string) => {
     try {
       const file = await api.getFile(fileId);
-      // FileInfoをFileListItemに変換
-      const fileListItem: FileListItem = {
-        id: file.id,
-        filename: file.filename || '無名ファイル',
-        status: 'completed',
-        created_at: file.created_at,
-        updated_at: file.updated_at,
-        file_size: 0,
-        processing_time: null
-      };
+      const fileListItem = files.find(f => f.id === fileId);
+      if (!fileListItem) return;
+
       setSelectedFile(fileListItem);
       setSelectedFileDetail(file); // 詳細情報を別途保存
       setIsEditModalOpen(true);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'ファイルの取得に失敗しました';
-      if (isClient) {
-        showError('エラー', errorMessage);
-      }
+      showError('エラー', errorMessage);
     }
   };
 
-  // 編集履歴表示
+  // ファイル履歴を表示
   const handleShowHistory = async (fileId: string) => {
     try {
-      const file = await api.getFile(fileId);
-      // FileInfoをFileListItemに変換
-      const fileListItem: FileListItem = {
-        id: file.id,
-        filename: file.filename || '無名ファイル',
-        status: 'completed',
-        created_at: file.created_at,
-        updated_at: file.updated_at,
-        file_size: 0,
-        processing_time: null
-      };
+      const fileListItem = files.find(f => f.id === fileId);
+      if (!fileListItem) return;
+
       setHistoryFile(fileListItem);
       setIsHistoryModalOpen(true);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'ファイルの取得に失敗しました';
-      if (isClient) {
-        showError('エラー', errorMessage);
-      }
+      showError('エラー', errorMessage);
     }
   };
 
-  // ファイル削除
+  // ファイルを削除
   const handleDeleteFile = async (fileId: string) => {
     if (!confirm('このファイルを削除しますか？')) return;
 
     try {
       setDeletingFileId(fileId);
       await api.deleteFile(fileId);
-
       setFiles(prev => prev.filter(f => f.id !== fileId));
-      if (isClient) {
-        success('ファイルを削除しました');
-      }
-
-      // 現在のページのファイルが0件になった場合、前のページに移動
-      if (files.length === 1 && currentPage > 1) {
-        setCurrentPage(prev => prev - 1);
-      }
+      success('ファイルを削除しました');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'ファイルの削除に失敗しました';
-      if (isClient) {
-        showError('エラー', errorMessage);
-      }
+      showError('エラー', errorMessage);
     } finally {
       setDeletingFileId(null);
     }
   };
 
-  // 一括操作
+  // バッチ操作を開始
   const handleBatchOperation = (selectedFiles: string[]) => {
     setSelectedFilesForBatch(selectedFiles);
     setIsBatchModalOpen(true);
   };
 
-  // 一括操作完了
+  // バッチ操作完了
   const handleBatchOperationComplete = () => {
     setIsBatchModalOpen(false);
-    setSelectedFilesForBatch([]);
     fetchFiles(); // ファイル一覧を再取得
   };
 
@@ -195,33 +152,37 @@ export default function FilesPageClient() {
         filename,
         markdown_content: content,
         edit_reason: reason,
-        edited_by: 'user',
       });
 
+      // ファイル一覧を更新
+      setFiles(prev => prev.map(f =>
+        f.id === fileId
+          ? { ...f, filename, updated_at: new Date().toISOString() }
+          : f
+      ));
+
       setIsEditModalOpen(false);
-      setSelectedFile(null);
-      setSelectedFileDetail(null);
       fetchFiles(); // ファイル一覧を再取得
-      if (isClient) {
-        success('ファイルを更新しました');
-      }
+      success('ファイルを更新しました');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'ファイルの更新に失敗しました';
-      if (isClient) {
-        showError('エラー', errorMessage);
-      }
-      throw err; // エラーを再スローしてモーダルを閉じないようにする
+      showError('エラー', errorMessage);
     }
   };
 
-  // ファイル詳細モーダルを閉じる
+  // モーダルを閉じる
   const closeDetailModal = () => {
     setIsDetailModalOpen(false);
     setSelectedFile(null);
     setSelectedFileDetail(null);
   };
 
-  // 編集履歴モーダルを閉じる
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedFile(null);
+    setSelectedFileDetail(null);
+  };
+
   const closeHistoryModal = () => {
     setIsHistoryModalOpen(false);
     setHistoryFile(null);
@@ -230,17 +191,16 @@ export default function FilesPageClient() {
   // ファイルアップロード完了
   const handleUploadComplete = () => {
     fetchFiles(); // ファイル一覧を再取得
-    if (isClient) {
-      success('ファイルをアップロードしました');
-    }
+    success('ファイルをアップロードしました');
   };
 
-  // 検索・フィルター適用
+  // 検索・フィルター
   const handleSearch = (query: string, status: string, isEdited: boolean | null) => {
-    setSearchTerm(query);
+    setSearchQuery(query);
     setStatusFilter(status);
-    setIsEditedFilter(isEdited); // 編集状態フィルターを更新
-    setCurrentPage(1); // 検索時は最初のページに戻る
+    setIsEditedFilter(isEdited);
+    setCurrentPage(1); // 検索時は1ページ目に戻る
+    // 実際の検索APIを呼び出す場合はここで実装
   };
 
   // ページ変更
@@ -248,111 +208,104 @@ export default function FilesPageClient() {
     setCurrentPage(page);
   };
 
-  if (error) {
+  // 選択されたファイルの管理
+  const handleFileSelection = (fileId: string, isSelected: boolean) => {
+    setSelectedFiles(prev =>
+      isSelected
+        ? [...prev, fileId]
+        : prev.filter(id => id !== fileId)
+    );
+  };
+
+  // 全選択・全解除
+  const handleSelectAll = (isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedFiles(files.map(f => f.id));
+    } else {
+      setSelectedFiles([]);
+    }
+  };
+
+  if (loading && files.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md mx-auto text-center">
-          <svg className="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-          <h1 className="mt-4 text-lg font-medium text-gray-900">エラーが発生しました</h1>
-          <p className="mt-2 text-sm text-gray-600" data-testid="error-message">{error}</p>
-          <button
-            onClick={fetchFiles}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-          >
-            再試行
-          </button>
-        </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-lg">読み込み中...</div>
+      </div>
+    );
+  }
+
+  if (error && files.length === 0) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-red-500 text-lg">{error}</div>
       </div>
     );
   }
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen py-8" data-testid="files-page">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* ヘッダー */}
-          <div className="mb-8" data-testid="page-header">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">ファイル一覧</h1>
-            <p className="mt-2 text-sm sm:text-base text-gray-600">
-              アップロードされたファイルの管理、編集、履歴確認ができます。
-            </p>
-          </div>
-
-          {/* 検索・フィルター */}
-          <div className="mb-6">
-            <FileSearchFilter
-              onSearch={handleSearch}
-              onReset={() => {
-                setSearchTerm('');
-                setStatusFilter('all');
-                setIsEditedFilter(null);
-                setCurrentPage(1);
-              }}
-              loading={loading}
-            />
-          </div>
-
-          {/* ファイル一覧 */}
-          <div className="bg-white rounded-lg shadow">
-            {loading ? (
-              <div className="p-8 text-center" data-testid="files-page-loading">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-gray-600">ファイルを読み込み中...</p>
-              </div>
-            ) : (
-              <>
-                <FileListTable
-                  files={files}
-                  onViewFile={handleViewFile}
-                  onEditFile={handleEditFile}
-                  onDeleteFile={handleDeleteFile}
-                  onBatchOperation={handleBatchOperation}
-                  onShowHistory={handleShowHistory}
-                  deletingFileId={deletingFileId}
-                />
-
-                {/* ページネーション */}
-                {totalPages > 1 && (
-                  <div className="px-6 py-4 border-t border-gray-200">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalItems={files.length}
-                      itemsPerPage={itemsPerPage}
-                      onPageChange={handlePageChange}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">ファイル一覧</h1>
+          <p className="text-gray-600">アップロードされたPDFファイルの一覧です</p>
         </div>
 
-        {/* モーダル */}
-        {isEditModalOpen && selectedFileDetail && (
-          <FileEditModal
-            file={selectedFileDetail}
-            isOpen={isEditModalOpen}
-            onClose={() => setIsEditModalOpen(false)}
-            onSave={handleEditComplete}
-          />
-        )}
+        <FileSearchFilter
+          onSearch={handleSearch}
+          onReset={() => {
+            setSearchQuery('');
+            setStatusFilter('');
+            setIsEditedFilter(null);
+            setCurrentPage(1);
+          }}
+          loading={loading}
+        />
 
-        {isDetailModalOpen && selectedFileDetail && (
+        <FileListTable
+          files={files}
+          onViewFile={handleViewFile}
+          onEditFile={handleEditFile}
+          onDeleteFile={handleDeleteFile}
+          onBatchOperation={handleBatchOperation}
+          onShowHistory={handleShowHistory}
+          deletingFileId={deletingFileId}
+        />
+
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalCount}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+        />
+
+        {/* モーダル類 */}
+        {isDetailModalOpen && selectedFile && selectedFileDetail && (
           <FileDetailModal
             file={selectedFileDetail}
             isOpen={isDetailModalOpen}
             onClose={closeDetailModal}
+            onFileUpdated={(updatedFile) => {
+              setSelectedFileDetail(updatedFile);
+              fetchFiles();
+            }}
+          />
+        )}
+
+        {isEditModalOpen && selectedFile && selectedFileDetail && (
+          <FileEditModal
+            isOpen={isEditModalOpen}
+            onClose={closeEditModal}
+            file={selectedFileDetail}
+            onSave={handleEditComplete}
           />
         )}
 
         {isHistoryModalOpen && historyFile && (
           <FileHistoryModal
-            fileId={historyFile.id}
-            filename={historyFile.filename}
             isOpen={isHistoryModalOpen}
             onClose={closeHistoryModal}
+            fileId={historyFile.id}
+            filename={historyFile.filename}
           />
         )}
 
@@ -365,7 +318,7 @@ export default function FilesPageClient() {
         )}
 
         {/* Toast通知 */}
-        {isClient && <ToastContainer toasts={toasts} onClose={removeToast} />}
+        <ToastContainer toasts={toasts} onClose={removeToast} />
       </div>
     </ErrorBoundary>
   );

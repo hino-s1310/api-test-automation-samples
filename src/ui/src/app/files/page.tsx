@@ -1,9 +1,6 @@
-import dynamic from 'next/dynamic';
+'use client';
 
-const FilesPageClient = dynamic(() => import('./FilesPageClient'), {
-  ssr: false,
-  loading: () => <div>Loading...</div>
-});
+import FilesPageClient from './FilesPageClient';
 
 export default function FilesPage() {
   return <FilesPageClient />;

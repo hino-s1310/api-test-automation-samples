@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import FilesPage from '../../../app/files/page';
+import FilesPageClient from '../../../app/files/FilesPageClient';
 
 // APIモック
 jest.mock('../../../lib/api', () => ({
@@ -12,6 +12,7 @@ jest.mock('../../../lib/api', () => ({
     searchFiles: jest.fn(),
     editFile: jest.fn(),
     uploadPdf: jest.fn(),
+    getFileEditHistory: jest.fn(),
   }
 }));
 
@@ -65,7 +66,7 @@ const mockFileDetail = {
   processing_time: 1.5,
 };
 
-describe('FilesPage', () => {
+describe('FilesPageClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -74,23 +75,26 @@ describe('FilesPage', () => {
     mockApi.getFile.mockResolvedValue(mockFileDetail);
     mockApi.deleteFile.mockResolvedValue({ message: 'File deleted' });
     mockApi.editFile.mockResolvedValue(mockFileDetail);
+    mockApi.getFileEditHistory.mockResolvedValue({ history: [] });
   });
 
   it('renders files page with title and description', async () => {
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
-    expect(screen.getByText('ファイル一覧')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('ファイル一覧')).toBeInTheDocument();
+    });
     expect(screen.getByText('アップロードされたファイルの管理、編集、履歴確認ができます。')).toBeInTheDocument();
   });
 
   it('shows loading state initially', () => {
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     expect(screen.getByText('ファイルを読み込み中...')).toBeInTheDocument();
   });
 
   it('displays files after loading', async () => {
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -101,7 +105,7 @@ describe('FilesPage', () => {
   });
 
   it('displays search filter component', async () => {
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByTestId('file-search-filter')).toBeInTheDocument();
@@ -115,7 +119,7 @@ describe('FilesPage', () => {
 
   it('handles search functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByTestId('file-search-filter')).toBeInTheDocument();
@@ -145,7 +149,7 @@ describe('FilesPage', () => {
 
   it('handles search reset functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByTestId('file-search-filter')).toBeInTheDocument();
@@ -161,7 +165,7 @@ describe('FilesPage', () => {
 
   it('handles file view functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -176,7 +180,7 @@ describe('FilesPage', () => {
 
   it('handles file edit functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -195,7 +199,7 @@ describe('FilesPage', () => {
     // confirmダイアログをモック
     global.confirm = jest.fn(() => true);
 
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -209,9 +213,9 @@ describe('FilesPage', () => {
     expect(mockApi.deleteFile).toHaveBeenCalledWith('test-file-1');
   });
 
-  it('handles file edit functionality', async () => {
+  it('handles file edit modal functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -230,7 +234,7 @@ describe('FilesPage', () => {
   it('shows error message when API calls fail', async () => {
     mockApi.searchFiles.mockRejectedValue(new Error('API Error'));
 
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByText('エラーが発生しました')).toBeInTheDocument();
@@ -241,7 +245,7 @@ describe('FilesPage', () => {
 
   it('handles refresh functionality', async () => {
     const user = userEvent.setup();
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -263,7 +267,7 @@ describe('FilesPage', () => {
 
     mockApi.searchFiles.mockResolvedValue(manyFiles);
 
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByText('test1.pdf')).toBeInTheDocument();
@@ -283,7 +287,7 @@ describe('FilesPage', () => {
 
     mockApi.searchFiles.mockResolvedValue(emptyFiles);
 
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByText('ファイルがありません')).toBeInTheDocument();
@@ -294,7 +298,7 @@ describe('FilesPage', () => {
   });
 
   it('maintains accessibility features', async () => {
-    render(<FilesPage />);
+    render(<FilesPageClient />);
 
     await waitFor(() => {
       expect(screen.getByTestId('file-search-filter')).toBeInTheDocument();

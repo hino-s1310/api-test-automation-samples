@@ -34,6 +34,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -331,21 +333,39 @@ jobs:
             echo "UI dependencies already installed, skipping..."
           fi
 
+          # ビルドキャッシュの設定
+          echo "Setting up build cache..."
+          mkdir -p .next/cache
+          if [ -d ".next/cache" ]; then
+            echo "Build cache directory created"
+          fi
+
           # Next.jsの確認
           echo "Checking Next.js installation..."
           pnpm list next
 
           # 本番ビルドを実行
           echo "Building Next.js application for production..."
+          export NODE_ENV=production
           export NEXT_TELEMETRY_DISABLED=1
           export NODE_OPTIONS="--max-old-space-size=4096"
           export CI=true
 
           # ビルドの実行
+          echo "Starting build process..."
           if pnpm build; then
             echo "Build completed successfully"
+
+            # ビルド結果の確認
+            echo "Build output directory contents:"
+            ls -la .next/
+
+            echo "Build cache contents:"
+            ls -la .next/cache/ || echo "No cache directory"
           else
             echo "Build failed, checking logs..."
+            echo "Build error details:"
+            cat .next/build-manifest.json 2>/dev/null || echo "No build manifest"
             exit 1
           fi
 
@@ -375,7 +395,7 @@ jobs:
             fi
           fi
         env:
-          NODE_ENV: development
+          NODE_ENV: production
           CI: true
           NEXT_TELEMETRY_DISABLED: 1
           NODE_OPTIONS: "--max-old-space-size=4096"
