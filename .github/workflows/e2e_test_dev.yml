@@ -314,10 +314,10 @@ jobs:
           echo "Available endpoints:"
           curl -s http://localhost:8000/docs 2>/dev/null | grep -o 'href="[^"]*"' | head -10 || echo "Could not fetch OpenAPI docs"
 
-      - name: Start UI server with Next.js dev server
+      - name: Start UI server with Next.js production build
         run: |
           cd ../../
-          echo "Starting UI server with Next.js development server..."
+          echo "Starting UI server with Next.js production build..."
 
           # UIサーバーを起動
           cd src/ui
@@ -335,23 +335,31 @@ jobs:
           echo "Checking Next.js installation..."
           pnpm list next
 
-          # 開発サーバーを起動
-          echo "Starting Next.js development server..."
+          # 本番ビルドを実行
+          echo "Building Next.js application for production..."
           export NEXT_TELEMETRY_DISABLED=1
           export NODE_OPTIONS="--max-old-space-size=4096"
           export CI=true
 
-          # 開発サーバーを起動（バックグラウンドで実行）
-          echo "Starting Next.js dev server in background..."
-          nohup pnpm dev > ../../ui_server.log 2>&1 &
+          # ビルドの実行
+          if pnpm build; then
+            echo "Build completed successfully"
+          else
+            echo "Build failed, checking logs..."
+            exit 1
+          fi
+
+          # 本番サーバーを起動
+          echo "Starting Next.js production server..."
+          nohup pnpm start > ../../ui_server.log 2>&1 &
           echo $! > ../../ui_server.pid
 
           # プロセスIDの確認
           echo "UI server PID: $(cat ../../ui_server.pid)"
 
-          # サーバー起動を待機
-          echo "Waiting for Next.js dev server to start..."
-          sleep 60
+          # サーバー起動を待機（本番ビルドは起動が早い）
+          echo "Waiting for Next.js production server to start..."
+          sleep 30
 
           # ログを確認
           echo "UI server log:"
@@ -378,23 +386,35 @@ jobs:
           cd ../../
           echo "Checking UI server..."
 
-          # UIサーバーの起動確認（より詳細な確認）
-          for i in {1..30}; do
-            echo "Attempt $i/30: Checking UI server..."
-
-            # プロセス状態確認
-            if [ -f ui_server.pid ]; then
-              if ! kill -0 $(cat ui_server.pid) 2>/dev/null; then
-                echo "UI server process died, checking logs..."
-                if [ -f ui_server.log ]; then
-                  cat ui_server.log
-                fi
-                echo "UI server failed to start"
-                exit 1
+          # UIサーバーの起動確認（本番ビルド用に最適化）
+          echo "Phase 1: Process status check..."
+          if [ -f ui_server.pid ]; then
+            if ! kill -0 $(cat ui_server.pid) 2>/dev/null; then
+              echo "UI server process died, checking logs..."
+              if [ -f ui_server.log ]; then
+                cat ui_server.log
               fi
+              echo "UI server failed to start"
+              exit 1
             fi
+            echo "UI server process is running with PID: $(cat ui_server.pid)"
+          else
+            echo "UI server PID file not found"
+            exit 1
+          fi
 
-            # HTTP接続確認（より詳細なチェック）
+          echo "Phase 2: Port availability check..."
+          if ! lsof -i :3000 > /dev/null 2>&1; then
+            echo "Port 3000 is not available"
+            exit 1
+          fi
+          echo "Port 3000 is available"
+
+          echo "Phase 3: HTTP response check..."
+          # 本番ビルドは起動が早いため、より短い間隔でチェック
+          for i in {1..15}; do
+            echo "Attempt $i/15: Checking UI server response..."
+
             if curl -f http://localhost:3000 > /dev/null 2>&1; then
               echo "UI server is responding successfully!"
 
@@ -409,11 +429,11 @@ jobs:
             fi
 
             echo "UI server not ready yet, waiting..."
-            sleep 3
+            sleep 2
 
-            # タイムアウトチェック
-            if [ $i -eq 30 ]; then
-              echo "UI server failed to start within 90 seconds"
+            # タイムアウトチェック（本番ビルドは30秒で十分）
+            if [ $i -eq 15 ]; then
+              echo "UI server failed to start within 30 seconds"
               echo "Final UI server log:"
               if [ -f ui_server.log ]; then
                 cat ui_server.log
