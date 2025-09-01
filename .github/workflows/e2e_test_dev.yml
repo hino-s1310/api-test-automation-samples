@@ -354,7 +354,13 @@ jobs:
               npm install
             fi
           else
-            echo "UI dependencies already installed, skipping..."
+            echo "UI dependencies already installed, checking for missing packages..."
+            # 重要なパッケージが不足していないか確認
+            if [ ! -f "node_modules/.pnpm/tailwindcss" ] && [ ! -f "node_modules/tailwindcss" ]; then
+              echo "Tailwind CSS not found, reinstalling dependencies..."
+              rm -rf node_modules pnpm-lock.yaml
+              pnpm install --no-frozen-lockfile
+            fi
           fi
 
           # ビルドに必要な依存関係の確認
@@ -367,6 +373,26 @@ jobs:
           pnpm list postcss
           echo "Checking Autoprefixer:"
           pnpm list autoprefixer
+
+          # 重要なパッケージの存在確認
+          echo "Verifying critical packages exist..."
+          CRITICAL_PACKAGES=("tailwindcss" "postcss" "autoprefixer" "next")
+          MISSING_PACKAGES=()
+
+          for package in "${CRITICAL_PACKAGES[@]}"; do
+            if [ ! -f "node_modules/.pnpm/$package" ] && [ ! -f "node_modules/$package" ]; then
+              MISSING_PACKAGES+=("$package")
+            fi
+          done
+
+          if [ ${#MISSING_PACKAGES[@]} -gt 0 ]; then
+            echo "ERROR: Missing critical packages: ${MISSING_PACKAGES[*]}"
+            echo "Reinstalling all dependencies..."
+            rm -rf node_modules pnpm-lock.yaml
+            pnpm install --no-frozen-lockfile
+          else
+            echo "All critical packages are available"
+          fi
 
           # Tailwind CSS設定ファイルの確認
           echo "Checking Tailwind CSS configuration..."
@@ -401,6 +427,20 @@ jobs:
           export NODE_ENV=production
           export NEXT_TELEMETRY_DISABLED=1
           export CI=true
+
+          # ビルド前の最終確認
+          echo "Final dependency check before build..."
+          echo "Node modules structure:"
+          ls -la node_modules/.pnpm/ | head -10
+
+          echo "Critical packages verification:"
+          for package in "tailwindcss" "postcss" "autoprefixer" "next"; do
+            if [ -f "node_modules/.pnpm/$package" ] || [ -f "node_modules/$package" ]; then
+              echo "✓ $package: Available"
+            else
+              echo "✗ $package: Missing"
+            fi
+          done
 
           # ビルドの実行
           echo "Starting build process..."
