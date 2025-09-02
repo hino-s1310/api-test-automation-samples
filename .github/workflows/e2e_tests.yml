@@ -105,6 +105,7 @@ jobs:
         working-directory: ./src/ui
         run: |
           pnpm install --frozen-lockfile
+          pnpm list typescript @types/react @types/node
 
       - name: Install backend dependencies
         run: |
@@ -131,6 +132,20 @@ jobs:
       # ========================================
       # 4. ビルド
       # ========================================
+      - name: Verify TypeScript dependencies
+        working-directory: ./src/ui
+        run: |
+          echo "Checking TypeScript dependencies..."
+          pnpm list typescript @types/react @types/node
+          echo "TypeScript dependencies verified"
+
+      - name: Install TypeScript dependencies (fallback)
+        working-directory: ./src/ui
+        if: failure()
+        run: |
+          echo "Installing TypeScript dependencies as fallback..."
+          pnpm add --save-dev typescript @types/react @types/node
+
       - name: Build Next.js application
         working-directory: ./src/ui
         run: |
