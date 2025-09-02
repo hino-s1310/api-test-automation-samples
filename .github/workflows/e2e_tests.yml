@@ -58,7 +58,10 @@ jobs:
       # 4. Frontend dependencies
       - name: Install frontend dependencies
         working-directory: ./src/ui
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile
+          # TypeScript依存関係を明示的にインストール
+          pnpm add --save-dev typescript @types/react @types/node
 
       # 5. Playwright dependencies
       - name: Install Playwright dependencies
