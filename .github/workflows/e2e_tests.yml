@@ -42,7 +42,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          cache: 'npm'
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -55,30 +54,23 @@ jobs:
           version: "latest"
 
       - name: Setup pnpm
-        run: |
-          echo "Setting up pnpm via npm..."
-          npm install -g pnpm@9.15.0
-          pnpm --version
-          pnpm config set registry https://registry.npmjs.org/
-        env:
-          NODE_ENV: production
-          CI: true
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
 
       # ========================================
       # 2. キャッシュ設定
       # ========================================
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
       - name: Cache pnpm dependencies
         uses: actions/cache@v3
         with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: |
+            ~/.pnpm-store
+            **/node_modules
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            ${{ runner.os }}-pnpm-
 
       - name: Cache Playwright browsers
         uses: actions/cache@v3
@@ -140,9 +132,10 @@ jobs:
       - name: Start API server
         run: |
           echo "Starting API server..."
-          uv run uvicorn src.api.main:app --host 0.0.0.0 --port ${{ env.API_PORT }} &
+          nohup uv run uvicorn src.api.main:app --host 0.0.0.0 --port ${{ env.API_PORT }} > api_server.log 2>&1 &
           echo $! > api_server.pid
           echo "API server started with PID: $(cat api_server.pid)"
+          sleep 5
 
       - name: Wait for API server
         run: |
@@ -154,9 +147,10 @@ jobs:
         run: |
           echo "Starting UI server..."
           cd src/ui
-          node .next/standalone/server.js &
+          nohup node .next/standalone/server.js > ui_server.log 2>&1 &
           echo $! > ui_server.pid
           echo "UI server started with PID: $(cat ui_server.pid)"
+          sleep 5
 
       - name: Wait for UI server
         run: |
@@ -205,11 +199,11 @@ jobs:
           echo "Stopping servers..."
           if [ -f api_server.pid ]; then
             kill $(cat api_server.pid) 2>/dev/null || true
-            rm -f api_server.pid
+            rm -f api_server.pid api_server.log
           fi
           if [ -f ui_server.pid ]; then
             kill $(cat ui_server.pid) 2>/dev/null || true
-            rm -f ui_server.pid
+            rm -f ui_server.pid ui_server.log
           fi
           echo "Servers stopped"
 
