@@ -47,26 +47,29 @@ export default defineConfig({
     },
   ],
 
-  webServer: [
-    {
-      name: 'api-server',
-      command: 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000',
-      url: 'http://localhost:8000/system/health',
-      reuseExistingServer: false,
-      timeout: process.env.CI ? 300 * 1000 : 120 * 1000,
-      stdout: 'pipe',
-      env: { ENVIRONMENT: 'test' },
-    },
-    {
-      name: 'ui-server',
-      command: 'cd ../../src/ui && node .next/standalone/server.js -p 3000',
-      url: 'http://localhost:3000',
-      reuseExistingServer: false,
-      timeout: process.env.CI ? 300 * 1000 : 120 * 1000,
-      stdout: 'pipe',
-      env: { NODE_ENV: 'production' },
-    },
-  ],
+  // CI環境では手動でサーバーを起動するため、webServerは無効化
+  ...(process.env.CI ? {} : {
+    webServer: [
+      {
+        name: 'api-server',
+        command: 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000',
+        url: 'http://localhost:8000/system/health',
+        reuseExistingServer: false,
+        timeout: 120 * 1000,
+        stdout: 'pipe',
+        env: { ENVIRONMENT: 'test' },
+      },
+      {
+        name: 'ui-server',
+        command: 'cd ../../src/ui && node .next/standalone/server.js -p 3000',
+        url: 'http://localhost:3000',
+        reuseExistingServer: false,
+        timeout: 120 * 1000,
+        stdout: 'pipe',
+        env: { NODE_ENV: 'production' },
+      },
+    ],
+  }),
 
   use: {
     trace: 'retain-on-failure',
