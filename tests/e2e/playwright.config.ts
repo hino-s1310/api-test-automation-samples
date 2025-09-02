@@ -1,35 +1,23 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/**
- * @see https://playwright.dev/docs/test-configuration
- */
 export default defineConfig({
   testDir: './tests',
   testMatch: /.*\.spec\.ts/,
-  /* CI環境では並列実行を無効化してテストの安定性を向上 */
   fullyParallel: false,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* CI環境ではリトライ回数を増やして安定性を向上 */
   retries: process.env.CI ? 3 : 0,
-  /* ワーカー数を1に制限して競合状態を回避 */
   workers: 1,
-  /* Output directory for test results */
   outputDir: './test-results',
-  /* Reporter configuration optimized for CI */
-  reporter: process.env.CI ? [
-    ['github'],  // GitHub Actions integration
-    ['json', { outputFile: 'test-results/results.json' }],
-    ['junit', { outputFile: 'test-results/results.xml' }],
-    ['html', { outputFolder: 'playwright-report', open: 'never' }],
-    ['list']  // コンソール出力も追加
-  ] : [
-    ['html'],
-    ['json', { outputFile: 'test-results/results.json' }],
-    ['junit', { outputFile: 'test-results/results.xml' }]
-  ],
+  reporter: process.env.CI
+    ? [
+        ['github'],
+        ['json', { outputFile: 'test-results/results.json' }],
+        ['junit', { outputFile: 'test-results/results.xml' }],
+        ['html', { outputFolder: 'playwright-report', open: 'never' }],
+        ['list']
+      ]
+    : [['html'], ['json', { outputFile: 'test-results/results.json' }], ['junit', { outputFile: 'test-results/results.xml' }]],
 
-  /* Configure projects for different test types */
   projects: [
     {
       name: 'api-tests',
@@ -39,7 +27,6 @@ export default defineConfig({
         baseURL: 'http://localhost:8000',
       },
     },
-
     {
       name: 'ui-tests',
       testMatch: /.*\.ui\.spec\.ts/,
@@ -48,68 +35,48 @@ export default defineConfig({
         baseURL: 'http://localhost:3000',
       },
     },
-
     {
       name: 'integration-tests',
       testMatch: /.*\.integration\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         baseURL: 'http://localhost:3000',
-        // CI環境でのタイムアウトを延長
         actionTimeout: process.env.CI ? 90000 : 30000,
         navigationTimeout: process.env.CI ? 180000 : 60000,
       },
     },
   ],
 
-  // CI環境でもwebServerを使用してサーバーを起動
   webServer: [
     {
       name: 'api-server',
-      command: 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000',
+      command: 'cd ../../ && ENVIRONMENT=test uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000',
       url: 'http://localhost:8000/system/health',
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: process.env.CI ? 300 * 1000 : 120 * 1000,
       stdout: 'pipe',
-      env: {
-        ENVIRONMENT: 'test'
-      }
+      env: { ENVIRONMENT: 'test' },
     },
     {
       name: 'ui-server',
-      command: process.env.CI
-        ? 'cd ../../src/ui && pnpm install && pnpm build && pnpm start'
-        : 'cd ../../src/ui && pnpm install && pnpm dev',
+      command: 'cd ../../src/ui && node .next/standalone/server.js -p 3000',
       url: 'http://localhost:3000',
+      reuseExistingServer: false,
+      timeout: process.env.CI ? 300 * 1000 : 120 * 1000,
       stdout: 'pipe',
-      reuseExistingServer: true,
-      timeout: process.env.CI ? 600 * 1000 : 180 * 1000,
-      env: {
-        NODE_ENV: process.env.CI ? 'production' : 'development'
-      }
-    }
+      env: { NODE_ENV: 'production' },
+    },
   ],
 
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'retain-on-failure',
-
-    /* Take screenshot on failure */
     screenshot: 'only-on-failure',
-
-    /* Record video on failure */
     video: 'on',
-
-    /* CI環境ではタイムアウトを延長して安定性を向上 */
     actionTimeout: process.env.CI ? 60000 : 5000,
     navigationTimeout: process.env.CI ? 120000 : 10000,
   },
 
-  /* CI環境ではグローバルタイムアウトを延長して安定性を向上 */
   timeout: process.env.CI ? 600000 : 30000,
-
-  /* CI環境では期待値のタイムアウトも延長して安定性を向上 */
   expect: {
     timeout: process.env.CI ? 90000 : 5000,
   },
