@@ -91,7 +91,9 @@ jobs:
       - name: Cache Python dependencies
         uses: actions/cache@v3
         with:
-          path: ~/.cache/uv
+          path: |
+            ~/.cache/uv
+            .venv
           key: ${{ runner.os }}-uv-cache-${{ hashFiles('pyproject.toml', 'uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-uv-cache-
@@ -106,6 +108,13 @@ jobs:
 
       - name: Install backend dependencies
         run: |
+          if [ ! -d ".venv" ]; then
+            echo "Creating new virtual environment..."
+            uv venv --python 3.11
+          else
+            echo "Using cached virtual environment..."
+          fi
+          source .venv/bin/activate
           uv pip install -e ".[test]"
 
       - name: Install Playwright dependencies
@@ -132,7 +141,8 @@ jobs:
       - name: Start API server
         run: |
           echo "Starting API server..."
-          nohup uv run uvicorn src.api.main:app --host 0.0.0.0 --port ${{ env.API_PORT }} > api_server.log 2>&1 &
+          source .venv/bin/activate
+          nohup uvicorn src.api.main:app --host 0.0.0.0 --port ${{ env.API_PORT }} > api_server.log 2>&1 &
           echo $! > api_server.pid
           echo "API server started with PID: $(cat api_server.pid)"
           sleep 5
