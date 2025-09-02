@@ -484,62 +484,91 @@ jobs:
           export HOSTNAME=0.0.0.0
           # NODE_ENVは既にproductionに設定済み
 
-          # Next.js本番サーバーを起動（複数の方法を試行）
+          # standaloneモード用の環境変数設定
+          if [ -f ".next/standalone/server.js" ]; then
+            echo "Configuring standalone mode environment..."
+
+            # 静的ファイルをstandaloneディレクトリにコピー
+            echo "Copying static files for standalone mode..."
+            if [ -d ".next/static" ]; then
+              cp -r .next/static .next/standalone/.next/
+              echo "Static files copied to standalone directory"
+            fi
+
+            # publicディレクトリをコピー
+            if [ -d "public" ]; then
+              cp -r public .next/standalone/
+              echo "Public files copied to standalone directory"
+            fi
+
+            export NEXT_STATIC_FILES_PATH="$(pwd)/.next/standalone/.next/static"
+            export NEXT_PUBLIC_BASE_PATH=""
+            echo "Standalone mode environment configured"
+          fi
+
+          # Next.js本番サーバーを起動（standaloneモード優先）
           echo "Attempting to start Next.js server..."
 
-          # 方法1: pnpm start
-          if nohup pnpm start > ../../ui_server.log 2>&1 & then
-            SERVER_PID=$!
-            echo "Method 1 (pnpm start) succeeded with PID: $SERVER_PID"
-          else
-            echo "Method 1 failed, trying method 2..."
-
-            # 方法2: 直接next start
-            if nohup npx next start > ../../ui_server.log 2>&1 & then
+          # 方法1: standaloneモードのサーバー実行（優先）
+          if [ -f ".next/standalone/server.js" ]; then
+            echo "Standalone mode detected, using node .next/standalone/server.js"
+            # standaloneモードでは作業ディレクトリをstandaloneディレクトリに変更
+            cd .next/standalone
+            if nohup node server.js > ../../../ui_server.log 2>&1 & then
               SERVER_PID=$!
-              echo "Method 2 (npx next start) succeeded with PID: $SERVER_PID"
+              echo "Method 1 (node server.js from standalone directory) succeeded with PID: $SERVER_PID"
+              # 作業ディレクトリを元に戻す
+              cd ../..
             else
-              echo "Method 2 failed, trying method 3..."
+              echo "Method 1 failed, trying method 2..."
+              # 作業ディレクトリを元に戻す
+              cd ../..
 
-              # 方法3: standaloneモードのサーバー実行
-              if [ -f ".next/standalone/server.js" ]; then
-                if nohup node .next/standalone/server.js > ../../ui_server.log 2>&1 & then
+              # 方法2: 通常のserver.js
+              if [ -f ".next/server.js" ]; then
+                if nohup node .next/server.js > ../../ui_server.log 2>&1 & then
                   SERVER_PID=$!
-                  echo "Method 3 (node .next/standalone/server.js) succeeded with PID: $SERVER_PID"
+                  echo "Method 2 (node .next/server.js) succeeded with PID: $SERVER_PID"
                 else
-                  echo "Method 3 failed, trying method 4..."
+                  echo "Method 2 failed, trying method 3..."
 
-                  # 方法4: 通常のserver.js
-                  if [ -f ".next/server.js" ]; then
-                    if nohup node .next/server.js > ../../ui_server.log 2>&1 & then
-                      SERVER_PID=$!
-                      echo "Method 4 (node .next/server.js) succeeded with PID: $SERVER_PID"
-                    else
-                      echo "All methods failed"
-                      exit 1
-                    fi
-                  else
-                    echo "No server files found, all methods failed"
-                    exit 1
-                  fi
-                fi
-              else
-                echo "No standalone server found, trying regular server..."
-
-                # 方法4: 通常のserver.js
-                if [ -f ".next/server.js" ]; then
-                  if nohup node .next/server.js > ../../ui_server.log 2>&1 & then
+                  # 方法3: pnpm start（非standaloneモード用）
+                  if nohup pnpm start > ../../ui_server.log 2>&1 & then
                     SERVER_PID=$!
-                    echo "Method 4 (node .next/server.js) succeeded with PID: $SERVER_PID"
+                    echo "Method 3 (pnpm start) succeeded with PID: $SERVER_PID"
                   else
                     echo "All methods failed"
                     exit 1
                   fi
+                fi
+              else
+                echo "No server files found, all methods failed"
+                exit 1
+              fi
+            fi
+          else
+            echo "No standalone server found, trying regular methods..."
+
+            # 方法2: 通常のserver.js
+            if [ -f ".next/server.js" ]; then
+              if nohup node .next/server.js > ../../ui_server.log 2>&1 & then
+                SERVER_PID=$!
+                echo "Method 2 (node .next/server.js) succeeded with PID: $SERVER_PID"
+              else
+                echo "Method 2 failed, trying method 3..."
+
+                # 方法3: pnpm start
+                if nohup pnpm start > ../../ui_server.log 2>&1 & then
+                  SERVER_PID=$!
+                  echo "Method 3 (pnpm start) succeeded with PID: $SERVER_PID"
                 else
-                  echo "No server files found, all methods failed"
+                  echo "All methods failed"
                   exit 1
                 fi
               fi
+            else
+              echo "No server files found, all methods failed"
+              exit 1
             fi
           fi
 
