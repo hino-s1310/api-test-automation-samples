@@ -453,6 +453,26 @@ jobs:
             # ビルド結果の確認
             echo "Build output directory contents:"
             ls -la .next/
+
+            # standaloneモードの確認
+            if [ -d ".next/standalone" ]; then
+              echo "Standalone build detected:"
+              ls -la .next/standalone/
+            else
+              echo "Regular build detected"
+            fi
+
+            # サーバーファイルの確認
+            echo "Server files check:"
+            if [ -f ".next/standalone/server.js" ]; then
+              echo "✓ Standalone server.js found"
+            elif [ -f ".next/server.js" ]; then
+              echo "✓ Regular server.js found"
+            else
+              echo "✗ No server.js found"
+              echo "Available files in .next/:"
+              find .next/ -name "*.js" | head -10
+            fi
           else
             echo "Build failed, checking logs..."
             exit 1
@@ -464,9 +484,65 @@ jobs:
           export HOSTNAME=0.0.0.0
           # NODE_ENVは既にproductionに設定済み
 
-          # Next.js本番サーバーを起動
-          nohup pnpm start > ../../ui_server.log 2>&1 &
-          SERVER_PID=$!
+          # Next.js本番サーバーを起動（複数の方法を試行）
+          echo "Attempting to start Next.js server..."
+
+          # 方法1: pnpm start
+          if nohup pnpm start > ../../ui_server.log 2>&1 & then
+            SERVER_PID=$!
+            echo "Method 1 (pnpm start) succeeded with PID: $SERVER_PID"
+          else
+            echo "Method 1 failed, trying method 2..."
+
+            # 方法2: 直接next start
+            if nohup npx next start > ../../ui_server.log 2>&1 & then
+              SERVER_PID=$!
+              echo "Method 2 (npx next start) succeeded with PID: $SERVER_PID"
+            else
+              echo "Method 2 failed, trying method 3..."
+
+              # 方法3: standaloneモードのサーバー実行
+              if [ -f ".next/standalone/server.js" ]; then
+                if nohup node .next/standalone/server.js > ../../ui_server.log 2>&1 & then
+                  SERVER_PID=$!
+                  echo "Method 3 (node .next/standalone/server.js) succeeded with PID: $SERVER_PID"
+                else
+                  echo "Method 3 failed, trying method 4..."
+
+                  # 方法4: 通常のserver.js
+                  if [ -f ".next/server.js" ]; then
+                    if nohup node .next/server.js > ../../ui_server.log 2>&1 & then
+                      SERVER_PID=$!
+                      echo "Method 4 (node .next/server.js) succeeded with PID: $SERVER_PID"
+                    else
+                      echo "All methods failed"
+                      exit 1
+                    fi
+                  else
+                    echo "No server files found, all methods failed"
+                    exit 1
+                  fi
+                fi
+              else
+                echo "No standalone server found, trying regular server..."
+
+                # 方法4: 通常のserver.js
+                if [ -f ".next/server.js" ]; then
+                  if nohup node .next/server.js > ../../ui_server.log 2>&1 & then
+                    SERVER_PID=$!
+                    echo "Method 4 (node .next/server.js) succeeded with PID: $SERVER_PID"
+                  else
+                    echo "All methods failed"
+                    exit 1
+                  fi
+                else
+                  echo "No server files found, all methods failed"
+                  exit 1
+                fi
+              fi
+            fi
+          fi
+
           echo $SERVER_PID > ../../ui_server.pid
 
           echo "Production server started with PID: $SERVER_PID"
@@ -479,6 +555,48 @@ jobs:
           # ログを確認
           echo "UI server log:"
           cat ../../ui_server.log
+
+          # プロセスの詳細診断
+          echo "=== Process Diagnosis ==="
+          if [ -f ../../ui_server.pid ]; then
+            PID=$(cat ../../ui_server.pid)
+            echo "Server PID: $PID"
+
+            # プロセスの存在確認
+            if kill -0 $PID 2>/dev/null; then
+              echo "✓ Process is running"
+
+              # プロセスの詳細情報
+              echo "Process details:"
+              ps -p $PID -o pid,ppid,cmd,etime,state
+
+              # プロセスが使用しているポート
+              echo "Ports used by process:"
+              netstat -tlnp 2>/dev/null | grep $PID || echo "No ports found for this process"
+
+              # プロセスの子プロセス
+              echo "Child processes:"
+              ps --forest -g $PID 2>/dev/null || echo "No child processes found"
+
+              # プロセスの環境変数
+              echo "Process environment:"
+              cat /proc/$PID/environ 2>/dev/null | tr '\0' '\n' | grep -E "(PORT|HOSTNAME|NODE_ENV)" || echo "Could not read process environment"
+
+            else
+              echo "✗ Process is not running"
+            fi
+          fi
+
+          # ポート3000の詳細確認
+          echo "=== Port 3000 Analysis ==="
+          echo "All processes using port 3000:"
+          lsof -i :3000 || echo "No processes using port 3000"
+
+          echo "All listening ports:"
+          netstat -tlnp 2>/dev/null | grep LISTEN | head -10
+
+          echo "Next.js related processes:"
+          ps aux | grep -E "(next|node)" | grep -v grep || echo "No Next.js processes found"
 
           # プロセス状態の確認
           if [ -f ../../ui_server.pid ]; then

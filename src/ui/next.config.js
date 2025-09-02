@@ -2,8 +2,8 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 通常のビルド設定（静的エクスポートを無効化）
-  output: undefined,
+  // CI環境での安定性を向上させるためstandaloneモードを使用
+  output: 'standalone',
 
   // 画像最適化を有効化
   images: {
