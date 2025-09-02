@@ -424,9 +424,14 @@ jobs:
 
           # 本番ビルドを実行
           echo "Building Next.js application for production..."
-          export NODE_ENV=production
+          # ビルド時はNODE_ENVを一時的にdevelopmentに設定してdevDependenciesを利用可能にする
+          export NODE_ENV=development
           export NEXT_TELEMETRY_DISABLED=1
           export CI=true
+
+          # NODE_ENV変更後の依存関係再インストール
+          echo "Reinstalling dependencies with NODE_ENV=development..."
+          pnpm install --no-frozen-lockfile
 
           # ビルド前の最終確認
           echo "Final dependency check before build..."
@@ -459,6 +464,8 @@ jobs:
           echo "Starting lightweight HTTP server for static files..."
           export PORT=3000
           export HOSTNAME=0.0.0.0
+          # サーバー起動時は本番環境用に設定
+          export NODE_ENV=production
 
           # 複数のHTTPサーバーオプションを試行
           echo "Trying different HTTP server options..."
