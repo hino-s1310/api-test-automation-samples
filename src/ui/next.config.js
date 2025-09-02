@@ -2,16 +2,16 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 静的配信用の設定
-  output: 'export',
+  // 通常のビルド設定（静的エクスポートを無効化）
+  output: undefined,
 
-  // 画像最適化を無効化（静的配信用）
+  // 画像最適化を有効化
   images: {
-    unoptimized: true,
+    unoptimized: false,
   },
 
-  // トレーリングスラッシュを有効化（静的配信用）
-  trailingSlash: true,
+  // トレーリングスラッシュを無効化
+  trailingSlash: false,
 
   // 静的ファイルのベースパス設定
   assetPrefix: '',

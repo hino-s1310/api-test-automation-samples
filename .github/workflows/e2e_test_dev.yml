@@ -320,10 +320,10 @@ jobs:
           echo "Available endpoints:"
           curl -s http://localhost:8000/docs 2>/dev/null | grep -o 'href="[^"]*"' | head -10 || echo "Could not fetch OpenAPI docs"
 
-      - name: Start UI server with Next.js production build and static server
+      - name: Start UI server with Next.js production server
         run: |
           cd ../../
-          echo "Starting UI server with Next.js production build and static server..."
+          echo "Starting UI server with Next.js production server..."
 
           # UIサーバーを起動
           cd src/ui
@@ -424,26 +424,24 @@ jobs:
 
           # 本番ビルドを実行
           echo "Building Next.js application for production..."
-          # ビルド時はNODE_ENVを一時的にdevelopmentに設定してdevDependenciesを利用可能にする
-          export NODE_ENV=development
+          # 本番環境でビルド（依存関係は既にdependenciesに移動済み）
+          export NODE_ENV=production
           export NEXT_TELEMETRY_DISABLED=1
           export CI=true
 
-          # NODE_ENV変更後の依存関係再インストール
-          echo "Reinstalling dependencies with NODE_ENV=development..."
-          pnpm install --no-frozen-lockfile
+          # 本番環境での依存関係確認
+          echo "Verifying production dependencies..."
+          pnpm install --frozen-lockfile --prod=false
 
           # ビルド前の最終確認
           echo "Final dependency check before build..."
-          echo "Node modules structure:"
-          ls -la node_modules/.pnpm/ | head -10
-
           echo "Critical packages verification:"
           for package in "tailwindcss" "postcss" "autoprefixer" "next"; do
-            if [ -f "node_modules/.pnpm/$package" ] || [ -f "node_modules/$package" ]; then
+            if pnpm list $package > /dev/null 2>&1; then
               echo "✓ $package: Available"
             else
               echo "✗ $package: Missing"
+              exit 1
             fi
           done
 
@@ -460,105 +458,23 @@ jobs:
             exit 1
           fi
 
-          # 軽量HTTPサーバーを起動
-          echo "Starting lightweight HTTP server for static files..."
+          # Next.js本番サーバーを起動
+          echo "Starting Next.js production server..."
           export PORT=3000
           export HOSTNAME=0.0.0.0
-          # サーバー起動時は本番環境用に設定
-          export NODE_ENV=production
+          # NODE_ENVは既にproductionに設定済み
 
-          # 複数のHTTPサーバーオプションを試行
-          echo "Trying different HTTP server options..."
-
-          # オプション1: serveパッケージ
-          if [ -f "node_modules/.pnpm/serve" ] || [ -f "node_modules/serve" ]; then
-            echo "Option 1: Using serve package..."
-            nohup npx serve .next -p 3000 -l 0.0.0.0:3000 > ../../ui_server.log 2>&1 &
-          else
-            echo "Serve package not found, trying to install..."
-            if pnpm add -D serve; then
-              echo "Serve package installed successfully"
-              nohup npx serve .next -p 3000 -l 0.0.0.0:3000 > ../../ui_server.log 2>&1 &
-            else
-              echo "Failed to install serve package, trying option 2..."
-
-              # オプション2: Python HTTPサーバー
-              if command -v python3 > /dev/null 2>&1; then
-                echo "Option 2: Using Python HTTP server..."
-                cd .next
-                nohup python3 -m http.server 3000 > ../../ui_server.log 2>&1 &
-                cd ..
-              else
-                echo "Python not available, trying option 3..."
-
-                # オプション3: Node.jsの簡易HTTPサーバー
-                echo "Option 3: Using Node.js simple HTTP server..."
-                echo "Creating simple HTTP server script..."
-
-                # 簡易HTTPサーバーのスクリプトを作成
-                echo 'const http = require("http");' > simple-server.js
-                echo 'const fs = require("fs");' >> simple-server.js
-                echo 'const path = require("path");' >> simple-server.js
-                echo '' >> simple-server.js
-                echo 'const server = http.createServer((req, res) => {' >> simple-server.js
-                echo '  let filePath = path.join(__dirname, ".next", req.url === "/" ? "index.html" : req.url);' >> simple-server.js
-                echo '' >> simple-server.js
-                echo '  if (!fs.existsSync(filePath)) {' >> simple-server.js
-                echo '    filePath = path.join(__dirname, ".next", "index.html");' >> simple-server.js
-                echo '  }' >> simple-server.js
-                echo '' >> simple-server.js
-                echo '  const ext = path.extname(filePath);' >> simple-server.js
-                echo '  const contentType = {' >> simple-server.js
-                echo '    ".html": "text/html",' >> simple-server.js
-                echo '    ".js": "text/javascript",' >> simple-server.js
-                echo '    ".css": "text/css",' >> simple-server.js
-                echo '    ".json": "application/json",' >> simple-server.js
-                echo '    ".png": "image/png",' >> simple-server.js
-                echo '    ".jpg": "image/jpg",' >> simple-server.js
-                echo '    ".gif": "image/gif",' >> simple-server.js
-                echo '    ".svg": "image/svg+xml",' >> simple-server.js
-                echo '    ".ico": "image/x-icon"' >> simple-server.js
-                echo '  }[ext] || "application/octet-stream";' >> simple-server.js
-                echo '' >> simple-server.js
-                echo '  fs.readFile(filePath, (err, content) => {' >> simple-server.js
-                echo '    if (err) {' >> simple-server.js
-                echo '      res.writeHead(404);' >> simple-server.js
-                echo '      res.end("File not found");' >> simple-server.js
-                echo '    } else {' >> simple-server.js
-                echo '      res.writeHead(200, { "Content-Type": contentType });' >> simple-server.js
-                echo '      res.end(content);' >> simple-server.js
-                echo '    }' >> simple-server.js
-                echo '  });' >> simple-server.js
-                echo '});' >> simple-server.js
-                echo '' >> simple-server.js
-                echo 'server.listen(3000, "0.0.0.0", () => {' >> simple-server.js
-                echo '  console.log("Simple HTTP server running on port 3000");' >> simple-server.js
-                echo '});' >> simple-server.js
-
-                echo "Simple HTTP server script created successfully"
-                nohup node simple-server.js > ../../ui_server.log 2>&1 &
-              fi
-            fi
-          fi
-
-          # 代替案: 開発サーバーの最適化（静的配信が問題がある場合）
-          # echo "Alternative: Starting optimized development server..."
-          # export NODE_ENV=development
-          # export NEXT_TELEMETRY_DISABLED=1
-          # export NEXT_FAST_REFRESH=false
-          # export NEXT_WEBPACK_USEPOLLING=false
-          #
-          # nohup pnpm dev > ../../ui_server.log 2>&1 &
-
+          # Next.js本番サーバーを起動
+          nohup pnpm start > ../../ui_server.log 2>&1 &
           SERVER_PID=$!
           echo $SERVER_PID > ../../ui_server.pid
 
-          echo "Static server started with PID: $SERVER_PID"
+          echo "Production server started with PID: $SERVER_PID"
           echo "PID file created: ../../ui_server.pid"
 
-          # サーバー起動を待機（静的サーバーは起動が早い）
-          echo "Waiting for static server to start..."
-          sleep 15
+          # サーバー起動を待機
+          echo "Waiting for production server to start..."
+          sleep 30
 
           # ログを確認
           echo "UI server log:"
