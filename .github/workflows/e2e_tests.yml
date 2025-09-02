@@ -1,0 +1,251 @@
+name: E2E Tests
+
+on:
+  # PR作成・更新時に実行
+  pull_request:
+    branches: [main, develop]
+  # mainブランチにpush時に実行
+  push:
+    branches: [main]
+  # 手動実行も可能
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # GitHub Actions の権限設定
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+      statuses: write
+
+    # 環境変数設定
+    env:
+      NODE_ENV: production
+      ENVIRONMENT: test
+      CI: true
+      API_PORT: 8000
+      UI_PORT: 3000
+
+    steps:
+      # ========================================
+      # 1. 環境セットアップ
+      # ========================================
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Setup pnpm
+        run: |
+          echo "Setting up pnpm via npm..."
+          npm install -g pnpm@9.15.0
+          pnpm --version
+          pnpm config set registry https://registry.npmjs.org/
+        env:
+          NODE_ENV: production
+          CI: true
+
+      # ========================================
+      # 2. キャッシュ設定
+      # ========================================
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-browsers-${{ hashFiles('tests/e2e/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-browsers-
+
+      - name: Cache Next.js build
+        uses: actions/cache@v3
+        with:
+          path: src/ui/.next
+          key: ${{ runner.os }}-nextjs-build-${{ hashFiles('src/ui/package.json', 'src/ui/next.config.js') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-build-
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-cache-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-cache-
+
+      # ========================================
+      # 3. 依存関係インストール
+      # ========================================
+      - name: Install frontend dependencies
+        working-directory: ./src/ui
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Install backend dependencies
+        run: |
+          uv pip install -e ".[test]"
+
+      - name: Install Playwright dependencies
+        working-directory: ./tests/e2e
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: ./tests/e2e
+        run: |
+          pnpm exec playwright install --with-deps
+
+      # ========================================
+      # 4. ビルド
+      # ========================================
+      - name: Build Next.js application
+        working-directory: ./src/ui
+        run: |
+          pnpm build
+
+      # ========================================
+      # 5. サーバー起動
+      # ========================================
+      - name: Start API server
+        run: |
+          echo "Starting API server..."
+          uv run uvicorn src.api.main:app --host 0.0.0.0 --port ${{ env.API_PORT }} &
+          echo $! > api_server.pid
+          echo "API server started with PID: $(cat api_server.pid)"
+
+      - name: Wait for API server
+        run: |
+          echo "Waiting for API server to be ready..."
+          timeout 300 bash -c 'until curl -f http://localhost:${{ env.API_PORT }}/system/health; do sleep 5; done'
+          echo "API server is ready!"
+
+      - name: Start UI server
+        run: |
+          echo "Starting UI server..."
+          cd src/ui
+          node .next/standalone/server.js &
+          echo $! > ui_server.pid
+          echo "UI server started with PID: $(cat ui_server.pid)"
+
+      - name: Wait for UI server
+        run: |
+          echo "Waiting for UI server to be ready..."
+          timeout 300 bash -c 'until curl -f http://localhost:${{ env.UI_PORT }}; do sleep 5; done'
+          echo "UI server is ready!"
+
+      # ========================================
+      # 6. テスト実行
+      # ========================================
+      - name: Run Playwright tests
+        working-directory: ./tests/e2e
+        run: |
+          pnpm test
+        env:
+          CI: true
+
+      # ========================================
+      # 7. 結果収集
+      # ========================================
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-test-results
+          path: |
+            tests/e2e/test-results/
+            tests/e2e/playwright-report/
+          retention-days: 30
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-artifacts
+          path: |
+            tests/e2e/test-results/
+          retention-days: 7
+
+      # ========================================
+      # 8. クリーンアップ
+      # ========================================
+      - name: Stop servers
+        if: always()
+        run: |
+          echo "Stopping servers..."
+          if [ -f api_server.pid ]; then
+            kill $(cat api_server.pid) 2>/dev/null || true
+            rm -f api_server.pid
+          fi
+          if [ -f ui_server.pid ]; then
+            kill $(cat ui_server.pid) 2>/dev/null || true
+            rm -f ui_server.pid
+          fi
+          echo "Servers stopped"
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // テスト結果ファイルの存在確認
+            const resultsPath = 'tests/e2e/test-results/results.json';
+            if (fs.existsSync(resultsPath)) {
+              const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+              const stats = results.stats || {};
+
+              const comment = `## 🎭 E2E Test Results
+
+              **Test Summary:**
+              - ✅ Passed: ${stats.passed || 0}
+              - ❌ Failed: ${stats.failed || 0}
+              - ⏭️ Skipped: ${stats.skipped || 0}
+              - ⏱️ Duration: ${stats.duration || 'N/A'}ms
+
+              **Test Artifacts:**
+              - 📊 [Test Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              - 📸 Screenshots and videos are available in the artifacts
+
+              ${stats.failed > 0 ? '⚠️ Some tests failed. Please check the detailed report.' : '🎉 All tests passed!'}`;
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+        continue-on-error: true
