@@ -55,26 +55,31 @@ jobs:
           source .venv/bin/activate
           uv pip install -e ".[test]"
 
-      # 4. Playwright dependencies
+      # 4. Frontend dependencies
+      - name: Install frontend dependencies
+        working-directory: ./src/ui
+        run: pnpm install --frozen-lockfile
+
+      # 5. Playwright dependencies
       - name: Install Playwright dependencies
         working-directory: ./tests/e2e
         run: |
           pnpm install --frozen-lockfile
           npx playwright install --with-deps
 
-      # 5. Next.js standalone build
+      # 6. Next.js standalone build
       - name: Build Next.js (standalone)
         working-directory: ./src/ui
         run: pnpm build
 
-      # 6. Run Playwright tests
+      # 7. Run Playwright tests
       - name: Run Playwright E2E tests
         working-directory: ./tests/e2e
         run: npx playwright test --config=playwright.config.ts
         env:
           CI: true
 
-      # 7. Collect artifacts
+      # 8. Collect artifacts
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
