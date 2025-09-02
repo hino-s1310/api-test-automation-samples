@@ -121,11 +121,12 @@ jobs:
         working-directory: ./tests/e2e
         run: |
           pnpm install --frozen-lockfile
+          pnpm list @playwright/test
 
       - name: Install Playwright browsers
-        working-directory: ./tests/e2e
         run: |
-          pnpm exec playwright install --with-deps
+          cd tests/e2e
+          npx playwright install --with-deps
 
       # ========================================
       # 4. ビルド
@@ -172,9 +173,9 @@ jobs:
       # 6. テスト実行
       # ========================================
       - name: Run Playwright tests
-        working-directory: ./tests/e2e
         run: |
-          pnpm test
+          cd tests/e2e
+          npx playwright test
         env:
           CI: true
 
