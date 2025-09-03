@@ -8,20 +8,124 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+# SQLModel関連のインポート
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlmodel import SQLModel
+
+# 環境設定
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
+
+# ===========================
+# 共通データベース設定
+# ===========================
+
+
+def get_database_path() -> str:
+    """既存のDatabaseManagerと同じロジックでDBパスを取得"""
+    environment = os.getenv("ENVIRONMENT", "development")
+    if environment == "test":
+        return "data/test_database.db"
+    else:
+        return "data/database.db"
+
+
+# ===========================
+# SQLModel用データベース設定
+# ===========================
+
+
+def get_database_url(db_path: str = None) -> str:
+    """データベースURLを取得"""
+    if db_path is None:
+        db_path = get_database_path()
+
+    # SQLite用のURL形式
+    return f"sqlite:///{db_path}"
+
+
+def create_sqlmodel_engine(db_path: str = None):
+    """SQLModel用エンジンを作成"""
+    database_url = get_database_url(db_path)
+    engine = create_engine(
+        database_url,
+        connect_args={"check_same_thread": False},  # SQLite用設定
+        echo=False,  # SQLクエリのログ出力（開発時はTrueに設定可能）
+    )
+    return engine
+
+
+def create_session_factory(engine=None):
+    """セッションファクトリーを作成"""
+    if engine is None:
+        engine = create_sqlmodel_engine()
+
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return SessionLocal
+
+
+# グローバルエンジンとセッションファクトリー
+_engine = None
+_session_factory = None
+
+
+def get_engine():
+    """グローバルエンジンを取得"""
+    global _engine
+    if _engine is None:
+        _engine = create_sqlmodel_engine()
+    return _engine
+
+
+def get_session_factory():
+    """グローバルセッションファクトリーを取得"""
+    global _session_factory
+    if _session_factory is None:
+        _session_factory = create_session_factory(get_engine())
+    return _session_factory
+
+
+class SQLModelSessionManager:
+    """SQLModel用セッション管理クラス"""
+
+    def __init__(self, db_path: str = None):
+        self.engine = create_sqlmodel_engine(db_path)
+        self.SessionLocal = create_session_factory(self.engine)
+
+    def get_session(self):
+        """セッションを取得"""
+        return self.SessionLocal()
+
+    def create_tables(self):
+        """テーブルを作成"""
+        SQLModel.metadata.create_all(self.engine)
+
+    def drop_tables(self):
+        """テーブルを削除（テスト用）"""
+        SQLModel.metadata.drop_all(self.engine)
+
+    def __enter__(self):
+        """コンテキストマネージャー開始"""
+        self.session = self.get_session()
+        return self.session
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """コンテキストマネージャー終了"""
+        if exc_type is not None:
+            self.session.rollback()
+        else:
+            self.session.commit()
+        self.session.close()
+
 
 class DatabaseManager:
     """SQLiteデータベース管理クラス"""
 
     def __init__(self, db_path: str = None):
         if db_path is None:
-            # 環境変数でテスト用DBパスを指定可能
-            import os
-
-            environment = os.getenv("ENVIRONMENT", "development")
-            if environment == "test":
-                db_path = "data/test_database.db"
-            else:
-                db_path = "data/database.db"
+            # 統一されたDBパス取得ロジックを使用
+            db_path = get_database_path()
 
         self.db_path = db_path
         self._ensure_db_directory()
@@ -48,7 +152,7 @@ class DatabaseManager:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     processing_time REAL,
-                    metadata TEXT,
+                    file_metadata TEXT,
                     last_edited_at TIMESTAMP,
                     edit_count INTEGER DEFAULT 0,
                     is_edited BOOLEAN DEFAULT FALSE
@@ -136,7 +240,7 @@ class DatabaseManager:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute(
                     """
-                    INSERT INTO files (id, filename, original_path, file_size, metadata)
+                    INSERT INTO files (id, filename, original_path, file_size, file_metadata)
                     VALUES (?, ?, ?, ?, ?)
                 """,
                     (
@@ -217,8 +321,10 @@ class DatabaseManager:
 
                 if row:
                     file_dict = dict(row)
-                    if file_dict.get("metadata"):
-                        file_dict["metadata"] = json.loads(file_dict["metadata"])
+                    if file_dict.get("file_metadata"):
+                        file_dict["file_metadata"] = json.loads(
+                            file_dict["file_metadata"]
+                        )
                     return file_dict
                 return None
         except Exception as e:
@@ -534,6 +640,79 @@ class DatabaseManager:
     def _get_connection(self):
         """データベース接続を取得（テスト用）"""
         return sqlite3.connect(self.db_path)
+
+
+# ===========================
+# 互換性確保・統合機能
+# ===========================
+
+
+def ensure_database_compatibility():
+    """既存のDatabaseManagerとSQLModelの互換性を確保"""
+    # 既存のDatabaseManagerでテーブルを作成
+    db_manager = DatabaseManager()
+
+    # SQLModel用のテーブルも作成（既存テーブルと互換性を保つ）
+    session_manager = SQLModelSessionManager()
+    session_manager.create_tables()
+
+    return db_manager, session_manager
+
+
+def get_unified_database_manager():
+    """統合されたデータベース管理機能を提供"""
+    db_path = get_database_path()
+
+    # 既存のDatabaseManager
+    legacy_manager = DatabaseManager(db_path)
+
+    # SQLModel用のセッションマネージャー
+    sqlmodel_manager = SQLModelSessionManager(db_path)
+
+    return {
+        "legacy": legacy_manager,
+        "sqlmodel": sqlmodel_manager,
+        "db_path": db_path,
+        "environment": ENVIRONMENT,
+    }
+
+
+def verify_database_compatibility():
+    """データベース互換性を検証"""
+    try:
+        # 既存のDatabaseManagerでテーブル構造を確認
+        legacy_manager = DatabaseManager()
+
+        # SQLModel用のテーブルも作成
+        sqlmodel_manager = SQLModelSessionManager()
+        sqlmodel_manager.create_tables()
+
+        # 基本的な互換性テスト
+        with sqlite3.connect(legacy_manager.db_path) as conn:
+            # 既存テーブルの存在確認
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = [row[0] for row in cursor.fetchall()]
+
+            required_tables = ["files", "conversion_logs", "file_edit_history"]
+            missing_tables = [table for table in required_tables if table not in tables]
+
+            if missing_tables:
+                return {
+                    "compatible": False,
+                    "error": f"Missing tables: {missing_tables}",
+                    "tables": tables,
+                }
+
+        return {
+            "compatible": True,
+            "message": "Database compatibility verified",
+            "tables": tables,
+            "environment": ENVIRONMENT,
+            "db_path": legacy_manager.db_path,
+        }
+
+    except Exception as e:
+        return {"compatible": False, "error": str(e), "environment": ENVIRONMENT}
 
 
 # グローバルインスタンス
