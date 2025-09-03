@@ -8,15 +8,22 @@
 from datetime import datetime, timedelta
 from typing import Any
 
-from ..database import db_manager
-from ..models import FileStatus
+from sqlmodel import and_, func, or_, select
+
+from ..database import SQLModelSessionManager, db_manager
+from ..models import ConversionLog, File, FileEditHistory, FileStatus
 
 
 class FileRepository:
     """ファイルリポジトリクラス"""
 
-    def __init__(self):
+    def __init__(self, use_sqlmodel: bool = False):
         self.db_manager = db_manager
+        self.use_sqlmodel = use_sqlmodel
+        if use_sqlmodel:
+            self.sqlmodel_manager = SQLModelSessionManager()
+        else:
+            self.sqlmodel_manager = None
 
     # ===========================
     # 基本的なCRUD操作
@@ -24,45 +31,133 @@ class FileRepository:
 
     def get_file(self, file_id: str) -> dict[str, Any] | None:
         """ファイル情報を取得"""
-        return self.db_manager.get_file(file_id)
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(File).where(File.id == file_id)
+                    file_obj = session.exec(statement).first()
+                    if file_obj:
+                        return file_obj.to_dict()
+                    return None
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                return self.db_manager.get_file(file_id)
+        else:
+            return self.db_manager.get_file(file_id)
 
     def create_file(self, file_data: dict[str, Any]) -> bool:
         """ファイルを作成"""
-        try:
-            return self.db_manager.insert_file(
-                file_id=file_data["id"],
-                filename=file_data["filename"],
-                original_path=file_data["original_path"],
-                file_size=file_data["file_size"],
-                status=file_data.get("status", FileStatus.PROCESSING),
-            )
-        except Exception:
-            return False
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    # SQLModelのFileオブジェクトを作成
+                    file_obj = File(
+                        id=file_data["id"],
+                        filename=file_data["filename"],
+                        original_path=file_data["original_path"],
+                        file_size=file_data["file_size"],
+                        status=file_data.get("status", FileStatus.PROCESSING),
+                        created_at=datetime.now(),
+                        updated_at=datetime.now(),
+                    )
+                    session.add(file_obj)
+                    session.commit()
+                    return True
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                try:
+                    return self.db_manager.insert_file(
+                        file_id=file_data["id"],
+                        filename=file_data["filename"],
+                        original_path=file_data["original_path"],
+                        file_size=file_data["file_size"],
+                        status=file_data.get("status", FileStatus.PROCESSING),
+                    )
+                except Exception:
+                    return False
+        else:
+            try:
+                return self.db_manager.insert_file(
+                    file_id=file_data["id"],
+                    filename=file_data["filename"],
+                    original_path=file_data["original_path"],
+                    file_size=file_data["file_size"],
+                    status=file_data.get("status", FileStatus.PROCESSING),
+                )
+            except Exception:
+                return False
 
     def update_file(self, file_id: str, update_data: dict[str, Any]) -> bool:
         """ファイル情報を更新"""
-        try:
-            # 個別の更新処理を呼び出し
-            if "status" in update_data:
-                if "markdown_content" in update_data:
-                    return self.db_manager.update_file_status(
-                        file_id, update_data["status"], update_data["markdown_content"]
-                    )
-                else:
-                    return self.db_manager.update_file_status(
-                        file_id, update_data["status"]
-                    )
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(File).where(File.id == file_id)
+                    file_obj = session.exec(statement).first()
+                    if not file_obj:
+                        return False
 
-            # その他の更新処理
-            return self.update_file_content(
-                file_id=file_id,
-                new_filename=update_data.get("filename"),
-                new_content=update_data.get("markdown_content"),
-                edit_reason=update_data.get("edit_reason"),
-                edited_by=update_data.get("edited_by", "system"),
-            )
-        except Exception:
-            return False
+                    # 更新データを適用
+                    for key, value in update_data.items():
+                        if hasattr(file_obj, key):
+                            setattr(file_obj, key, value)
+
+                    # updated_atを自動更新
+                    file_obj.updated_at = datetime.now()
+
+                    session.add(file_obj)
+                    session.commit()
+                    return True
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                try:
+                    if "status" in update_data:
+                        if "markdown_content" in update_data:
+                            return self.db_manager.update_file_status(
+                                file_id,
+                                update_data["status"],
+                                update_data["markdown_content"],
+                            )
+                        else:
+                            return self.db_manager.update_file_status(
+                                file_id, update_data["status"]
+                            )
+
+                    # その他の更新処理
+                    return self.update_file_content(
+                        file_id=file_id,
+                        new_filename=update_data.get("filename"),
+                        new_content=update_data.get("markdown_content"),
+                        edit_reason=update_data.get("edit_reason"),
+                        edited_by=update_data.get("edited_by", "system"),
+                    )
+                except Exception:
+                    return False
+        else:
+            try:
+                # 個別の更新処理を呼び出し
+                if "status" in update_data:
+                    if "markdown_content" in update_data:
+                        return self.db_manager.update_file_status(
+                            file_id,
+                            update_data["status"],
+                            update_data["markdown_content"],
+                        )
+                    else:
+                        return self.db_manager.update_file_status(
+                            file_id, update_data["status"]
+                        )
+
+                # その他の更新処理
+                return self.update_file_content(
+                    file_id=file_id,
+                    new_filename=update_data.get("filename"),
+                    new_content=update_data.get("markdown_content"),
+                    edit_reason=update_data.get("edit_reason"),
+                    edited_by=update_data.get("edited_by", "system"),
+                )
+            except Exception:
+                return False
 
     def update_file_content(
         self,
@@ -86,7 +181,22 @@ class FileRepository:
 
     def delete_file(self, file_id: str) -> bool:
         """ファイルを削除"""
-        return self.db_manager.delete_file(file_id)
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(File).where(File.id == file_id)
+                    file_obj = session.exec(statement).first()
+                    if not file_obj:
+                        return False
+
+                    session.delete(file_obj)
+                    session.commit()
+                    return True
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                return self.db_manager.delete_file(file_id)
+        else:
+            return self.db_manager.delete_file(file_id)
 
     def file_exists(self, file_id: str) -> bool:
         """ファイルの存在確認"""
@@ -98,7 +208,34 @@ class FileRepository:
 
     def list_files(self, page: int = 1, per_page: int = 10) -> dict[str, Any]:
         """ファイル一覧を取得"""
-        return self.db_manager.list_files(page, per_page)
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    # 総件数を取得
+                    count_statement = select(func.count(File.id))
+                    total_count = session.exec(count_statement).one()
+
+                    # ページネーション用のオフセット計算
+                    offset = (page - 1) * per_page
+
+                    # ファイル一覧を取得
+                    statement = select(File).offset(offset).limit(per_page)
+                    files = session.exec(statement).all()
+
+                    # 辞書形式に変換
+                    file_dicts = [file_obj.to_dict() for file_obj in files]
+
+                    return {
+                        "files": file_dicts,
+                        "total_count": total_count,
+                        "page": page,
+                        "per_page": per_page,
+                    }
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                return self.db_manager.list_files(page, per_page)
+        else:
+            return self.db_manager.list_files(page, per_page)
 
     def search_files(
         self,
@@ -109,52 +246,157 @@ class FileRepository:
         per_page: int = 10,
     ) -> dict[str, Any]:
         """ファイルを検索・フィルタリング"""
-        return self.db_manager.search_files(
-            query=query,
-            status=status,
-            is_edited=is_edited,
-            page=page,
-            per_page=per_page,
-        )
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    # ベースクエリ
+                    statement = select(File)
+                    conditions = []
+
+                    # 検索条件の構築
+                    if query:
+                        conditions.append(
+                            or_(
+                                File.filename.contains(query),
+                                File.original_path.contains(query),
+                            )
+                        )
+
+                    if status:
+                        conditions.append(File.status == status)
+
+                    if is_edited is not None:
+                        conditions.append(File.is_edited == is_edited)
+
+                    # 条件を適用
+                    if conditions:
+                        statement = statement.where(and_(*conditions))
+
+                    # 総件数を取得
+                    count_statement = select(func.count(File.id))
+                    if conditions:
+                        count_statement = count_statement.where(and_(*conditions))
+                    total_count = session.exec(count_statement).one()
+
+                    # ページネーション
+                    offset = (page - 1) * per_page
+                    statement = statement.offset(offset).limit(per_page)
+
+                    # 結果を取得
+                    files = session.exec(statement).all()
+                    file_dicts = [file_obj.to_dict() for file_obj in files]
+
+                    return {
+                        "files": file_dicts,
+                        "total_count": total_count,
+                        "page": page,
+                        "per_page": per_page,
+                    }
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                return self.db_manager.search_files(
+                    query=query,
+                    status=status,
+                    is_edited=is_edited,
+                    page=page,
+                    per_page=per_page,
+                )
+        else:
+            return self.db_manager.search_files(
+                query=query,
+                status=status,
+                is_edited=is_edited,
+                page=page,
+                per_page=per_page,
+            )
 
     def get_files_by_status(self, status: str) -> list[dict[str, Any]]:
         """指定されたステータスのファイルを取得"""
-        result = self.db_manager.list_files(page=1, per_page=10000)
-        return [f for f in result["files"] if f["status"] == status]
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(File).where(File.status == status)
+                    files = session.exec(statement).all()
+                    return [file_obj.to_dict() for file_obj in files]
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                result = self.db_manager.list_files(page=1, per_page=10000)
+                return [f for f in result["files"] if f["status"] == status]
+        else:
+            result = self.db_manager.list_files(page=1, per_page=10000)
+            return [f for f in result["files"] if f["status"] == status]
 
     def get_files_created_after(self, date: datetime) -> list[dict[str, Any]]:
         """指定された日時以降に作成されたファイルを取得"""
-        result = self.db_manager.list_files(page=1, per_page=10000)
-        files = []
-
-        for file_info in result["files"]:
+        if self.use_sqlmodel and self.sqlmodel_manager:
             try:
-                created_at = datetime.fromisoformat(
-                    file_info["created_at"].replace("Z", "+00:00")
-                )
-                if created_at >= date:
-                    files.append(file_info)
-            except (ValueError, TypeError):
-                continue
-        # noqa: W293
-        return files
+                with self.sqlmodel_manager as session:
+                    statement = select(File).where(File.created_at >= date)
+                    files = session.exec(statement).all()
+                    return [file_obj.to_dict() for file_obj in files]
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                result = self.db_manager.list_files(page=1, per_page=10000)
+                files = []
+                for file_info in result["files"]:
+                    try:
+                        created_at = datetime.fromisoformat(
+                            file_info["created_at"].replace("Z", "+00:00")
+                        )
+                        if created_at >= date:
+                            files.append(file_info)
+                    except (ValueError, TypeError):
+                        continue
+                return files
+        else:
+            result = self.db_manager.list_files(page=1, per_page=10000)
+            files = []
+            for file_info in result["files"]:
+                try:
+                    created_at = datetime.fromisoformat(
+                        file_info["created_at"].replace("Z", "+00:00")
+                    )
+                    if created_at >= date:
+                        files.append(file_info)
+                except (ValueError, TypeError):
+                    continue
+            return files
 
     def get_files_created_before(self, date: datetime) -> list[dict[str, Any]]:
         """指定された日時以前に作成されたファイルを取得"""
-        result = self.db_manager.list_files(page=1, per_page=10000)
-        files = []
-
-        for file_info in result["files"]:
+        if self.use_sqlmodel and self.sqlmodel_manager:
             try:
-                created_at = datetime.fromisoformat(
-                    file_info["created_at"].replace("Z", "+00:00")
-                )
-                if created_at <= date:
-                    files.append(file_info)
-            except (ValueError, TypeError):
-                continue
-
-        return files
+                with self.sqlmodel_manager as session:
+                    statement = select(File).where(File.created_at <= date)
+                    files = session.exec(statement).all()
+                    return [file_obj.to_dict() for file_obj in files]
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                result = self.db_manager.list_files(page=1, per_page=10000)
+                files = []
+                for file_info in result["files"]:
+                    try:
+                        created_at = datetime.fromisoformat(
+                            file_info["created_at"].replace("Z", "+00:00")
+                        )
+                        if created_at <= date:
+                            files.append(file_info)
+                    except (ValueError, TypeError):
+                        continue
+                return files
+        else:
+            result = self.db_manager.list_files(page=1, per_page=10000)
+            files = []
+            for file_info in result["files"]:
+                try:
+                    created_at = datetime.fromisoformat(
+                        file_info["created_at"].replace("Z", "+00:00")
+                    )
+                    if created_at <= date:
+                        files.append(file_info)
+                except (ValueError, TypeError):
+                    continue
+            return files
 
     # ===========================
     # ファイル統計情報
@@ -162,39 +404,95 @@ class FileRepository:
 
     def get_file_count(self) -> int:
         """ファイル総数を取得"""
-        result = self.db_manager.list_files(page=1, per_page=1)
-        return result["total_count"]
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(func.count(File.id))
+                    return session.exec(statement).one()
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                result = self.db_manager.list_files(page=1, per_page=1)
+                return result["total_count"]
+        else:
+            result = self.db_manager.list_files(page=1, per_page=1)
+            return result["total_count"]
 
     def get_file_count_by_status(self, status: str) -> int:
         """指定されたステータスのファイル数を取得"""
-        files = self.get_files_by_status(status)
-        return len(files)
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(func.count(File.id)).where(File.status == status)
+                    return session.exec(statement).one()
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                files = self.get_files_by_status(status)
+                return len(files)
+        else:
+            files = self.get_files_by_status(status)
+            return len(files)
 
     def get_total_file_size(self) -> int:
         """ファイル総サイズを取得（バイト）"""
-        result = self.db_manager.list_files(page=1, per_page=10000)
-        total_size = 0
-
-        for file_info in result["files"]:
-            file_size = file_info.get("file_size", 0)
-            if isinstance(file_size, int | float) and file_size >= 0:
-                total_size += file_size
-
-        return total_size
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(func.sum(File.file_size))
+                    result = session.exec(statement).one()
+                    return result if result is not None else 0
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                result = self.db_manager.list_files(page=1, per_page=10000)
+                total_size = 0
+                for file_info in result["files"]:
+                    file_size = file_info.get("file_size", 0)
+                    if isinstance(file_size, int | float) and file_size >= 0:
+                        total_size += file_size
+                return total_size
+        else:
+            result = self.db_manager.list_files(page=1, per_page=10000)
+            total_size = 0
+            for file_info in result["files"]:
+                file_size = file_info.get("file_size", 0)
+                if isinstance(file_size, int | float) and file_size >= 0:
+                    total_size += file_size
+            return total_size
 
     def get_average_processing_time(self) -> float:
         """平均処理時間を取得"""
-        result = self.db_manager.list_files(page=1, per_page=10000)
-        total_time = 0
-        count = 0
-
-        for file_info in result["files"]:
-            processing_time = file_info.get("processing_time")
-            if isinstance(processing_time, int | float) and processing_time >= 0:
-                total_time += processing_time
-                count += 1
-
-        return round(total_time / count, 2) if count > 0 else 0.0
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    # 処理時間がNULLでないファイルの平均を取得
+                    statement = select(func.avg(File.processing_time)).where(
+                        File.processing_time.is_not(None)
+                    )
+                    result = session.exec(statement).one()
+                    return round(result, 2) if result is not None else 0.0
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                result = self.db_manager.list_files(page=1, per_page=10000)
+                total_time = 0
+                count = 0
+                for file_info in result["files"]:
+                    processing_time = file_info.get("processing_time")
+                    if (
+                        isinstance(processing_time, int | float)
+                        and processing_time >= 0
+                    ):
+                        total_time += processing_time
+                        count += 1
+                return round(total_time / count, 2) if count > 0 else 0.0
+        else:
+            result = self.db_manager.list_files(page=1, per_page=10000)
+            total_time = 0
+            count = 0
+            for file_info in result["files"]:
+                processing_time = file_info.get("processing_time")
+                if isinstance(processing_time, int | float) and processing_time >= 0:
+                    total_time += processing_time
+                    count += 1
+            return round(total_time / count, 2) if count > 0 else 0.0
 
     def get_file_statistics(self) -> dict[str, Any]:
         """ファイル統計情報を取得"""
@@ -237,7 +535,19 @@ class FileRepository:
 
     def get_file_edit_history(self, file_id: str) -> list[dict[str, Any]]:
         """ファイルの編集履歴を取得"""
-        return self.db_manager.get_edit_history(file_id)
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(FileEditHistory).where(
+                        FileEditHistory.file_id == file_id
+                    )
+                    history = session.exec(statement).all()
+                    return [h.to_dict() for h in history]
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                return self.db_manager.get_edit_history(file_id)
+        else:
+            return self.db_manager.get_edit_history(file_id)
 
     def add_edit_history(
         self,
@@ -250,18 +560,49 @@ class FileRepository:
         edited_by: str = "system",
     ) -> bool:
         """編集履歴を追加"""
-        try:
-            return self.db_manager.add_edit_history(
-                file_id=file_id,
-                original_filename=original_filename,
-                original_content=original_content,
-                edited_filename=edited_filename,
-                edited_content=edited_content,
-                edit_reason=edit_reason,
-                edited_by=edited_by,
-            )
-        except Exception:
-            return False
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    history_obj = FileEditHistory(
+                        file_id=file_id,
+                        original_filename=original_filename,
+                        original_content=original_content,
+                        edited_filename=edited_filename,
+                        edited_content=edited_content,
+                        edit_reason=edit_reason,
+                        edited_by=edited_by,
+                        created_at=datetime.now(),
+                    )
+                    session.add(history_obj)
+                    session.commit()
+                    return True
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                try:
+                    return self.db_manager.add_edit_history(
+                        file_id=file_id,
+                        original_filename=original_filename,
+                        original_content=original_content,
+                        edited_filename=edited_filename,
+                        edited_content=edited_content,
+                        edit_reason=edit_reason,
+                        edited_by=edited_by,
+                    )
+                except Exception:
+                    return False
+        else:
+            try:
+                return self.db_manager.add_edit_history(
+                    file_id=file_id,
+                    original_filename=original_filename,
+                    original_content=original_content,
+                    edited_filename=edited_filename,
+                    edited_content=edited_content,
+                    edit_reason=edit_reason,
+                    edited_by=edited_by,
+                )
+            except Exception:
+                return False
 
     def get_edit_history(self, file_id: str) -> list[dict[str, Any]]:
         """指定されたファイルの編集履歴を取得"""
@@ -287,7 +628,19 @@ class FileRepository:
 
     def get_conversion_logs(self, file_id: str) -> list[dict[str, Any]]:
         """変換ログを取得"""
-        return self.db_manager.get_conversion_logs(file_id)
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(ConversionLog).where(
+                        ConversionLog.file_id == file_id
+                    )
+                    logs = session.exec(statement).all()
+                    return [log.to_dict() for log in logs]
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                return self.db_manager.get_conversion_logs(file_id)
+        else:
+            return self.db_manager.get_conversion_logs(file_id)
 
     def add_conversion_log(
         self,
@@ -298,16 +651,43 @@ class FileRepository:
         processing_time: float | None = None,
     ) -> bool:
         """変換ログを追加"""
-        try:
-            return self.db_manager.add_conversion_log(
-                file_id=file_id,
-                action=action,
-                status=status,
-                message=message,
-                processing_time=processing_time,
-            )
-        except Exception:
-            return False
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    log_obj = ConversionLog(
+                        file_id=file_id,
+                        action=action,
+                        status=status,
+                        message=message,
+                        timestamp=datetime.now(),
+                        processing_time=processing_time,
+                    )
+                    session.add(log_obj)
+                    session.commit()
+                    return True
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                try:
+                    return self.db_manager.add_conversion_log(
+                        file_id=file_id,
+                        action=action,
+                        status=status,
+                        message=message,
+                        processing_time=processing_time,
+                    )
+                except Exception:
+                    return False
+        else:
+            try:
+                return self.db_manager.add_conversion_log(
+                    file_id=file_id,
+                    action=action,
+                    status=status,
+                    message=message,
+                    processing_time=processing_time,
+                )
+            except Exception:
+                return False
 
     # ===========================
     # クリーンアップ・メンテナンス
