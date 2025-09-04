@@ -7,7 +7,7 @@ import { VALID_UPLOAD_DATA, VALID_UPDATE_DATA } from '../fixtures/test-data';
 const FILE_NAME = VALID_UPLOAD_DATA.filename;
 const UPDATE_FILE_NAME = VALID_UPDATE_DATA.filename;
 
-test.describe('ファイル更新APIの統合テスト', () => {
+test.describe('ファイル再生成APIの統合テスト', () => {
   // テストを直列実行して、データベースの状態を管理
   test.describe.configure({ mode: 'serial' });
 
@@ -17,7 +17,7 @@ test.describe('ファイル更新APIの統合テスト', () => {
     await cleanupMockData(page);
   });
 
-  test('ファイル更新APIの統合テスト', async ({ page }) => {
+  test('ファイル再生成APIの統合テスト', async ({ page }) => {
     // モックデータを挿入し、ファイルIDを取得
     await setupMockData(page);
     const fileId = await getFileId(page, FILE_NAME);
@@ -45,7 +45,7 @@ test.describe('ファイル更新APIの統合テスト', () => {
     // モーダルを閉じる
     await filesListPage.clickFileDetailModalCloseButton();
 
-    // ファイル更新APIを実行（新しいファイル名で更新）
+    // ファイル再生成APIを実行（PDFファイルの再変換）
     const updateResponse = await reconvertFile(page.request, fileId);
 
     // 更新APIのレスポンスを確認
@@ -57,27 +57,34 @@ test.describe('ファイル更新APIの統合テスト', () => {
     // ファイルIDが同じであることを確認
     expect(updateResponseBody.id).toBe(fileId);
 
-    // ファイル名が新しい名前に変更されていることを確認
-    expect(updateResponseBody.filename).toBe(UPDATE_FILE_NAME);
+    // ファイル名は変更されないことを確認（再生成APIではファイル名は保持される）
+    expect(updateResponseBody.filename).toBe(FILE_NAME);
+
+    // 再生成後のMarkdown内容が存在することを確認
+    expect(updateResponseBody.markdown).toBeDefined();
+    expect(updateResponseBody.markdown).toContain('PDF変換結果');
+
+    // ステータスが完了状態であることを確認
+    expect(updateResponseBody.status).toBe('completed');
 
     // ページを再読み込みして最新の状態を取得
     await filesListPage.reload();
     await filesListPage.waitForPageLoad('domcontentloaded');
 
-    // 新しいファイル名でファイル詳細モーダルを開く
-    await filesListPage.clickFileName(UPDATE_FILE_NAME);
+    // 元のファイル名でファイル詳細モーダルを開く（再生成後もファイル名は同じ）
+    await filesListPage.clickFileName(FILE_NAME);
 
-    // ファイル詳細モーダルのファイル名を確認（新しい名前に変更されている）
+    // ファイル詳細モーダルのファイル名を確認（再生成後もファイル名は同じ）
     const updatedFileName = filesListPage.getFileDetailModalFileName();
     await expect(updatedFileName).toBeVisible();
-    await expect(updatedFileName).toContainText(UPDATE_FILE_NAME);
+    await expect(updatedFileName).toContainText(FILE_NAME);
 
-    // ファイル名が実際に変更されていることを詳細に検証
+    // ファイル名が再生成後も同じであることを確認
     const actualFileName = await updatedFileName.textContent();
-    expect(actualFileName).toContain(UPDATE_FILE_NAME);
+    expect(actualFileName).toContain(FILE_NAME);
 
-    // ファイル名が元のファイル名と異なることを確認
-    expect(actualFileName).not.toBe(FILE_NAME);
+    // 再生成APIではファイル名は変更されないことを確認
+    expect(actualFileName).toBe(FILE_NAME);
   });
 
   test.afterEach(async ({ page }) => {

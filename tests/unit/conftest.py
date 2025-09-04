@@ -5,15 +5,21 @@ pytest 設定とテストフィクスチャ
 すべてのテストファイルで自動的に利用可能になります。
 """
 
+import logging
+import os
 import shutil
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import app
+from src.api.services.file_service import FileService
+from src.api.services.pdf_service import PDFService
 from tests.unit import TEST_DATA_DIR
+from tests.unit.fixtures import PDFTestData
 from tests.unit.helpers import upload_test_pdf
 
 # ===========================
@@ -28,9 +34,6 @@ def test_client():
     すべてのテストで同じクライアントインスタンスを使用することで、
     テスト実行時間を短縮できます。
     """
-    # テスト環境用の一時ディレクトリを作成
-    import os
-    import tempfile
 
     # テスト用の一時ディレクトリを作成
     temp_upload_dir = tempfile.mkdtemp(prefix="test_uploads_")
@@ -47,9 +50,6 @@ def test_client():
 
     # クライアントと一時ディレクトリのパスを返す
     yield client
-
-    # セッション終了時に一時ディレクトリをクリーンアップ
-    import shutil
 
     try:
         shutil.rmtree(temp_upload_dir)
@@ -86,8 +86,6 @@ def clean_environment():
 
     各テスト関数の実行前後で環境をクリーンな状態に保ちます。
     """
-    # テスト実行前のセットアップ
-    import os
 
     original_env = os.environ.copy()
 
@@ -150,7 +148,6 @@ def sample_file_id(test_client):
 @pytest.fixture
 def pdf_service_for_test():
     """テスト用のPDFServiceインスタンス（特定のディレクトリを指定）"""
-    from src.api.services.pdf_service import PDFService
 
     return PDFService(upload_dir="test_uploads", markdown_dir="test_markdown")
 
@@ -163,7 +160,6 @@ def pdf_service_for_test():
 @pytest.fixture
 def file_service(mock_db_manager):
     """FileServiceのインスタンス（モックされたFileRepositoryを使用）"""
-    from src.api.services.file_service import FileService
 
     # モックされたFileRepositoryを注入
     service = FileService(file_repository=mock_db_manager)
@@ -178,7 +174,6 @@ def file_service(mock_db_manager):
 @pytest.fixture
 def mock_db_manager():
     """FileRepositoryのモック（改良後のサービス層に対応）"""
-    from unittest.mock import Mock
 
     # FileRepositoryのモックを作成
     mock_repo = Mock()
@@ -240,7 +235,6 @@ def mock_db_manager():
 @pytest.fixture
 def valid_pdf_content():
     """有効なPDFコンテンツ"""
-    from tests.unit.fixtures import PDFTestData
 
     return PDFTestData.valid_pdf_bytes()
 
@@ -248,7 +242,6 @@ def valid_pdf_content():
 @pytest.fixture
 def invalid_pdf_content():
     """無効なPDFコンテンツ"""
-    from tests.unit.fixtures import PDFTestData
 
     return PDFTestData.invalid_pdf_bytes()
 
@@ -256,7 +249,6 @@ def invalid_pdf_content():
 @pytest.fixture
 def large_pdf_content():
     """サイズ制限を超えるPDFコンテンツ"""
-    from tests.unit.fixtures import PDFTestData
 
     return PDFTestData.large_pdf_bytes()
 
@@ -353,7 +345,6 @@ def setup_test_logging():
 
     autouse=True により、すべてのテストで自動的に適用されます。
     """
-    import logging
 
     # テスト用ログレベル設定
     logging.getLogger("src.api").setLevel(logging.DEBUG)
@@ -546,10 +537,6 @@ def test_session_setup():
 
     # テストセッション終了時のクリーンアップ
     print("\nテストセッション終了時のクリーンアップを実行中...")
-
-    # テスト実行時に作成された一時ファイルをクリーンアップ
-    import os
-    import shutil
 
     # テスト用の一時ディレクトリをクリーンアップ
     test_dirs = ["test_markdown", "test_uploads"]

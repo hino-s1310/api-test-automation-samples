@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pytest
 
 from src.api.models import FileStatus
+from src.api.services.pdf_service import PDFService
 
 # テストデータとフィクスチャをインポート
 from .fixtures import (
@@ -651,8 +652,6 @@ class TestPDFService:
         markdown_dir = tmp_path / "markdown"
 
         # テスト実行
-        from src.api.services.pdf_service import PDFService
-
         PDFService(upload_dir=str(upload_dir), markdown_dir=str(markdown_dir))
 
         # アサーション
@@ -757,3 +756,184 @@ class TestPDFServiceParameterized:
             # サイズが無効な場合
             assert is_valid is False
             assert "ファイルサイズは10MB以下にしてください" in message
+
+
+class TestFileServiceSQLModel:
+    """FileServiceのSQLModel対応テストクラス"""
+
+    @pytest.fixture
+    def sqlmodel_file_service(self):
+        """SQLModel対応のFileServiceのインスタンス"""
+        from src.api.services.file_service import FileService
+
+        return FileService(use_sqlmodel=True)
+
+    def test_sqlmodel_initialization(self, sqlmodel_file_service):
+        """SQLModel初期化テスト"""
+        assert sqlmodel_file_service.use_sqlmodel is True
+        assert sqlmodel_file_service.file_repository.use_sqlmodel is True
+
+    def test_sqlmodel_get_file_not_found(self, sqlmodel_file_service):
+        """SQLModel: 存在しないファイルの取得テスト"""
+        result = sqlmodel_file_service.get_file("non-existent-id")
+        assert result is None
+
+    def test_sqlmodel_list_files_empty(self, sqlmodel_file_service):
+        """SQLModel: ファイル一覧取得テスト"""
+        result = sqlmodel_file_service.list_files(page=1, per_page=10)
+        assert isinstance(result, dict)
+        assert "files" in result
+        assert "total_count" in result
+        assert "page" in result
+        assert "per_page" in result
+        assert isinstance(result["files"], list)
+        assert isinstance(result["total_count"], int)
+
+    def test_sqlmodel_search_files(self, sqlmodel_file_service):
+        """SQLModel: 検索結果テスト"""
+        result = sqlmodel_file_service.search_files(query="test", page=1, per_page=10)
+        assert isinstance(result, dict)
+        assert "files" in result
+        assert "total_count" in result
+        assert "page" in result
+        assert "per_page" in result
+        assert isinstance(result["files"], list)
+        assert isinstance(result["total_count"], int)
+
+    def test_sqlmodel_get_file_statistics(self, sqlmodel_file_service):
+        """SQLModel: 統計情報取得テスト"""
+        result = sqlmodel_file_service.get_file_statistics()
+        assert isinstance(result, dict)
+        assert "total_files" in result
+        assert "status_counts" in result
+        assert "total_size_bytes" in result
+        assert "total_size_mb" in result
+        assert isinstance(result["total_files"], int)
+        assert isinstance(result["status_counts"], dict)
+
+    def test_sqlmodel_get_conversion_logs_empty(self, sqlmodel_file_service):
+        """SQLModel: 空の変換ログ取得テスト"""
+        result = sqlmodel_file_service.get_conversion_logs("non-existent-id")
+        assert isinstance(result, list)
+        assert result == []
+
+    def test_sqlmodel_delete_file_not_found(self, sqlmodel_file_service):
+        """SQLModel: 存在しないファイルの削除テスト"""
+        result = sqlmodel_file_service.delete_file("non-existent-id")
+        assert result is False
+
+    def test_sqlmodel_update_file_not_found(self, sqlmodel_file_service):
+        """SQLModel: 存在しないファイルの更新テスト"""
+        result = sqlmodel_file_service.update_file("non-existent-id", "new content")
+        assert result is None
+
+    def test_sqlmodel_get_file_status_not_found(self, sqlmodel_file_service):
+        """SQLModel: 存在しないファイルのステータス取得テスト"""
+        result = sqlmodel_file_service.get_file_status("non-existent-id")
+        assert result is None
+
+    def test_sqlmodel_get_files_by_status(self, sqlmodel_file_service):
+        """SQLModel: ステータス別ファイル取得テスト"""
+        result = sqlmodel_file_service.get_files_by_status("completed")
+        assert isinstance(result, list)
+
+    def test_sqlmodel_get_files_created_after(self, sqlmodel_file_service):
+        """SQLModel: 日付以降ファイル取得テスト"""
+        cutoff_date = datetime(2024, 1, 1)
+        result = sqlmodel_file_service.get_files_created_after(cutoff_date)
+        assert isinstance(result, list)
+
+    def test_sqlmodel_get_files_created_before(self, sqlmodel_file_service):
+        """SQLModel: 日付以前ファイル取得テスト"""
+        cutoff_date = datetime(2024, 1, 1)
+        result = sqlmodel_file_service.get_files_created_before(cutoff_date)
+        assert isinstance(result, list)
+
+    def test_sqlmodel_cleanup_old_files_empty(self, sqlmodel_file_service):
+        """SQLModel: 空のクリーンアップテスト"""
+        result = sqlmodel_file_service.cleanup_old_files(days=30)
+        assert isinstance(result, dict)
+        assert "success" in result
+        assert "deleted_count" in result
+        assert result["deleted_count"] == 0
+
+    def test_sqlmodel_get_orphaned_files(self, sqlmodel_file_service):
+        """SQLModel: 孤立ファイル取得テスト"""
+        result = sqlmodel_file_service.get_orphaned_files()
+        assert isinstance(result, dict)
+        assert "orphaned_files" in result
+        assert "total_orphaned" in result
+        assert isinstance(result["orphaned_files"], list)
+        assert isinstance(result["total_orphaned"], int)
+
+    def test_sqlmodel_batch_delete_files_empty(self, sqlmodel_file_service):
+        """SQLModel: 空のバッチ削除テスト"""
+        result = sqlmodel_file_service.batch_delete_files([])
+        assert isinstance(result, dict)
+        assert "success" in result
+        assert "error" in result
+        assert "ファイルIDが指定されていません" in result["error"]
+
+
+class TestPDFServiceSQLModel:
+    """PDFServiceのSQLModel対応テストクラス"""
+
+    @pytest.fixture
+    def sqlmodel_pdf_service(self):
+        """SQLModel対応のPDFServiceのインスタンス"""
+        return PDFService(use_sqlmodel=True)
+
+    def test_sqlmodel_initialization(self, sqlmodel_pdf_service):
+        """SQLModel初期化テスト"""
+        assert sqlmodel_pdf_service.use_sqlmodel is True
+        assert sqlmodel_pdf_service.pdf_repository.use_sqlmodel is True
+
+    def test_sqlmodel_get_conversion_logs_empty(self, sqlmodel_pdf_service):
+        """SQLModel: 空の変換ログ取得テスト"""
+        result = sqlmodel_pdf_service.get_conversion_logs()
+        assert isinstance(result, list)
+        assert result == []
+
+    def test_sqlmodel_get_conversion_statistics(self, sqlmodel_pdf_service):
+        """SQLModel: 変換統計情報取得テスト"""
+        result = sqlmodel_pdf_service.get_conversion_statistics()
+        assert isinstance(result, dict)
+        assert "total_logs" in result
+        assert "success_count" in result
+        assert "failed_count" in result
+        assert "success_rate" in result
+        assert "total_processing_time" in result
+        assert "average_processing_time" in result
+        assert "action_counts" in result
+        assert isinstance(result["total_logs"], int)
+        assert isinstance(result["action_counts"], dict)
+
+    def test_sqlmodel_get_orphaned_files(self, sqlmodel_pdf_service):
+        """SQLModel: 孤立ファイル取得テスト"""
+        result = sqlmodel_pdf_service.get_orphaned_files()
+        assert isinstance(result, dict)
+        assert "orphaned_pdfs" in result
+        assert "orphaned_markdowns" in result
+        assert "total_orphaned" in result
+        assert isinstance(result["orphaned_pdfs"], list)
+        assert isinstance(result["orphaned_markdowns"], list)
+        assert isinstance(result["total_orphaned"], int)
+
+    def test_sqlmodel_cleanup_old_files_empty(self, sqlmodel_pdf_service):
+        """SQLModel: 空のクリーンアップテスト"""
+        result = sqlmodel_pdf_service.cleanup_old_files(days=30)
+        assert isinstance(result, dict)
+        assert "success" in result
+        assert "deleted_count" in result
+        assert result["deleted_count"] == 0
+
+    def test_sqlmodel_get_database_info(self, sqlmodel_pdf_service):
+        """SQLModel: データベース情報取得テスト"""
+        result = sqlmodel_pdf_service.get_database_info()
+        assert isinstance(result, dict)
+        # エラーがない場合は正常
+        if "error" not in result:
+            assert "total_files" in result
+            assert "conversion_statistics" in result
+            assert "upload_directory" in result
+            assert "markdown_directory" in result

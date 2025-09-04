@@ -116,6 +116,51 @@ db-reset: ## Reset database
 	mkdir -p data
 	$(MAKE) db-init
 
+# Migration management
+migration-check: ## Check migration prerequisites
+	uv run python scripts/migration_manager.py --action check --environment development
+
+migration-current: ## Show current migration revision
+	uv run python scripts/migration_manager.py --action current --environment development
+
+migration-history: ## Show migration history
+	uv run python scripts/migration_manager.py --action history --environment development
+
+migration-dry-run: ## Run migration in dry-run mode
+	uv run python scripts/migration_manager.py --action migrate --environment development --dry-run
+
+migration-upgrade: ## Run migration upgrade
+	uv run python scripts/migration_manager.py --action migrate --environment development
+
+migration-backup: ## Create database backup
+	uv run python scripts/migration_manager.py --action backup --environment development
+
+migration-rollback: ## Rollback migration (usage: make migration-rollback REVISION=<revision_id>)
+	uv run python scripts/migration_manager.py --action rollback --environment development --target $(REVISION)
+
+# Test environment migration
+migration-test-check: ## Check test migration prerequisites
+	ENVIRONMENT=test uv run python scripts/migration_manager.py --action check --environment test
+
+migration-test-current: ## Show test migration revision
+	ENVIRONMENT=test uv run python scripts/migration_manager.py --action current --environment test
+
+migration-test-history: ## Show test migration history
+	ENVIRONMENT=test uv run python scripts/migration_manager.py --action history --environment test
+
+# Production migration (use with caution)
+migration-prod-check: ## Check production migration prerequisites
+	ENVIRONMENT=production uv run python scripts/migration_manager.py --action check --environment production
+
+migration-prod-dry-run: ## Run production migration in dry-run mode
+	ENVIRONMENT=production uv run python scripts/migration_manager.py --action migrate --environment production --dry-run
+
+migration-prod-upgrade: ## Run production migration upgrade
+	ENVIRONMENT=production uv run python scripts/migration_manager.py --action migrate --environment production
+
+migration-prod-backup: ## Create production database backup
+	ENVIRONMENT=production uv run python scripts/migration_manager.py --action backup --environment production
+
 # Utility
 check-deps: ## Check dependency versions
 	uv pip list --outdated

@@ -5,26 +5,34 @@ PDF関連のデータアクセス処理を担当
 PDF変換処理、ファイルシステム操作、変換ログの管理
 """
 
+import os
 import time
 import uuid
 from datetime import datetime, timedelta
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 import pdfplumber
 import pypdf
+from markitdown import MarkItDown
+from sqlmodel import func, select
 
-from ..database import db_manager
-from ..models import FileStatus
+from ..cache import CacheKeys, cache_manager
+from ..database import SQLModelSessionManager, db_manager
+from ..models import ConversionLog, FileStatus
 
 
 class PDFRepository:
     """PDFリポジトリクラス"""
 
-    def __init__(self, upload_dir: str = None, markdown_dir: str = None):
-        # 環境変数からディレクトリパスを取得、なければデフォルト値を使用
-        import os
-
+    def __init__(
+        self,
+        upload_dir: str = None,
+        markdown_dir: str = None,
+        use_sqlmodel: bool = False,
+        enable_cache: bool = True,
+    ):
         if upload_dir is None:
             upload_dir = os.environ.get("UPLOAD_DIR", "data/uploads")
         if markdown_dir is None:
@@ -32,6 +40,16 @@ class PDFRepository:
 
         self.upload_dir = Path(upload_dir)
         self.markdown_dir = Path(markdown_dir)
+        self.use_sqlmodel = use_sqlmodel
+        self.enable_cache = enable_cache
+        self.db_manager = db_manager
+
+        # SQLModelサポートの初期化
+        if self.use_sqlmodel:
+            self.sqlmodel_manager = SQLModelSessionManager()
+        else:
+            self.sqlmodel_manager = None
+
         self._ensure_directories()
 
     def _ensure_directories(self):
@@ -55,8 +73,6 @@ class PDFRepository:
 
         # PDFファイルの内容チェック
         try:
-            from io import BytesIO
-
             pypdf.PdfReader(BytesIO(file_content))
             return True, "OK"
         except Exception:
@@ -123,8 +139,6 @@ class PDFRepository:
 
         try:
             try:
-                from markitdown import MarkItDown
-
                 markitdown_converter = MarkItDown()
                 result = markitdown_converter.convert(file_path)
                 if result and result.text_content and result.text_content.strip():
@@ -345,7 +359,19 @@ class PDFRepository:
 
     def get_conversion_logs(self, file_id: str) -> list[dict[str, Any]]:
         """変換ログを取得"""
-        return db_manager.get_conversion_logs(file_id)
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(ConversionLog).where(
+                        ConversionLog.file_id == file_id
+                    )
+                    logs = session.exec(statement).all()
+                    return [log.to_dict() for log in logs]
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                return self.db_manager.get_conversion_logs(file_id)
+        else:
+            return self.db_manager.get_conversion_logs(file_id)
 
     def add_conversion_log(
         self,
@@ -356,98 +382,298 @@ class PDFRepository:
         processing_time: float | None = None,
     ) -> bool:
         """変換ログを追加"""
-        try:
-            return db_manager.add_conversion_log(
-                file_id=file_id,
-                action=action,
-                status=status,
-                message=message,
-                processing_time=processing_time,
-            )
-        except Exception:
-            return False
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    log_obj = ConversionLog(
+                        file_id=file_id,
+                        action=action,
+                        status=status,
+                        message=message,
+                        timestamp=datetime.now(),
+                        processing_time=processing_time,
+                    )
+                    session.add(log_obj)
+                    session.commit()
+                    return True
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                try:
+                    return self.db_manager.add_conversion_log(
+                        file_id=file_id,
+                        action=action,
+                        status=status,
+                        message=message,
+                        processing_time=processing_time,
+                    )
+                except Exception:
+                    return False
+        else:
+            try:
+                return self.db_manager.add_conversion_log(
+                    file_id=file_id,
+                    action=action,
+                    status=status,
+                    message=message,
+                    processing_time=processing_time,
+                )
+            except Exception:
+                return False
 
     def get_conversion_logs_by_action(self, action: str) -> list[dict[str, Any]]:
         """指定されたアクションの変換ログを取得"""
-        # 全ファイルの変換ログから該当するものを検索
-        # 注: より効率的な実装が必要な場合は、データベースにインデックスを追加
-        all_logs = []
-        for file_info in self.db_manager.list_files(page=1, per_page=10000)["files"]:
-            logs = self.get_conversion_logs(file_info["id"])
-            for log in logs:
-                if log.get("action") == action:
-                    all_logs.append(log)
-        return all_logs
-
-    def get_conversion_logs_by_status(self, status: str) -> list[dict[str, Any]]:
-        """指定されたステータスの変換ログを取得"""
-        # 全ファイルの変換ログから該当するものを検索
-        all_logs = []
-        for file_info in self.db_manager.list_files(page=1, per_page=10000)["files"]:
-            logs = self.get_conversion_logs(file_info["id"])
-            for log in logs:
-                if log.get("status") == status:
-                    all_logs.append(log)
-        return all_logs
-
-    def get_conversion_statistics(self) -> dict[str, Any]:
-        """変換統計情報を取得"""
-        try:
-            total_logs = 0
-            success_count = 0
-            failed_count = 0
-            total_processing_time = 0
-            action_counts = {}
-
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(ConversionLog).where(
+                        ConversionLog.action == action
+                    )
+                    logs = session.exec(statement).all()
+                    return [log.to_dict() for log in logs]
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                all_logs = []
+                for file_info in self.db_manager.list_files(page=1, per_page=10000)[
+                    "files"
+                ]:
+                    logs = self.get_conversion_logs(file_info["id"])
+                    for log in logs:
+                        if log.get("action") == action:
+                            all_logs.append(log)
+                return all_logs
+        else:
+            all_logs = []
             for file_info in self.db_manager.list_files(page=1, per_page=10000)[
                 "files"
             ]:
                 logs = self.get_conversion_logs(file_info["id"])
                 for log in logs:
-                    total_logs += 1
+                    if log.get("action") == action:
+                        all_logs.append(log)
+            return all_logs
 
-                    # ステータス別カウント
-                    if log.get("status") == "success":
-                        success_count += 1
-                    elif log.get("status") == "failed":
-                        failed_count += 1
+    def get_conversion_logs_by_status(self, status: str) -> list[dict[str, Any]]:
+        """指定されたステータスの変換ログを取得"""
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    statement = select(ConversionLog).where(
+                        ConversionLog.status == status
+                    )
+                    logs = session.exec(statement).all()
+                    return [log.to_dict() for log in logs]
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                all_logs = []
+                for file_info in self.db_manager.list_files(page=1, per_page=10000)[
+                    "files"
+                ]:
+                    logs = self.get_conversion_logs(file_info["id"])
+                    for log in logs:
+                        if log.get("status") == status:
+                            all_logs.append(log)
+                return all_logs
+        else:
+            all_logs = []
+            for file_info in self.db_manager.list_files(page=1, per_page=10000)[
+                "files"
+            ]:
+                logs = self.get_conversion_logs(file_info["id"])
+                for log in logs:
+                    if log.get("status") == status:
+                        all_logs.append(log)
+            return all_logs
 
-                    # 処理時間の合計
-                    processing_time = log.get("processing_time", 0)
-                    if (
-                        isinstance(processing_time, int | float)
-                        and processing_time >= 0
-                    ):
-                        total_processing_time += processing_time
+    def get_conversion_statistics(self) -> dict[str, Any]:
+        """変換統計情報を取得"""
+        # キャッシュチェック
+        if self.enable_cache:
+            cached_result = cache_manager.get(CacheKeys.CONVERSION_STATISTICS)
+            if cached_result is not None:
+                return cached_result
 
-                    # アクション別カウント
-                    action = log.get("action", "unknown")
-                    action_counts[action] = action_counts.get(action, 0) + 1
+        if self.use_sqlmodel and self.sqlmodel_manager:
+            try:
+                with self.sqlmodel_manager as session:
+                    # 総ログ数
+                    total_logs_statement = select(func.count(ConversionLog.id))
+                    total_logs = session.exec(total_logs_statement).one()
 
-            return {
-                "total_logs": total_logs,
-                "success_count": success_count,
-                "failed_count": failed_count,
-                "success_rate": round(success_count / total_logs * 100, 2)
-                if total_logs > 0
-                else 0,
-                "total_processing_time": round(total_processing_time, 2),
-                "average_processing_time": round(total_processing_time / total_logs, 2)
-                if total_logs > 0
-                else 0,
-                "action_counts": action_counts,
-            }
-        except Exception as e:
-            return {
-                "error": str(e),
-                "total_logs": 0,
-                "success_count": 0,
-                "failed_count": 0,
-                "success_rate": 0,
-                "total_processing_time": 0,
-                "average_processing_time": 0,
-                "action_counts": {},
-            }
+                    # 成功・失敗数
+                    success_statement = select(func.count(ConversionLog.id)).where(
+                        ConversionLog.status == "success"
+                    )
+                    success_count = session.exec(success_statement).one()
+
+                    failed_statement = select(func.count(ConversionLog.id)).where(
+                        ConversionLog.status == "failed"
+                    )
+                    failed_count = session.exec(failed_statement).one()
+
+                    # 総処理時間
+                    total_time_statement = select(
+                        func.sum(ConversionLog.processing_time)
+                    ).where(ConversionLog.processing_time.is_not(None))
+                    total_processing_time = (
+                        session.exec(total_time_statement).one() or 0
+                    )
+
+                    # アクション別カウント（簡易版）
+                    action_counts = {}
+                    try:
+                        all_logs_statement = select(
+                            ConversionLog.action, func.count(ConversionLog.id)
+                        ).group_by(ConversionLog.action)
+                        action_results = session.exec(all_logs_statement).all()
+                        for action, count in action_results:
+                            action_counts[action] = count
+                    except Exception:
+                        # アクション別カウントが失敗した場合は空の辞書を返す
+                        action_counts = {}
+
+                    result = {
+                        "total_logs": total_logs,
+                        "success_count": success_count,
+                        "failed_count": failed_count,
+                        "success_rate": round(success_count / total_logs * 100, 2)
+                        if total_logs > 0
+                        else 0,
+                        "total_processing_time": round(total_processing_time, 2),
+                        "average_processing_time": round(
+                            total_processing_time / total_logs, 2
+                        )
+                        if total_logs > 0
+                        else 0,
+                        "action_counts": action_counts,
+                    }
+
+                    # キャッシュに保存（5分間）
+                    if self.enable_cache:
+                        cache_manager.set(
+                            CacheKeys.CONVERSION_STATISTICS, result, ttl=300
+                        )
+
+                    return result
+            except Exception:
+                # フォールバック: 既存のdb_managerを使用
+                try:
+                    total_logs = 0
+                    success_count = 0
+                    failed_count = 0
+                    total_processing_time = 0
+                    action_counts = {}
+
+                    for file_info in self.db_manager.list_files(page=1, per_page=10000)[
+                        "files"
+                    ]:
+                        logs = self.get_conversion_logs(file_info["id"])
+                        for log in logs:
+                            total_logs += 1
+
+                            # ステータス別カウント
+                            if log.get("status") == "success":
+                                success_count += 1
+                            elif log.get("status") == "failed":
+                                failed_count += 1
+
+                            # 処理時間の合計
+                            processing_time = log.get("processing_time", 0)
+                            if (
+                                isinstance(processing_time, int | float)
+                                and processing_time >= 0
+                            ):
+                                total_processing_time += processing_time
+
+                            # アクション別カウント
+                            action = log.get("action", "unknown")
+                            action_counts[action] = action_counts.get(action, 0) + 1
+
+                    return {
+                        "total_logs": total_logs,
+                        "success_count": success_count,
+                        "failed_count": failed_count,
+                        "success_rate": round(success_count / total_logs * 100, 2)
+                        if total_logs > 0
+                        else 0,
+                        "total_processing_time": round(total_processing_time, 2),
+                        "average_processing_time": round(
+                            total_processing_time / total_logs, 2
+                        )
+                        if total_logs > 0
+                        else 0,
+                        "action_counts": action_counts,
+                    }
+                except Exception as e:
+                    return {
+                        "error": str(e),
+                        "total_logs": 0,
+                        "success_count": 0,
+                        "failed_count": 0,
+                        "success_rate": 0,
+                        "total_processing_time": 0,
+                        "average_processing_time": 0,
+                        "action_counts": {},
+                    }
+        else:
+            # Legacy実装
+            try:
+                total_logs = 0
+                success_count = 0
+                failed_count = 0
+                total_processing_time = 0
+                action_counts = {}
+
+                for file_info in self.db_manager.list_files(page=1, per_page=10000)[
+                    "files"
+                ]:
+                    logs = self.get_conversion_logs(file_info["id"])
+                    for log in logs:
+                        total_logs += 1
+
+                        # ステータス別カウント
+                        if log.get("status") == "success":
+                            success_count += 1
+                        elif log.get("status") == "failed":
+                            failed_count += 1
+
+                        # 処理時間の合計
+                        processing_time = log.get("processing_time", 0)
+                        if (
+                            isinstance(processing_time, int | float)
+                            and processing_time >= 0
+                        ):
+                            total_processing_time += processing_time
+
+                        # アクション別カウント
+                        action = log.get("action", "unknown")
+                        action_counts[action] = action_counts.get(action, 0) + 1
+
+                return {
+                    "total_logs": total_logs,
+                    "success_count": success_count,
+                    "failed_count": failed_count,
+                    "success_rate": round(success_count / total_logs * 100, 2)
+                    if total_logs > 0
+                    else 0,
+                    "total_processing_time": round(total_processing_time, 2),
+                    "average_processing_time": round(
+                        total_processing_time / total_logs, 2
+                    )
+                    if total_logs > 0
+                    else 0,
+                    "action_counts": action_counts,
+                }
+            except Exception as e:
+                return {
+                    "error": str(e),
+                    "total_logs": 0,
+                    "success_count": 0,
+                    "failed_count": 0,
+                    "success_rate": 0,
+                    "total_processing_time": 0,
+                    "average_processing_time": 0,
+                    "action_counts": {},
+                }
 
     # ===========================
     # クリーンアップ・メンテナンス

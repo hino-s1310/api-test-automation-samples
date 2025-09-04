@@ -5,6 +5,7 @@
 リポジトリ層との連携により、データアクセスロジックを分離
 """
 
+import re
 from datetime import datetime
 from typing import Any
 
@@ -15,9 +16,14 @@ from ..repositories.file_repository import FileRepository
 class FileService:
     """ファイル管理サービス"""
 
-    def __init__(self, file_repository: FileRepository = None):
+    def __init__(
+        self, file_repository: FileRepository = None, use_sqlmodel: bool = False
+    ):
         """FileRepositoryのインスタンスを初期化"""
-        self.file_repository = file_repository or FileRepository()
+        self.use_sqlmodel = use_sqlmodel
+        self.file_repository = file_repository or FileRepository(
+            use_sqlmodel=use_sqlmodel
+        )
 
     def get_file(self, file_id: str) -> dict[str, Any] | None:
         """ファイル情報を取得"""
@@ -83,7 +89,11 @@ class FileService:
 
     def delete_file(self, file_id: str) -> bool:
         """ファイルを削除"""
-        return self.file_repository.delete_file(file_id)
+        result = self.file_repository.delete_file(file_id)
+        if result:
+            # 削除成功時はキャッシュを無効化
+            self.file_repository.invalidate_file_cache(file_id)
+        return result
 
     def get_file_status(self, file_id: str) -> str | None:
         """ファイルの状態を取得"""
@@ -147,8 +157,6 @@ class FileService:
 
     def validate_file_id(self, file_id: str) -> bool:
         """ファイルIDの妥当性を検証"""
-        # UUID形式の検証
-        import re
 
         uuid_pattern = re.compile(
             r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -217,7 +225,8 @@ class FileService:
                 edit_reason=edit_reason,
                 edited_by=edited_by,
             ):
-                # 更新後のファイル情報を取得
+                # キャッシュを無効化してから更新後のファイル情報を取得
+                self.file_repository.invalidate_file_cache(file_id)
                 updated_file = self.file_repository.get_file(file_id)
 
                 return {
@@ -227,7 +236,8 @@ class FileService:
                     "markdown": updated_file.get("markdown_content", ""),
                     "status": updated_file["status"],
                     "updated_at": updated_file["updated_at"],
-                    "last_edited_at": updated_file["last_edited_at"],
+                    "last_edited_at": updated_file.get("last_edited_at")
+                    or updated_file["updated_at"],
                     "edit_count": updated_file["edit_count"],
                     "is_edited": updated_file["is_edited"],
                 }
@@ -302,7 +312,8 @@ class FileService:
                 edit_reason=f"履歴ID {history_id} への復元",
                 edited_by="system",
             ):
-                # 復元後のファイル情報を取得
+                # キャッシュを無効化してから復元後のファイル情報を取得
+                self.file_repository.invalidate_file_cache(file_id)
                 reverted_file = self.file_repository.get_file(file_id)
 
                 return {
@@ -312,7 +323,8 @@ class FileService:
                     "markdown": reverted_file.get("markdown_content", ""),
                     "status": reverted_file["status"],
                     "updated_at": reverted_file["updated_at"],
-                    "last_edited_at": reverted_file["last_edited_at"],
+                    "last_edited_at": reverted_file.get("last_edited_at")
+                    or reverted_file["updated_at"],
                     "edit_count": reverted_file["edit_count"],
                     "is_edited": reverted_file["is_edited"],
                 }

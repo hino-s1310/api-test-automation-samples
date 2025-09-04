@@ -27,6 +27,8 @@ test.describe('CRUDテスト', () => {
   test.beforeEach(async ({ request }) => {
     // 各テスト前にデータベースをリセット
     await request.post('/system/test/reset-db');
+    // キャッシュもクリア
+    await request.post('/system/cache/clear');
   });
 
   test('ファイルをアップロードする', async ({ request }) => {
@@ -130,7 +132,14 @@ test.describe('CRUDテスト', () => {
   test('ファイルの統計情報を取得する', async ({ request }) => {
     // このテスト専用にファイルをアップロード
     const uniqueTestData = generateUniqueTestData();
-    await uploadPdfFile(request, uniqueTestData);
+    const uploadResponse = await uploadPdfFile(request, uniqueTestData);
+    expect(uploadResponse.status()).toBe(200);
+
+    const uploadData = await uploadResponse.json();
+    const testFileId = uploadData.id;
+
+    // PDF変換が完了するまで待機（最大30秒）
+    await waitForPdfConversion(request, testFileId, 30);
 
     // ファイルの統計情報を取得する
     const response = await getFileStatistics(request)
@@ -226,5 +235,7 @@ test.describe('CRUDテスト', () => {
   test.afterEach(async ({ request }) => {
     // 各テスト後にデータベースをリセット
     await request.post('/system/test/reset-db');
+    // キャッシュもクリア
+    await request.post('/system/cache/clear');
   })
 });

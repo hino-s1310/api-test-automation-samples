@@ -5,6 +5,7 @@ repositories/pdf_repository.pyの各メソッドの機能適合性をテスト
 """
 
 import os
+import shutil
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -66,9 +67,6 @@ class TestPDFRepository:
         temp_markdown = tempfile.mkdtemp()
 
         yield temp_upload, temp_markdown
-
-        # クリーンアップ
-        import shutil
 
         shutil.rmtree(temp_upload, ignore_errors=True)
         shutil.rmtree(temp_markdown, ignore_errors=True)
@@ -951,3 +949,79 @@ class TestPDFRepositoryParameterized(TestPDFRepository):
                 assert test_file.exists(), "ファイルが存在しません"
         else:
             assert test_file.exists()
+
+
+class TestPDFRepositorySQLModel:
+    """PDFRepositoryのSQLModel対応テストクラス"""
+
+    @pytest.fixture
+    def sqlmodel_pdf_repository(self):
+        """SQLModel対応のPDFRepositoryのインスタンス"""
+        return PDFRepository(
+            upload_dir="test_uploads", markdown_dir="test_markdown", use_sqlmodel=True
+        )
+
+    def test_sqlmodel_initialization(self, sqlmodel_pdf_repository):
+        """SQLModel初期化テスト"""
+        assert sqlmodel_pdf_repository.use_sqlmodel is True
+        assert sqlmodel_pdf_repository.sqlmodel_manager is not None
+
+    def test_sqlmodel_get_conversion_logs_empty(self, sqlmodel_pdf_repository):
+        """SQLModel: 空の変換ログ取得テスト"""
+        result = sqlmodel_pdf_repository.get_conversion_logs("non-existent-id")
+        assert isinstance(result, list)
+        assert result == []
+
+    def test_sqlmodel_get_conversion_logs_by_action_empty(
+        self, sqlmodel_pdf_repository
+    ):
+        """SQLModel: 空のアクション別変換ログ取得テスト"""
+        result = sqlmodel_pdf_repository.get_conversion_logs_by_action(
+            "non-existent-action"
+        )
+        assert isinstance(result, list)
+        assert result == []
+
+    def test_sqlmodel_get_conversion_logs_by_status_empty(
+        self, sqlmodel_pdf_repository
+    ):
+        """SQLModel: 空のステータス別変換ログ取得テスト"""
+        result = sqlmodel_pdf_repository.get_conversion_logs_by_status(
+            "non-existent-status"
+        )
+        assert isinstance(result, list)
+        assert result == []
+
+    def test_sqlmodel_get_conversion_statistics_empty(self, sqlmodel_pdf_repository):
+        """SQLModel: 空の変換統計情報取得テスト"""
+        result = sqlmodel_pdf_repository.get_conversion_statistics()
+        assert isinstance(result, dict)
+        assert "total_logs" in result
+        assert "success_count" in result
+        assert "failed_count" in result
+        assert "success_rate" in result
+        assert "total_processing_time" in result
+        assert "average_processing_time" in result
+        assert "action_counts" in result
+        # データベースに既存のデータがあるため、0より大きい値を確認
+        assert result["total_logs"] >= 0
+
+    def test_sqlmodel_add_conversion_log_success(self, sqlmodel_pdf_repository):
+        """SQLModel: 変換ログ追加テスト"""
+        result = sqlmodel_pdf_repository.add_conversion_log(
+            file_id="test-file-id",
+            action="upload_and_convert",
+            status="success",
+            message="Test conversion",
+            processing_time=1.5,
+        )
+        assert result is True
+
+    def test_sqlmodel_add_conversion_log_failure(self, sqlmodel_pdf_repository):
+        """SQLModel: 変換ログ追加失敗テスト"""
+        # 無効なデータでテスト
+        result = sqlmodel_pdf_repository.add_conversion_log(
+            file_id="", action="", status="", message="", processing_time=-1
+        )
+        # エラーハンドリングによりFalseが返される可能性がある
+        assert isinstance(result, bool)

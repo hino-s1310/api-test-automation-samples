@@ -9,6 +9,7 @@ import time
 
 from fastapi import APIRouter, HTTPException, Query
 
+from ..cache import cache_manager
 from ..database import db_manager
 from ..models import HealthResponse
 from ..services.file_service import FileService
@@ -106,4 +107,44 @@ async def get_database_state(file_id: str):
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"データベース状態の取得に失敗しました: {str(e)}"
+        )
+
+
+@router.get("/cache/stats", tags=["Cache"])
+async def get_cache_stats():
+    """キャッシュ統計情報を取得"""
+    try:
+        stats = cache_manager.get_stats()
+        return {"cache_enabled": True, "stats": stats}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"キャッシュ統計情報の取得に失敗しました: {str(e)}"
+        )
+
+
+@router.post("/cache/clear", tags=["Cache"])
+async def clear_cache():
+    """全キャッシュをクリア"""
+    try:
+        cache_manager.clear()
+        return {"message": "キャッシュがクリアされました"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"キャッシュのクリアに失敗しました: {str(e)}"
+        )
+
+
+@router.post("/cache/cleanup", tags=["Cache"])
+async def cleanup_expired_cache():
+    """期限切れのキャッシュをクリーンアップ"""
+    try:
+        cleaned_count = cache_manager.cleanup_expired()
+        return {
+            "message": f"期限切れのキャッシュを{cleaned_count}件クリーンアップしました",
+            "cleaned_count": cleaned_count,
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"キャッシュのクリーンアップに失敗しました: {str(e)}",
         )

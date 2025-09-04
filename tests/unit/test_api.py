@@ -9,6 +9,7 @@ from .helpers import (
     assert_file_response,
     assert_update_response,
     assert_upload_response,
+    load_test_pdf,
     upload_test_pdf,
 )
 from .helpers.test_data import APIEndpoints
@@ -57,9 +58,6 @@ def test_list_files_success(test_client):
 def test_update_file_success(sample_file_id, test_client):
     """ファイル更新APIの統合テスト（実DB操作）"""
     # sample_file_id フィクスチャで既にファイルが作成済み
-
-    # 実際のPDFファイルを使用してファイル更新APIを呼び出す
-    from .helpers import load_test_pdf
 
     pdf_content = load_test_pdf()
 
@@ -167,9 +165,6 @@ def test_file_lifecycle_integration(test_client):
     assert response.status_code == 200
     file_data = response.json()
     assert file_data["id"] == file_id
-
-    # 3. ファイル更新
-    from .helpers import load_test_pdf
 
     pdf_content = load_test_pdf()
     response = test_client.put(

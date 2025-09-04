@@ -5,6 +5,7 @@ PDFファイルをMarkdown形式に変換する処理を担当
 リポジトリ層との連携により、データアクセス処理を分離
 """
 
+import os
 import time
 import uuid
 from datetime import datetime
@@ -22,12 +23,13 @@ class PDFService:
         pdf_repository: PDFRepository = None,
         upload_dir: str = None,
         markdown_dir: str = None,
+        use_sqlmodel: bool = False,
     ):
         # リポジトリ層の注入（依存性注入パターン）
-        self.pdf_repository = pdf_repository or PDFRepository(upload_dir, markdown_dir)
-
-        # 環境変数からディレクトリパスを取得、なければデフォルト値を使用
-        import os
+        self.use_sqlmodel = use_sqlmodel
+        self.pdf_repository = pdf_repository or PDFRepository(
+            upload_dir, markdown_dir, use_sqlmodel=use_sqlmodel
+        )
 
         if upload_dir is None:
             upload_dir = os.environ.get("UPLOAD_DIR", "data/uploads")
@@ -49,19 +51,6 @@ class PDFService:
             return self.pdf_repository.validate_pdf_file(file_content, filename)
         except Exception as e:
             return False, f"ファイル検証中にエラーが発生しました: {str(e)}"
-
-    def get_conversion_statistics(self) -> dict[str, Any]:
-        """変換統計情報を取得（リポジトリ層を活用）"""
-        try:
-            return self.pdf_repository.get_conversion_statistics()
-        except Exception as e:
-            return {
-                "error": str(e),
-                "total_conversions": 0,
-                "successful_conversions": 0,
-                "failed_conversions": 0,
-                "average_processing_time": 0,
-            }
 
     def get_orphaned_files(self) -> dict[str, Any]:
         """孤立したファイルを取得（リポジトリ層を活用）"""
@@ -231,6 +220,38 @@ class PDFService:
             return self.pdf_repository.get_database_info()
         except Exception as e:
             return {"error": str(e)}
+
+    def get_conversion_statistics(self) -> dict[str, Any]:
+        """変換統計情報を取得（リポジトリ層を活用）"""
+        try:
+            # リポジトリ層の統計情報取得メソッドを使用
+            stats = self.pdf_repository.get_conversion_statistics()
+
+            # 必要に応じてサービス層でデータを整形
+            if "error" not in stats:
+                return {
+                    "total_logs": stats.get("total_logs", 0),
+                    "success_count": stats.get("success_count", 0),
+                    "failed_count": stats.get("failed_count", 0),
+                    "success_rate": stats.get("success_rate", 0),
+                    "total_processing_time": stats.get("total_processing_time", 0),
+                    "average_processing_time": stats.get("average_processing_time", 0),
+                    "action_counts": stats.get("action_counts", {}),
+                }
+            else:
+                return stats
+
+        except Exception as e:
+            return {
+                "error": str(e),
+                "total_logs": 0,
+                "success_count": 0,
+                "failed_count": 0,
+                "success_rate": 0,
+                "total_processing_time": 0,
+                "average_processing_time": 0,
+                "action_counts": {},
+            }
 
     # 後方互換性のためのメソッド（既存のテストが動作するように）
     def _validate_pdf_file(
