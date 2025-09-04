@@ -12,7 +12,7 @@ class TestFileData:
     """テストファイルデータ管理クラス"""
 
     # テストファイルパス
-    TEST_PDF_PATH = "tests/data/test_markdown.pdf"
+    TEST_PDF_PATH = Path(__file__).parent.parent.parent / "data" / "test_markdown.pdf"
 
     # 期待される値
     EXPECTED_UPLOAD_MESSAGE = "PDFファイルのアップロードと変換が完了しました"
@@ -24,14 +24,14 @@ class TestFileData:
     MAX_FILE_SIZE_MB = 10
 
     @classmethod
-    def get_test_pdf_path(cls) -> str:
+    def get_test_pdf_path(cls) -> Path:
         """テスト用PDFファイルのパスを取得"""
         return cls.TEST_PDF_PATH
 
     @classmethod
     def validate_test_file_exists(cls) -> bool:
         """テストファイルの存在を確認"""
-        return Path(cls.TEST_PDF_PATH).exists()
+        return cls.TEST_PDF_PATH.exists()
 
 
 class InvalidTestData:
@@ -74,10 +74,16 @@ class APIEndpoints:
     LIST_FILES = "/files"
     FILES_BY_ID = "/files/{file_id}"
     FILES_LOGS = "/files/{file_id}/logs"
+    FILE_EDIT_HISTORY = "/files/{file_id}/edit-history"
     STATISTICS = "/system/statistics"
     GET_STATISTICS = "/system/statistics"
+    SYSTEM_STATS = "/system/statistics"
     CLEANUP = "/system/cleanup"
     CLEANUP_OLD_FILES = "/system/cleanup"
+    ORPHANED_FILES = "/system/orphaned-files"
+    BATCH_DELETE_FILES = "/files/batch-delete"
+    CONVERSION_LOGS = "/files/{file_id}/conversion-logs"
+    EDIT_HISTORY = "/files/{file_id}/edit-history"
 
     @classmethod
     def get_file_endpoint(cls, file_id: str) -> str:
@@ -88,6 +94,21 @@ class APIEndpoints:
     def get_file_logs_endpoint(cls, file_id: str) -> str:
         """ファイルログ取得エンドポイントを生成"""
         return cls.FILES_LOGS.format(file_id=file_id)
+
+    @classmethod
+    def get_file_edit_history_endpoint(cls, file_id: str) -> str:
+        """ファイル編集履歴取得エンドポイントを生成"""
+        return cls.FILE_EDIT_HISTORY.format(file_id=file_id)
+
+    @classmethod
+    def get_conversion_logs_endpoint(cls, file_id: str) -> str:
+        """変換ログ取得エンドポイントを生成"""
+        return cls.CONVERSION_LOGS.format(file_id=file_id)
+
+    @classmethod
+    def get_edit_history_endpoint(cls, file_id: str) -> str:
+        """編集履歴取得エンドポイントを生成"""
+        return cls.EDIT_HISTORY.format(file_id=file_id)
 
 
 class ExpectedResponses:

@@ -5,6 +5,7 @@
 リポジトリ層との連携により、データアクセスロジックを分離
 """
 
+import re
 from datetime import datetime
 from typing import Any
 
@@ -15,9 +16,14 @@ from ..repositories.file_repository import FileRepository
 class FileService:
     """ファイル管理サービス"""
 
-    def __init__(self, file_repository: FileRepository = None):
+    def __init__(
+        self, file_repository: FileRepository = None, use_sqlmodel: bool = False
+    ):
         """FileRepositoryのインスタンスを初期化"""
-        self.file_repository = file_repository or FileRepository()
+        self.use_sqlmodel = use_sqlmodel
+        self.file_repository = file_repository or FileRepository(
+            use_sqlmodel=use_sqlmodel
+        )
 
     def get_file(self, file_id: str) -> dict[str, Any] | None:
         """ファイル情報を取得"""
@@ -147,8 +153,6 @@ class FileService:
 
     def validate_file_id(self, file_id: str) -> bool:
         """ファイルIDの妥当性を検証"""
-        # UUID形式の検証
-        import re
 
         uuid_pattern = re.compile(
             r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",

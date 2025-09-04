@@ -50,9 +50,13 @@ class File(SQLModel, table=True):
     edit_count: int = SQLField(default=0, description="編集回数")
     is_edited: bool = SQLField(default=False, description="編集済みフラグ")
 
-    # リレーションシップ
-    conversion_logs: list["ConversionLog"] = Relationship(back_populates="file")
-    edit_history: list["FileEditHistory"] = Relationship(back_populates="file")
+    # リレーションシップ（遅延読み込み）
+    conversion_logs: list["ConversionLog"] = Relationship(
+        back_populates="file", sa_relationship_kwargs={"lazy": "selectin"}
+    )
+    edit_history: list["FileEditHistory"] = Relationship(
+        back_populates="file", sa_relationship_kwargs={"lazy": "selectin"}
+    )
 
     def get_metadata_dict(self) -> dict | None:
         """メタデータを辞書として取得"""

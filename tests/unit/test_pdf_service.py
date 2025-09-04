@@ -79,18 +79,21 @@ class TestPDFServiceConversionStatistics:
         """変換統計情報取得成功"""
         mock_repo = Mock(spec=PDFRepository)
         mock_repo.get_conversion_statistics.return_value = {
-            "total_conversions": 100,
-            "successful_conversions": 95,
-            "failed_conversions": 5,
+            "total_logs": 100,
+            "success_count": 95,
+            "failed_count": 5,
+            "success_rate": 95.0,
+            "total_processing_time": 250.0,
             "average_processing_time": 2.5,
+            "action_counts": {"upload_and_convert": 50, "reconvert": 50},
         }
 
         service = PDFService(pdf_repository=mock_repo)
         result = service.get_conversion_statistics()
 
-        assert result["total_conversions"] == 100
-        assert result["successful_conversions"] == 95
-        assert result["failed_conversions"] == 5
+        assert result["total_logs"] == 100
+        assert result["success_count"] == 95
+        assert result["failed_count"] == 5
         assert result["average_processing_time"] == 2.5
 
     def test_get_conversion_statistics_exception(self):
@@ -102,9 +105,9 @@ class TestPDFServiceConversionStatistics:
         result = service.get_conversion_statistics()
 
         assert "error" in result
-        assert result["total_conversions"] == 0
-        assert result["successful_conversions"] == 0
-        assert result["failed_conversions"] == 0
+        assert result["total_logs"] == 0
+        assert result["success_count"] == 0
+        assert result["failed_count"] == 0
 
 
 class TestPDFServiceOrphanedFiles:

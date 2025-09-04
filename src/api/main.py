@@ -4,6 +4,7 @@ PDF to Markdown API
 PDFファイルをMarkdown形式に変換するAPI
 """
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -33,6 +34,4 @@ app.include_router(system_router)
 
 
 if __name__ == "__main__":
-    import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)

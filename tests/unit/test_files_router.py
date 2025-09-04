@@ -4,9 +4,11 @@
 routers/files.pyの各エンドポイントの機能適合性をテスト
 """
 
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.api.routers.files import router
@@ -22,7 +24,6 @@ class TestFilesRouter:
     @pytest.fixture
     def files_router_client(self):
         """ファイルルーター専用のテストクライアント"""
-        from fastapi import FastAPI
 
         app = FastAPI()
         app.include_router(router)
@@ -95,7 +96,8 @@ class TestUploadPDF(TestFilesRouter):
         )
 
         # テスト実行
-        with open("tests/data/test_markdown.pdf", "rb") as f:
+        test_file_path = Path(__file__).parent.parent / "data" / "test_markdown.pdf"
+        with open(test_file_path, "rb") as f:
             response = files_router_client.post(
                 "/files/upload",
                 files={"file": ("test.pdf", f.read(), "application/pdf")},
@@ -117,7 +119,8 @@ class TestUploadPDF(TestFilesRouter):
         )
 
         # テスト実行
-        with open("tests/data/test_markdown.pdf", "rb") as f:
+        test_file_path = Path(__file__).parent.parent / "data" / "test_markdown.pdf"
+        with open(test_file_path, "rb") as f:
             response = files_router_client.post(
                 "/files/upload",
                 files={"file": ("test.pdf", f.read(), "application/pdf")},
@@ -136,7 +139,8 @@ class TestUploadPDF(TestFilesRouter):
         )
 
         # テスト実行
-        with open("tests/data/test_markdown.pdf", "rb") as f:
+        test_file_path = Path(__file__).parent.parent / "data" / "test_markdown.pdf"
+        with open(test_file_path, "rb") as f:
             response = files_router_client.post(
                 "/files/upload",
                 files={"file": ("test.pdf", f.read(), "application/pdf")},
@@ -344,7 +348,8 @@ class TestUpdateFile(TestFilesRouter):
         mock_file_service.get_file.return_value = updated_file_data
 
         # テスト実行
-        with open("tests/data/test_markdown.pdf", "rb") as f:
+        test_file_path = Path(__file__).parent.parent / "data" / "test_markdown.pdf"
+        with open(test_file_path, "rb") as f:
             response = files_router_client.put(
                 f"/files/{sample_file_id}",
                 files={"file": ("updated.pdf", f.read(), "application/pdf")},
@@ -362,7 +367,8 @@ class TestUpdateFile(TestFilesRouter):
         mock_file_service.validate_file_id.return_value = False
 
         # テスト実行
-        with open("tests/data/test_markdown.pdf", "rb") as f:
+        test_file_path = Path(__file__).parent.parent / "data" / "test_markdown.pdf"
+        with open(test_file_path, "rb") as f:
             response = files_router_client.put(
                 "/files/invalid-id",
                 files={"file": ("test.pdf", f.read(), "application/pdf")},
@@ -384,7 +390,8 @@ class TestUpdateFile(TestFilesRouter):
         )
 
         # テスト実行
-        with open("tests/data/test_markdown.pdf", "rb") as f:
+        test_file_path = Path(__file__).parent.parent / "data" / "test_markdown.pdf"
+        with open(test_file_path, "rb") as f:
             response = files_router_client.put(
                 f"/files/{sample_file_id}",
                 files={"file": ("test.pdf", f.read(), "application/pdf")},
@@ -814,7 +821,8 @@ class TestFilesRouterErrorHandling(TestFilesRouter):
         )
 
         # テスト実行
-        with open("tests/data/test_markdown.pdf", "rb") as f:
+        test_file_path = Path(__file__).parent.parent / "data" / "test_markdown.pdf"
+        with open(test_file_path, "rb") as f:
             response = files_router_client.post(
                 "/files/upload",
                 files={"file": ("test.pdf", f.read(), "application/pdf")},
@@ -851,7 +859,8 @@ class TestFilesRouterErrorHandling(TestFilesRouter):
         )
 
         # テスト実行
-        with open("tests/data/test_markdown.pdf", "rb") as f:
+        test_file_path = Path(__file__).parent.parent / "data" / "test_markdown.pdf"
+        with open(test_file_path, "rb") as f:
             response = files_router_client.put(
                 f"/files/{sample_file_id}",
                 files={"file": ("test.pdf", f.read(), "application/pdf")},

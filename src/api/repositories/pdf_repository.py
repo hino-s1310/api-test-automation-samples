@@ -5,16 +5,20 @@ PDF関連のデータアクセス処理を担当
 PDF変換処理、ファイルシステム操作、変換ログの管理
 """
 
+import os
 import time
 import uuid
 from datetime import datetime, timedelta
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 import pdfplumber
 import pypdf
+from markitdown import MarkItDown
 from sqlmodel import func, select
 
+from ..cache import CacheKeys, cache_manager
 from ..database import SQLModelSessionManager, db_manager
 from ..models import ConversionLog, FileStatus
 
@@ -27,10 +31,8 @@ class PDFRepository:
         upload_dir: str = None,
         markdown_dir: str = None,
         use_sqlmodel: bool = False,
+        enable_cache: bool = True,
     ):
-        # 環境変数からディレクトリパスを取得、なければデフォルト値を使用
-        import os
-
         if upload_dir is None:
             upload_dir = os.environ.get("UPLOAD_DIR", "data/uploads")
         if markdown_dir is None:
@@ -39,6 +41,7 @@ class PDFRepository:
         self.upload_dir = Path(upload_dir)
         self.markdown_dir = Path(markdown_dir)
         self.use_sqlmodel = use_sqlmodel
+        self.enable_cache = enable_cache
         self.db_manager = db_manager
 
         # SQLModelサポートの初期化
@@ -70,8 +73,6 @@ class PDFRepository:
 
         # PDFファイルの内容チェック
         try:
-            from io import BytesIO
-
             pypdf.PdfReader(BytesIO(file_content))
             return True, "OK"
         except Exception:
@@ -138,8 +139,6 @@ class PDFRepository:
 
         try:
             try:
-                from markitdown import MarkItDown
-
                 markitdown_converter = MarkItDown()
                 result = markitdown_converter.convert(file_path)
                 if result and result.text_content and result.text_content.strip():
@@ -487,6 +486,12 @@ class PDFRepository:
 
     def get_conversion_statistics(self) -> dict[str, Any]:
         """変換統計情報を取得"""
+        # キャッシュチェック
+        if self.enable_cache:
+            cached_result = cache_manager.get(CacheKeys.CONVERSION_STATISTICS)
+            if cached_result is not None:
+                return cached_result
+
         if self.use_sqlmodel and self.sqlmodel_manager:
             try:
                 with self.sqlmodel_manager as session:
@@ -526,7 +531,7 @@ class PDFRepository:
                         # アクション別カウントが失敗した場合は空の辞書を返す
                         action_counts = {}
 
-                    return {
+                    result = {
                         "total_logs": total_logs,
                         "success_count": success_count,
                         "failed_count": failed_count,
@@ -541,6 +546,14 @@ class PDFRepository:
                         else 0,
                         "action_counts": action_counts,
                     }
+
+                    # キャッシュに保存（5分間）
+                    if self.enable_cache:
+                        cache_manager.set(
+                            CacheKeys.CONVERSION_STATISTICS, result, ttl=300
+                        )
+
+                    return result
             except Exception:
                 # フォールバック: 既存のdb_managerを使用
                 try:

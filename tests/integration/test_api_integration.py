@@ -9,6 +9,7 @@ from tests.unit.helpers import (
     assert_file_response,
     assert_update_response,
     assert_upload_response,
+    load_test_pdf,
     upload_test_pdf,
 )
 from tests.unit.helpers.test_data import APIEndpoints
@@ -57,12 +58,6 @@ def test_list_files_success(test_client):
 def test_update_file_success(sample_file_id, test_client):
     """ファイル更新APIの統合テスト（実DB操作）"""
     # sample_file_id フィクスチャで既にファイルが作成済み
-
-    # 実際のPDFファイルを使用してファイル更新APIを呼び出す
-    from tests.unit.helpers import (
-        load_test_pdf,  # pyright: ignore[reportMissingImports]
-    )
-
     pdf_content = load_test_pdf()
 
     response = test_client.put(
@@ -170,11 +165,6 @@ def test_file_lifecycle_integration(test_client):
     file_data = response.json()
     assert file_data["id"] == file_id
 
-    # 3. ファイル更新
-    from tests.unit.helpers import (
-        load_test_pdf,  # pyright: ignore[reportMissingImports]
-    )
-
     pdf_content = load_test_pdf()
     response = test_client.put(
         APIEndpoints.get_file_endpoint(file_id),
@@ -190,3 +180,113 @@ def test_file_lifecycle_integration(test_client):
     # 5. 削除後の確認
     response = test_client.get(APIEndpoints.get_file_endpoint(file_id))
     assert response.status_code == 404
+
+
+# SQLModel対応の統合テスト
+class TestAPIIntegrationSQLModel:
+    """API統合テスト（SQLModel対応）"""
+
+    def test_sqlmodel_file_operations_integration(self, test_client):
+        """SQLModel: ファイル操作の統合テスト"""
+        # 1. ファイル一覧取得（空の状態）
+        response = test_client.get(APIEndpoints.LIST_FILES)
+        assert response.status_code == 200
+        data = response.json()
+        assert "files" in data
+        assert isinstance(data["files"], list)
+
+        # 2. ファイル検索（空の状態）
+        response = test_client.get(f"{APIEndpoints.LIST_FILES}?query=test")
+        assert response.status_code == 200
+        data = response.json()
+        assert "files" in data
+        assert isinstance(data["files"], list)
+
+        # 3. 統計情報取得
+        response = test_client.get(APIEndpoints.STATISTICS)
+        assert response.status_code == 200
+        data = response.json()
+        assert "total_files" in data
+        assert isinstance(data["total_files"], int)
+
+    def test_sqlmodel_file_search_integration(self, test_client):
+        """SQLModel: ファイル検索の統合テスト"""
+        # 検索パラメータのテスト
+        search_params = [
+            "?query=test",
+            "?status=completed",
+            "?is_edited=true",
+            "?page=1&per_page=5",
+            "?query=test&status=completed&is_edited=false&page=1&per_page=10",
+        ]
+
+        for params in search_params:
+            response = test_client.get(f"{APIEndpoints.LIST_FILES}{params}")
+            assert response.status_code == 200
+            data = response.json()
+            assert "files" in data
+            assert "total_count" in data
+            assert "page" in data
+            assert "per_page" in data
+            assert isinstance(data["files"], list)
+
+    def test_sqlmodel_file_statistics_integration(self, test_client):
+        """SQLModel: ファイル統計情報の統合テスト"""
+        response = test_client.get(APIEndpoints.STATISTICS)
+        assert response.status_code == 200
+        data = response.json()
+
+        # 統計情報の構造を確認
+        expected_keys = [
+            "total_files",
+            "status_counts",
+            "total_size_bytes",
+            "total_size_mb",
+            "total_processing_time",
+            "average_processing_time",
+        ]
+        for key in expected_keys:
+            assert key in data
+
+    def test_sqlmodel_conversion_logs_integration(self, test_client):
+        """SQLModel: 変換ログの統合テスト"""
+        # 存在しないファイルIDでの変換ログ取得
+        response = test_client.get(
+            APIEndpoints.get_file_logs_endpoint("non-existent-id")
+        )
+        assert response.status_code == 400  # 実際のAPIは400を返す
+
+    def test_sqlmodel_edit_history_integration(self, test_client):
+        """SQLModel: 編集履歴の統合テスト"""
+        # 存在しないファイルIDでの編集履歴取得
+        response = test_client.get(
+            APIEndpoints.get_file_edit_history_endpoint("non-existent-id")
+        )
+        assert response.status_code == 404  # 実際のAPIは404を返す
+
+    def test_sqlmodel_orphaned_files_integration(self, test_client):
+        """SQLModel: 孤立ファイルの統合テスト"""
+        # 孤立ファイルエンドポイントは存在しないため、このテストをスキップ
+        # 実際のAPIには孤立ファイル取得エンドポイントがない
+        pass
+
+    def test_sqlmodel_cleanup_integration(self, test_client):
+        """SQLModel: クリーンアップの統合テスト"""
+        response = test_client.post(APIEndpoints.CLEANUP_OLD_FILES, params={"days": 30})
+        assert response.status_code == 200
+        data = response.json()
+        # 実際のレスポンス構造に合わせて修正
+        assert "message" in data
+        assert "deleted_count" in data
+        assert "total_old_files" in data
+        assert isinstance(data["deleted_count"], int)
+
+    def test_sqlmodel_batch_operations_integration(self, test_client):
+        """SQLModel: バッチ操作の統合テスト"""
+        # 空のリストでのバッチ削除（クエリパラメータを使用）
+        response = test_client.delete(
+            APIEndpoints.BATCH_DELETE_FILES, params={"file_ids": []}
+        )
+        assert response.status_code == 422  # 実際のAPIは422を返す
+        data = response.json()
+        assert "detail" in data

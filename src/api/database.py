@@ -48,10 +48,42 @@ def get_database_url(db_path: str = None) -> str:
 def create_sqlmodel_engine(db_path: str = None):
     """SQLModel用エンジンを作成"""
     database_url = get_database_url(db_path)
+
+    # 環境に応じた接続プール設定
+    environment = os.getenv("ENVIRONMENT", "development")
+
+    if environment == "test":
+        # テスト環境: 小さなプールサイズで高速実行
+        pool_size = 5
+        max_overflow = 10
+        pool_timeout = 30
+        pool_recycle = 3600
+        pool_pre_ping = True
+    elif environment == "production":
+        # 本番環境: 大きなプールサイズで高負荷対応
+        pool_size = 20
+        max_overflow = 30
+        pool_timeout = 30
+        pool_recycle = 3600
+        pool_pre_ping = True
+    else:
+        # 開発環境: 中程度のプールサイズ
+        pool_size = 10
+        max_overflow = 20
+        pool_timeout = 30
+        pool_recycle = 3600
+        pool_pre_ping = True
+
     engine = create_engine(
         database_url,
         connect_args={"check_same_thread": False},  # SQLite用設定
         echo=False,  # SQLクエリのログ出力（開発時はTrueに設定可能）
+        # 接続プール設定
+        pool_size=pool_size,
+        max_overflow=max_overflow,
+        pool_timeout=pool_timeout,
+        pool_recycle=pool_recycle,
+        pool_pre_ping=pool_pre_ping,
     )
     return engine
 
@@ -92,6 +124,7 @@ class SQLModelSessionManager:
     def __init__(self, db_path: str = None):
         self.engine = create_sqlmodel_engine(db_path)
         self.SessionLocal = create_session_factory(self.engine)
+        self._pool_stats = None
 
     def get_session(self):
         """セッションを取得"""
@@ -117,6 +150,55 @@ class SQLModelSessionManager:
         else:
             self.session.commit()
         self.session.close()
+
+    def get_pool_status(self):
+        """接続プールの状態を取得"""
+        try:
+            pool = self.engine.pool
+            return {
+                "pool_size": pool.size(),
+                "checked_in": pool.checkedin(),
+                "checked_out": pool.checkedout(),
+                "overflow": pool.overflow(),
+                "total_connections": pool.size() + pool.overflow(),
+                "available_connections": pool.checkedin(),
+                "active_connections": pool.checkedout(),
+            }
+        except Exception as e:
+            return {"error": str(e)}
+
+    def get_engine_info(self):
+        """エンジン情報を取得"""
+        try:
+            return {
+                "url": str(self.engine.url),
+                "driver": self.engine.driver,
+                "pool_size": self.engine.pool.size(),
+                "max_overflow": self.engine.pool._max_overflow,
+                "pool_timeout": self.engine.pool._timeout,
+                "pool_recycle": self.engine.pool._recycle,
+                "pool_pre_ping": self.engine.pool._pre_ping,
+            }
+        except Exception as e:
+            return {"error": str(e)}
+
+    def health_check(self):
+        """データベース接続のヘルスチェック"""
+        try:
+            with self.get_session() as session:
+                # 簡単なクエリで接続をテスト
+                session.execute("SELECT 1")
+                return {
+                    "status": "healthy",
+                    "message": "Database connection is working",
+                    "pool_status": self.get_pool_status(),
+                }
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "error": str(e),
+                "pool_status": self.get_pool_status(),
+            }
 
 
 class DatabaseManager:
