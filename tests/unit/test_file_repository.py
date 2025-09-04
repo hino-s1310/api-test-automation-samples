@@ -507,7 +507,10 @@ class TestFileRepositoryStatistics(TestFileRepository):
 
     def test_get_file_statistics_exception(self, file_repository, mock_db_manager):
         """ファイル統計情報取得で例外が発生した場合のテスト"""
-        # モック設定
+        # キャッシュを無効化
+        file_repository.enable_cache = False
+
+        # モック設定 - get_file_statisticsが内部で呼び出すメソッドをモック
         mock_db_manager.list_files.side_effect = Exception("Statistics error")
 
         # テスト実行
@@ -768,7 +771,10 @@ class TestFileRepositoryBatchOperations(TestFileRepository):
 
     def test_batch_delete_files_exception(self, file_repository, mock_db_manager):
         """一括削除で例外が発生した場合のテスト"""
-        # モック設定
+        # キャッシュを無効化
+        file_repository.enable_cache = False
+
+        # モック設定 - batch_delete_filesが内部で呼び出すメソッドをモック
         mock_db_manager.get_file.side_effect = Exception("Batch delete error")
 
         # テスト実行
@@ -797,7 +803,10 @@ class TestFileRepositoryBatchOperations(TestFileRepository):
 
     def test_batch_update_file_status_exception(self, file_repository, mock_db_manager):
         """一括ステータス更新で例外が発生した場合のテスト"""
-        # モック設定
+        # キャッシュを無効化
+        file_repository.enable_cache = False
+
+        # モック設定 - batch_update_file_statusが内部で呼び出すメソッドをモック
         mock_db_manager.get_file.side_effect = Exception("Batch update error")
 
         # テスト実行
