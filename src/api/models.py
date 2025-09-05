@@ -19,6 +19,14 @@ class FileStatus(str, Enum):
     FAILED = "failed"
 
 
+class RedactionLevel(str, Enum):
+    """赤セルシートレベル"""
+
+    LEVEL1 = "level1"  # 最高機密
+    LEVEL2 = "level2"  # 一般機密
+    LEVEL3 = "level3"  # 内部限定
+
+
 # ===========================
 # SQLModel データベースモデル
 # ===========================
@@ -55,6 +63,9 @@ class File(SQLModel, table=True):
         back_populates="file", sa_relationship_kwargs={"lazy": "selectin"}
     )
     edit_history: list["FileEditHistory"] = Relationship(
+        back_populates="file", sa_relationship_kwargs={"lazy": "selectin"}
+    )
+    redaction_settings: list["RedactionSettings"] = Relationship(
         back_populates="file", sa_relationship_kwargs={"lazy": "selectin"}
     )
 
@@ -191,6 +202,114 @@ class FileEditHistory(SQLModel, table=True):
             "edited_content": self.edited_content,
             "edit_reason": self.edit_reason,
             "edited_by": self.edited_by,
+            "created_at": self.created_at,
+        }
+
+
+class RedactionSettings(SQLModel, table=True):
+    """赤セルシート設定データベースモデル"""
+
+    __tablename__ = "redaction_settings"
+
+    id: str = SQLField(primary_key=True, description="設定ID")
+    file_id: str = SQLField(foreign_key="files.id", description="ファイルID")
+    user_id: str | None = SQLField(default=None, description="ユーザーID")
+    name: str = SQLField(description="設定名")
+    description: str | None = SQLField(default=None, description="設定の説明")
+    show_all: bool = SQLField(default=False, description="全項目表示フラグ")
+    level_settings: str = SQLField(
+        default="{}", description="レベル別設定（JSON文字列）"
+    )
+    revealed_items: str = SQLField(
+        default="[]", description="表示項目リスト（JSON文字列）"
+    )
+    is_shared: bool = SQLField(default=False, description="共有フラグ")
+    created_at: datetime = SQLField(
+        default_factory=datetime.now, description="作成日時"
+    )
+    updated_at: datetime | None = SQLField(default=None, description="更新日時")
+
+    # リレーションシップ
+    file: File | None = Relationship(back_populates="redaction_settings")
+
+    def get_level_settings_dict(self) -> dict:
+        """レベル設定を辞書として取得"""
+        try:
+            return json.loads(self.level_settings)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    def set_level_settings_dict(self, level_settings: dict) -> None:
+        """レベル設定を辞書から設定"""
+        if level_settings:
+            self.level_settings = json.dumps(level_settings)
+        else:
+            self.level_settings = "{}"
+
+    def get_revealed_items_list(self) -> list[str]:
+        """表示項目リストを取得"""
+        try:
+            return json.loads(self.revealed_items)
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    def set_revealed_items_list(self, revealed_items: list[str]) -> None:
+        """表示項目リストを設定"""
+        if revealed_items:
+            self.revealed_items = json.dumps(revealed_items)
+        else:
+            self.revealed_items = "[]"
+
+    def to_dict(self) -> dict:
+        """辞書形式に変換"""
+        return {
+            "id": self.id,
+            "file_id": self.file_id,
+            "user_id": self.user_id,
+            "name": self.name,
+            "description": self.description,
+            "show_all": self.show_all,
+            "level_settings": self.get_level_settings_dict(),
+            "revealed_items": self.get_revealed_items_list(),
+            "is_shared": self.is_shared,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+
+
+class RedactionSettingsShare(SQLModel, table=True):
+    """赤セルシート設定共有データベースモデル"""
+
+    __tablename__ = "redaction_settings_shares"
+
+    id: str = SQLField(primary_key=True, description="共有ID")
+    settings_id: str = SQLField(
+        foreign_key="redaction_settings.id", description="設定ID"
+    )
+    shared_with_user_id: str | None = SQLField(
+        default=None, description="共有先ユーザーID"
+    )
+    shared_with_team_id: str | None = SQLField(
+        default=None, description="共有先チームID"
+    )
+    permission_level: str = SQLField(
+        default="read", description="権限レベル（read/write/admin）"
+    )
+    created_at: datetime = SQLField(
+        default_factory=datetime.now, description="作成日時"
+    )
+
+    # リレーションシップ
+    settings: RedactionSettings | None = Relationship()
+
+    def to_dict(self) -> dict:
+        """辞書形式に変換"""
+        return {
+            "id": self.id,
+            "settings_id": self.settings_id,
+            "shared_with_user_id": self.shared_with_user_id,
+            "shared_with_team_id": self.shared_with_team_id,
+            "permission_level": self.permission_level,
             "created_at": self.created_at,
         }
 
@@ -383,3 +502,69 @@ class FileSearchResponse(BaseModel):
     page: int = Field(1, description="現在のページ")
     per_page: int = Field(10, description="1ページあたりの件数")
     filters: dict = Field(..., description="適用されたフィルター")
+
+
+# ===========================
+# 赤セルシート関連レスポンスモデル
+# ===========================
+
+
+class RedactionSettingsResponse(BaseModel):
+    """赤セルシート設定レスポンス"""
+
+    id: str = Field(..., description="設定ID")
+    file_id: str = Field(..., description="ファイルID")
+    user_id: str | None = Field(None, description="ユーザーID")
+    name: str = Field(..., description="設定名")
+    description: str | None = Field(None, description="設定の説明")
+    show_all: bool = Field(..., description="全項目表示フラグ")
+    level_settings: dict = Field(..., description="レベル別設定")
+    revealed_items: list[str] = Field(..., description="表示項目リスト")
+    is_shared: bool = Field(..., description="共有フラグ")
+    created_at: datetime = Field(..., description="作成日時")
+    updated_at: datetime | None = Field(None, description="更新日時")
+
+
+class RedactionSettingsListResponse(BaseModel):
+    """赤セルシート設定一覧レスポンス"""
+
+    settings: list[RedactionSettingsResponse] = Field(..., description="設定一覧")
+    total: int = Field(..., description="総設定数")
+
+
+class RedactionSettingsCreateRequest(BaseModel):
+    """赤セルシート設定作成リクエスト"""
+
+    name: str = Field(..., description="設定名")
+    description: str | None = Field(None, description="設定の説明")
+    show_all: bool = Field(False, description="全項目表示フラグ")
+    level_settings: dict = Field(default_factory=dict, description="レベル別設定")
+    revealed_items: list[str] = Field(
+        default_factory=list, description="表示項目リスト"
+    )
+    is_shared: bool = Field(False, description="共有フラグ")
+
+
+class RedactionSettingsUpdateRequest(BaseModel):
+    """赤セルシート設定更新リクエスト"""
+
+    name: str | None = Field(None, description="設定名")
+    description: str | None = Field(None, description="設定の説明")
+    show_all: bool | None = Field(None, description="全項目表示フラグ")
+    level_settings: dict | None = Field(None, description="レベル別設定")
+    revealed_items: list[str] | None = Field(None, description="表示項目リスト")
+    is_shared: bool | None = Field(None, description="共有フラグ")
+
+
+class RedactionSettingsExportResponse(BaseModel):
+    """赤セルシート設定エクスポートレスポンス"""
+
+    settings_data: str = Field(..., description="設定データ（JSON文字列）")
+    export_format: str = Field("json", description="エクスポート形式")
+
+
+class RedactionSettingsImportRequest(BaseModel):
+    """赤セルシート設定インポートリクエスト"""
+
+    settings_data: str = Field(..., description="設定データ（JSON文字列）")
+    format: str = Field("json", description="インポート形式")

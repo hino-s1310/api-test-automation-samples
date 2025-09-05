@@ -548,14 +548,16 @@ def test_session_setup():
             except Exception as e:
                 print(f"ディレクトリ削除エラー {dir_name}: {e}")
 
-    # テスト用データベースファイルをクリーンアップ
-    test_db_files = ["test_database.db"]
-    for db_file in test_db_files:
-        if os.path.exists(db_file):
-            try:
-                os.remove(db_file)
-                print(f"削除されたファイル: {db_file}")
-            except Exception as e:
-                print(f"ファイル削除エラー {db_file}: {e}")
+    # テスト用データベースファイルをクリーンアップ（無効化）
+    # 注意: データベースファイルを削除すると、次回のテスト実行時に
+    # マイグレーションが適用されていない状態になるため、削除を無効化
+    # test_db_files = ["test_database.db"]
+    # for db_file in test_db_files:
+    #     if os.path.exists(db_file):
+    #         try:
+    #             os.remove(db_file)
+    #             print(f"削除されたファイル: {db_file}")
+    #         except Exception as e:
+    #             print(f"ファイル削除エラー {db_file}: {e}")
 
     print("テストセッション終了時のクリーンアップ完了")
