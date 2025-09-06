@@ -5,119 +5,23 @@ SQLModelのクエリ最適化（インデックス、遅延読み込み、N+1問
 """
 
 import os
-import subprocess
 from datetime import datetime, timedelta
 
 import pytest
 
-from src.api.database import SQLModelSessionManager
 from src.api.models import ConversionLog, File, FileEditHistory, FileStatus
-from src.api.repositories.file_repository import FileRepository
 
 
 class TestQueryOptimization:
     """クエリ最適化の機能テストクラス"""
 
-    @pytest.fixture(autouse=True, scope="class")
-    def setup_database_migration(self):
-        """テストクラス開始時にデータベースマイグレーションを実行"""
-        # テスト環境の設定
-        os.environ["ENVIRONMENT"] = "test"
-
-        # プロジェクトルートディレクトリを取得
-        # 現在のディレクトリがtests/unitの場合、プロジェクトルートに移動
-        current_dir = os.getcwd()
-        if current_dir.endswith("tests/unit"):
-            project_root = os.path.abspath(os.path.join(current_dir, "../../"))
-        elif current_dir.endswith("tests"):
-            project_root = os.path.abspath(os.path.join(current_dir, "../"))
-        else:
-            project_root = current_dir
-
-        # データベースファイルのパスを絶対パスで指定
-        test_db_path = os.path.join(project_root, "data", "test_database.db")
-        data_dir = os.path.join(project_root, "data")
-
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir, exist_ok=True)
-
-        # 既存のデータベースファイルを削除してクリーンな状態から開始
-        if os.path.exists(test_db_path):
-            try:
-                os.remove(test_db_path)
-                print(f"既存のデータベースファイルを削除: {test_db_path}")
-            except Exception as remove_error:
-                print(f"データベースファイル削除エラー: {remove_error}")
-
-        # マイグレーション実行の環境変数を設定
-        migration_env = os.environ.copy()
-        migration_env["ENVIRONMENT"] = "test"
-
-        print(f"プロジェクトルートディレクトリ: {project_root}")
-
-        try:
-            # マイグレーションを実行（プロジェクトルートから実行）
-            result = subprocess.run(
-                ["uv", "run", "alembic", "upgrade", "head"],
-                env=migration_env,
-                capture_output=True,
-                text=True,
-                check=True,
-                cwd=project_root,
-            )
-            print(f"マイグレーション実行成功: {result.stdout}")
-
-            # マイグレーション後のテーブル確認
-            if os.path.exists(test_db_path):
-                import sqlite3
-
-                conn = sqlite3.connect(test_db_path)
-                cursor = conn.cursor()
-                cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-                tables = cursor.fetchall()
-                print(f"作成されたテーブル: {[table[0] for table in tables]}")
-                conn.close()
-
-        except subprocess.CalledProcessError as e:
-            print(f"マイグレーション実行エラー: {e.stderr}")
-            # エラーが発生した場合、データベースファイルを削除して再試行
-            if os.path.exists(test_db_path):
-                try:
-                    os.remove(test_db_path)
-                    print(f"データベースファイルを削除: {test_db_path}")
-                except Exception as remove_error:
-                    print(f"データベースファイル削除エラー: {remove_error}")
-
-            # 再試行
-            try:
-                result = subprocess.run(
-                    ["uv", "run", "alembic", "upgrade", "head"],
-                    env=migration_env,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                    cwd=project_root,
-                )
-                print(f"マイグレーション再実行成功: {result.stdout}")
-            except Exception as retry_error:
-                print(f"マイグレーション再実行エラー: {retry_error}")
-                # 最終的にエラーが発生してもテストを続行
-        except Exception as e:
-            print(f"マイグレーション実行中の予期しないエラー: {e}")
-            # エラーが発生してもテストを続行
-
     @pytest.fixture
-    def optimized_repository(self):
-        """最適化されたリポジトリのインスタンス"""
-        return FileRepository(use_sqlmodel=True)
-
-    @pytest.fixture
-    def sample_data(self, optimized_repository):
+    def sample_data(self, file_repository, test_session_manager):
         """テスト用のサンプルデータを作成"""
         # 環境変数を明示的に設定
         os.environ["ENVIRONMENT"] = "test"
 
-        with SQLModelSessionManager() as session:
+        with test_session_manager as session:
             # テーブルの存在確認
             try:
                 # 既存のテストデータをクリーンアップ
@@ -173,22 +77,22 @@ class TestQueryOptimization:
 
             session.commit()
 
-    def test_index_functionality(self, optimized_repository, sample_data):
+    def test_index_functionality(self, file_repository, sample_data):
         """インデックス機能のテスト"""
-        result = optimized_repository.get_files_by_status("completed")
+        result = file_repository.get_files_by_status("completed")
 
         # 結果が正しく取得されていることを確認
         assert "files" in result
         assert "total_count" in result
         assert len(result["files"]) >= 0  # データが存在しない場合もある
 
-    def test_joinedload_functionality(self, optimized_repository, sample_data):
+    def test_joinedload_functionality(self, file_repository, sample_data):
         """joinedload機能のテスト"""
         # 通常のクエリ（N+1問題あり）
-        result_normal = optimized_repository.get_files_by_status("completed")
+        result_normal = file_repository.get_files_by_status("completed")
 
         # joinedloadを使用したクエリ（N+1問題解決）
-        result_optimized = optimized_repository.get_files_by_status(
+        result_optimized = file_repository.get_files_by_status(
             "completed", include_relations=True
         )
 
@@ -206,9 +110,9 @@ class TestQueryOptimization:
             assert normal_file["filename"] == optimized_file["filename"]
             assert normal_file["status"] == optimized_file["status"]
 
-    def test_search_functionality(self, optimized_repository, sample_data):
+    def test_search_functionality(self, file_repository, sample_data):
         """検索クエリの機能テスト"""
-        result = optimized_repository.search_files(
+        result = file_repository.search_files(
             query="test", status="completed", is_edited=True, page=1, per_page=5
         )
 
@@ -217,22 +121,24 @@ class TestQueryOptimization:
         assert "total_count" in result
         assert isinstance(result["files"], list)
 
-    def test_date_filter_functionality(self, optimized_repository, sample_data):
+    def test_date_filter_functionality(self, file_repository, sample_data):
         """日付フィルタリングの機能テスト"""
         # 過去7日間のファイルを取得
         seven_days_ago = datetime.now() - timedelta(days=7)
 
-        result = optimized_repository.get_files_created_after(seven_days_ago)
+        result = file_repository.get_files_created_after(seven_days_ago)
 
         # 結果が正しく取得されていることを確認
         assert "files" in result
         assert "total_count" in result
         assert isinstance(result["files"], list)
 
-    def test_edit_history_by_id_functionality(self, optimized_repository, sample_data):
+    def test_edit_history_by_id_functionality(
+        self, file_repository, sample_data, test_session_manager
+    ):
         """編集履歴ID取得の機能テスト（N+1問題解決）"""
         # 最初のファイルの編集履歴を取得
-        with SQLModelSessionManager() as session:
+        with test_session_manager as session:
             first_file = session.query(File).first()
             if first_file:
                 file_id = first_file.id
@@ -271,10 +177,12 @@ class TestQueryOptimization:
                 # ファイルが存在しない場合は、テストをスキップ
                 pytest.skip("テストファイルが見つかりませんでした")
 
-    def test_conversion_logs_functionality(self, optimized_repository, sample_data):
+    def test_conversion_logs_functionality(
+        self, file_repository, sample_data, test_session_manager
+    ):
         """変換ログ取得の機能テスト"""
         # 最初のファイルの変換ログを取得
-        with SQLModelSessionManager() as session:
+        with test_session_manager as session:
             first_file = session.query(File).first()
             if first_file:
                 file_id = first_file.id
@@ -316,9 +224,9 @@ class TestQueryOptimization:
                 # ファイルが存在しない場合は、テストをスキップ
                 pytest.skip("テストファイルが見つかりませんでした")
 
-    def test_statistics_functionality(self, optimized_repository, sample_data):
+    def test_statistics_functionality(self, file_repository, sample_data):
         """統計情報取得の機能テスト"""
-        result = optimized_repository.get_file_statistics()
+        result = file_repository.get_file_statistics()
 
         # 結果が正しく取得されていることを確認
         assert "total_files" in result

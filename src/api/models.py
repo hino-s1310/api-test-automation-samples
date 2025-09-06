@@ -211,7 +211,7 @@ class RedactionSettings(SQLModel, table=True):
 
     __tablename__ = "redaction_settings"
 
-    id: str = SQLField(primary_key=True, description="設定ID")
+    id: int = SQLField(primary_key=True, description="設定ID")
     file_id: str = SQLField(foreign_key="files.id", description="ファイルID")
     user_id: str | None = SQLField(default=None, description="ユーザーID")
     name: str = SQLField(description="設定名")
@@ -282,8 +282,8 @@ class RedactionSettingsShare(SQLModel, table=True):
 
     __tablename__ = "redaction_settings_shares"
 
-    id: str = SQLField(primary_key=True, description="共有ID")
-    settings_id: str = SQLField(
+    id: int = SQLField(primary_key=True, description="共有ID")
+    settings_id: int = SQLField(
         foreign_key="redaction_settings.id", description="設定ID"
     )
     shared_with_user_id: str | None = SQLField(

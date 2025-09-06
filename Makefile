@@ -24,6 +24,9 @@ test: test-unit ## Run unit tests (default)
 test-unit: ## Run unit tests
 	uv run pytest tests/unit/ -v
 
+test-redaction: ## Run redaction repository tests (optimized)
+	uv run pytest tests/unit/test_redaction_repository.py -v
+
 test-services: ## Run service tests
 	uv run pytest tests/unit/test_services.py -v
 

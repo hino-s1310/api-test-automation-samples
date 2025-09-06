@@ -4,6 +4,7 @@
 新しく追加したファイル編集関連のモデルのテストを実装
 """
 
+import json
 from datetime import datetime
 
 import pytest
@@ -1034,9 +1035,6 @@ class TestRedactionModelIntegration:
         assert settings_dict["id"] == "settings123"
         assert settings_dict["level_settings"] == {"level1": True}
         assert settings_dict["revealed_items"] == ["item1"]
-
-        # JSON文字列への変換（datetimeをISO形式に変換）
-        import json
 
         # datetimeをISO形式の文字列に変換
         serializable_dict = {
