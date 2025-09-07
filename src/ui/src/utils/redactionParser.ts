@@ -239,7 +239,7 @@ function getLevelInfo(level: RedactionLevel) {
     level3: { color: '#d97706', icon: '🟡', label: '内部限定' }
   };
 
-  return levelInfoMap[level];
+  return levelInfoMap[level] || { color: '#6b7280', icon: '⚫', label: '不明' };
 }
 
 /**
