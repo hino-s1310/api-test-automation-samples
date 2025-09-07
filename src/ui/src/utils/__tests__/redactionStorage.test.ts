@@ -50,6 +50,10 @@ describe('RedactionStorage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // localStorageのモックをリセット
+    localStorageMock.setItem.mockImplementation(() => {});
+    localStorageMock.getItem.mockImplementation(() => null);
+    localStorageMock.removeItem.mockImplementation(() => {});
   });
 
   describe('saveRedactionSettings', () => {
@@ -119,9 +123,9 @@ describe('RedactionStorage', () => {
   });
 
   describe('saveRedactionState', () => {
-    it('should save state to localStorage', () => {
+    it('should save state to localStorage', async () => {
       const state = { showAll: true, revealedItems: new Set(['item1']) };
-      const result = saveRedactionState('file_123', state);
+      const result = await saveRedactionState('file_123', state);
 
       expect(result).toBe(true);
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
@@ -146,12 +150,12 @@ describe('RedactionStorage', () => {
   });
 
   describe('saveDraftSettings', () => {
-    it('should save draft settings', () => {
+    it('should save draft settings', async () => {
       const draft: RedactionSettingsCreateRequest = {
         name: 'Draft Settings',
         description: 'Draft description'
       };
-      const result = saveDraftSettings('file_123', draft);
+      const result = await saveDraftSettings('file_123', draft);
 
       expect(result).toBe(true);
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
@@ -176,8 +180,8 @@ describe('RedactionStorage', () => {
   });
 
   describe('saveSettingsHistory', () => {
-    it('should save settings history', () => {
-      const result = saveSettingsHistory('file_123', mockSettings);
+    it('should save settings history', async () => {
+      const result = await saveSettingsHistory('file_123', mockSettings);
 
       expect(result).toBe(true);
       expect(localStorageMock.setItem).toHaveBeenCalledWith(

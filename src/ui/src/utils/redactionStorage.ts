@@ -521,3 +521,81 @@ function decompressData(compressedData: string): any {
 function generateHistoryId(): string {
   return `history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
+
+/**
+ * 赤セルシート設定の履歴を取得
+ * @param fileId ファイルID
+ * @returns 履歴配列
+ */
+export async function getRedactionHistory(fileId: string): Promise<RedactionSettings[]> {
+  try {
+    const key = `${STORAGE_KEYS.REDACTION_HISTORY}${fileId}`;
+    const data = localStorage.getItem(key);
+
+    if (!data) {
+      return [];
+    }
+
+    const history = JSON.parse(data);
+    return Array.isArray(history) ? history : [];
+  } catch (error) {
+    console.error('Failed to get redaction history:', error);
+    return [];
+  }
+}
+
+/**
+ * 赤セルシート設定の履歴を保存
+ * @param fileId ファイルID
+ * @param settings 設定データ
+ * @param maxCount 最大保持数
+ * @returns 保存成功フラグ
+ */
+export async function saveRedactionHistory(
+  fileId: string,
+  settings: RedactionSettings,
+  maxCount: number = 10
+): Promise<boolean> {
+  try {
+    const key = `${STORAGE_KEYS.REDACTION_HISTORY}${fileId}`;
+    const existingHistory = await getRedactionHistory(fileId);
+
+    // 新しい履歴エントリを作成
+    const historyEntry = {
+      ...settings,
+      id: generateHistoryId(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // 履歴に追加（先頭に挿入）
+    const newHistory = [historyEntry, ...existingHistory];
+
+    // 最大保持数を超える場合は古いものを削除
+    if (newHistory.length > maxCount) {
+      newHistory.splice(maxCount);
+    }
+
+    localStorage.setItem(key, JSON.stringify(newHistory));
+    return true;
+  } catch (error) {
+    console.error('Failed to save redaction history:', error);
+    return false;
+  }
+}
+
+/**
+ * 赤セルシート設定の履歴をクリア
+ * @param fileId ファイルID
+ * @returns クリア成功フラグ
+ */
+export async function clearRedactionHistory(fileId: string): Promise<boolean> {
+  try {
+    const key = `${STORAGE_KEYS.REDACTION_HISTORY}${fileId}`;
+    localStorage.removeItem(key);
+    return true;
+  } catch (error) {
+    console.error('Failed to clear redaction history:', error);
+    return false;
+  }
+}

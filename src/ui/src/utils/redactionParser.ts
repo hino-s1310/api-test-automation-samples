@@ -58,7 +58,7 @@ export function parseRedactionElements(
 
   // 各マッチを処理
   allMatches.forEach(({ match, type }, index) => {
-    if (!match.index) return;
+    if (match.index === undefined) return;
 
     const fullMatch = match[0];
     let level: RedactionLevel;
@@ -274,7 +274,7 @@ export function validateRedactionSyntax(markdown: string): {
   }
 
   // 無効なレベルをチェック
-  const invalidLevelMatches = markdown.match(/\[REDACTED:(?!level[123]):/g);
+  const invalidLevelMatches = markdown.match(/\[REDACTED:(?!level[123])(\w+):/g);
   if (invalidLevelMatches) {
     errors.push('無効なレベルが指定された赤セルシート構文が見つかりました');
   }
