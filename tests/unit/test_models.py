@@ -879,20 +879,26 @@ class TestRedactionSettingsListResponse:
         )
 
         response = RedactionSettingsListResponse(
-            settings=[settings1, settings2], total=2
+            settings=[settings1, settings2], total_count=2, limit=10, offset=0
         )
 
         assert len(response.settings) == 2
-        assert response.total == 2
+        assert response.total_count == 2
+        assert response.limit == 10
+        assert response.offset == 0
         assert response.settings[0].id == "settings1"
         assert response.settings[1].id == "settings2"
 
     def test_redaction_settings_list_response_empty(self):
         """空のリストのテスト"""
-        response = RedactionSettingsListResponse(settings=[], total=0)
+        response = RedactionSettingsListResponse(
+            settings=[], total_count=0, limit=10, offset=0
+        )
 
         assert len(response.settings) == 0
-        assert response.total == 0
+        assert response.total_count == 0
+        assert response.limit == 10
+        assert response.offset == 0
 
 
 class TestRedactionSettingsExportResponse:

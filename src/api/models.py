@@ -147,7 +147,7 @@ class ConversionLog(SQLModel, table=True):
     def to_dict(self) -> dict:
         """辞書形式に変換"""
         return {
-            "id": self.id,
+            "id": str(self.id),  # idを文字列に変換
             "file_id": self.file_id,
             "action": self.action,
             "status": self.status,
@@ -194,7 +194,7 @@ class FileEditHistory(SQLModel, table=True):
     def to_dict(self) -> dict:
         """辞書形式に変換"""
         return {
-            "id": self.id,
+            "id": str(self.id),  # idを文字列に変換
             "file_id": self.file_id,
             "original_filename": self.original_filename,
             "original_content": self.original_content,
@@ -263,7 +263,7 @@ class RedactionSettings(SQLModel, table=True):
     def to_dict(self) -> dict:
         """辞書形式に変換"""
         return {
-            "id": self.id,
+            "id": str(self.id),  # idを文字列に変換
             "file_id": self.file_id,
             "user_id": self.user_id,
             "name": self.name,
@@ -305,8 +305,8 @@ class RedactionSettingsShare(SQLModel, table=True):
     def to_dict(self) -> dict:
         """辞書形式に変換"""
         return {
-            "id": self.id,
-            "settings_id": self.settings_id,
+            "id": str(self.id),  # idを文字列に変換
+            "settings_id": str(self.settings_id),  # settings_idも文字列に変換
             "shared_with_user_id": self.shared_with_user_id,
             "shared_with_team_id": self.shared_with_team_id,
             "permission_level": self.permission_level,
@@ -529,7 +529,9 @@ class RedactionSettingsListResponse(BaseModel):
     """赤セルシート設定一覧レスポンス"""
 
     settings: list[RedactionSettingsResponse] = Field(..., description="設定一覧")
-    total: int = Field(..., description="総設定数")
+    total_count: int = Field(..., description="総設定数")
+    limit: int = Field(..., description="取得件数上限")
+    offset: int = Field(..., description="オフセット")
 
 
 class RedactionSettingsCreateRequest(BaseModel):

@@ -148,8 +148,15 @@ class RedactionRepository:
                     "表示項目の要素は文字列である必要があります"
                 )
 
-    def _validate_settings_id(self, settings_id: int) -> None:
+    def _validate_settings_id(self, settings_id: int | str) -> None:
         """設定IDのバリデーション"""
+        # 文字列の場合は整数に変換してからバリデーション
+        if isinstance(settings_id, str):
+            try:
+                settings_id = int(settings_id)
+            except ValueError:
+                raise RedactionValidationError("設定IDは有効な整数である必要があります")
+
         if not isinstance(settings_id, int) or settings_id <= 0:
             raise RedactionValidationError("設定IDは正の整数である必要があります")
 
@@ -310,7 +317,7 @@ class RedactionRepository:
             raise RedactionRepositoryError(f"設定の作成に失敗しました: {e}")
 
     def get_redaction_settings(
-        self, settings_id: int, include_relations: bool = False
+        self, settings_id: int | str, include_relations: bool = False
     ) -> dict[str, Any] | None:
         """
         機密情報設定を取得
@@ -327,7 +334,9 @@ class RedactionRepository:
             RedactionDatabaseError: データベースエラー
         """
         try:
-            # バリデーション
+            # バリデーション（文字列の場合は整数に変換）
+            if isinstance(settings_id, str):
+                settings_id = int(settings_id)
             self._validate_settings_id(settings_id)
 
         except RedactionValidationError:
@@ -380,7 +389,7 @@ class RedactionRepository:
 
     def update_redaction_settings(
         self,
-        settings_id: int,
+        settings_id: int | str,
         name: str | None = None,
         description: str | None = None,
         show_all: bool | None = None,
@@ -408,7 +417,9 @@ class RedactionRepository:
             RedactionDatabaseError: データベースエラー
         """
         try:
-            # バリデーション
+            # バリデーション（文字列の場合は整数に変換）
+            if isinstance(settings_id, str):
+                settings_id = int(settings_id)
             self._validate_settings_id(settings_id)
 
             if name is not None:
@@ -470,7 +481,7 @@ class RedactionRepository:
             )
             raise RedactionRepositoryError(f"設定の更新に失敗しました: {e}")
 
-    def delete_redaction_settings(self, settings_id: int) -> bool:
+    def delete_redaction_settings(self, settings_id: int | str) -> bool:
         """
         機密情報設定を削除
 
@@ -485,7 +496,9 @@ class RedactionRepository:
             RedactionDatabaseError: データベースエラー
         """
         try:
-            # バリデーション
+            # バリデーション（文字列の場合は整数に変換）
+            if isinstance(settings_id, str):
+                settings_id = int(settings_id)
             self._validate_settings_id(settings_id)
 
         except RedactionValidationError:
@@ -750,7 +763,7 @@ class RedactionRepository:
             logger.error(f"予期しないエラーが発生しました (get_shared_settings): {e}")
             raise RedactionRepositoryError(f"共有設定の取得に失敗しました: {e}")
 
-    def export_settings(self, settings_id: int) -> dict[str, Any] | None:
+    def export_settings(self, settings_id: int | str) -> dict[str, Any] | None:
         """
         設定をエクスポート用の形式で取得
 
@@ -765,7 +778,9 @@ class RedactionRepository:
             RedactionDatabaseError: データベースエラー
         """
         try:
-            # バリデーション
+            # バリデーション（文字列の場合は整数に変換）
+            if isinstance(settings_id, str):
+                settings_id = int(settings_id)
             self._validate_settings_id(settings_id)
 
         except RedactionValidationError:
