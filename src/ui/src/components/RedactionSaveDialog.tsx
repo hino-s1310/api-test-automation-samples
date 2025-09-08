@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { RedactionSettings } from '../types/redaction';
 
 export interface RedactionSaveDialogProps {
@@ -53,6 +53,7 @@ export default function RedactionSaveDialog({
 
   // 保存状態
   const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
 
   // ダイアログが開かれたときの初期化
   useEffect(() => {
@@ -68,6 +69,7 @@ export default function RedactionSaveDialog({
       });
       setErrors({});
       setIsSaving(false);
+      isSavingRef.current = false;
     }
   }, [isOpen, currentSettings, fileId]);
 
@@ -119,7 +121,9 @@ export default function RedactionSaveDialog({
       return;
     }
 
+    // 保存状態を設定
     setIsSaving(true);
+    isSavingRef.current = true;
     setErrors({});
 
     try {
@@ -131,25 +135,32 @@ export default function RedactionSaveDialog({
       });
     } finally {
       setIsSaving(false);
+      isSavingRef.current = false;
     }
   }, [formData, validateForm, onSave, onClose]);
 
   // キャンセル処理
   const handleCancel = useCallback(() => {
-    if (!isSaving) {
+    if (!isSavingRef.current) {
       onClose();
     }
-  }, [isSaving, onClose]);
+  }, [onClose]);
 
   // キーボードイベント
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
-    if (event.key === 'Escape' && !isSaving) {
-      handleCancel();
-    } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !isSaving) {
-      event.preventDefault();
-      handleSave();
+    if (event.key === 'Escape') {
+      // isSaving状態をチェックしてからキャンセル処理を実行
+      if (!isSavingRef.current) {
+        handleCancel();
+      }
+    } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      // isSaving状態をチェックしてから保存処理を実行
+      if (!isSavingRef.current) {
+        event.preventDefault();
+        handleSave();
+      }
     }
-  }, [isSaving, handleCancel, handleSave]);
+  }, [handleCancel, handleSave]);
 
   // ダイアログが閉じている場合は何も表示しない
   if (!isOpen) {

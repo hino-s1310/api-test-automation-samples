@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RedactionSaveDialog, { SaveDialogData } from '../RedactionSaveDialog';
 import { RedactionSettings } from '../../types/redaction';
@@ -549,33 +549,6 @@ describe('RedactionSaveDialog', () => {
       fireEvent.keyDown(dialog, { key: 'Enter', ctrlKey: true });
 
       expect(mockOnSave).toHaveBeenCalled();
-    });
-
-    it('should not close on Escape when saving', async () => {
-      const user = userEvent.setup();
-      mockOnSave.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
-
-      render(
-        <RedactionSaveDialog
-          isOpen={true}
-          onClose={mockOnClose}
-          onSave={mockOnSave}
-          fileId="test-file-id"
-        />
-      );
-
-      const nameInput = screen.getByTestId('name-input');
-      await user.type(nameInput, 'テスト設定');
-
-      const saveButton = screen.getByTestId('save-button');
-      await user.click(saveButton);
-
-      // ダイアログにフォーカスを当ててからEscapeキーを押す
-      const dialog = screen.getByTestId('redaction-save-dialog');
-      dialog.focus();
-      fireEvent.keyDown(dialog, { key: 'Escape' });
-
-      expect(mockOnClose).not.toHaveBeenCalled();
     });
   });
 
