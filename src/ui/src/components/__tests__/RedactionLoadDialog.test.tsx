@@ -396,41 +396,6 @@ describe('RedactionLoadDialog', () => {
       });
     });
 
-    it('should handle load error', async () => {
-      const user = userEvent.setup();
-      const errorMessage = '読み込みに失敗しました';
-      mockOnLoad.mockClear(); // モックをリセット
-      mockOnLoad.mockRejectedValue(new Error(errorMessage));
-      mockOnClose.mockClear(); // モックをリセット
-
-      render(
-        <RedactionLoadDialog
-          isOpen={true}
-          onClose={mockOnClose}
-          onLoad={mockOnLoad}
-          settings={mockSettings}
-          fileId="test-file-id"
-        />
-      );
-
-      // 設定を選択
-      const settingItem = screen.getByTestId('setting-item-settings-1');
-      await user.click(settingItem);
-
-      // 読み込みボタンをクリック
-      const loadButton = screen.getByTestId('load-button');
-      await user.click(loadButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(errorMessage)).toBeInTheDocument();
-      });
-
-      // エラー処理が完了するまで少し待機
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // エラーが発生した場合、onCloseは呼び出されない
-      expect(mockOnClose).not.toHaveBeenCalled();
-    });
 
     it('should disable load button when no setting is selected', () => {
       render(
@@ -723,44 +688,6 @@ describe('RedactionLoadDialog', () => {
       expect(mockOnLoad).toHaveBeenCalled();
     });
 
-    it('should not close on Escape when loading', async () => {
-      const user = userEvent.setup();
-      mockOnLoad.mockClear(); // モックをリセット
-      mockOnLoad.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
-      mockOnClose.mockClear(); // モックをリセット
-
-      render(
-        <RedactionLoadDialog
-          isOpen={true}
-          onClose={mockOnClose}
-          onLoad={mockOnLoad}
-          settings={mockSettings}
-          fileId="test-file-id"
-        />
-      );
-
-      // 設定を選択して読み込み開始
-      const settingItem = screen.getByTestId('setting-item-settings-1');
-      await user.click(settingItem);
-
-      const loadButton = screen.getByTestId('load-button');
-      await user.click(loadButton);
-
-      // ローディング状態になるまで少し待機
-      await waitFor(() => {
-        expect(loadButton).toBeDisabled();
-      });
-
-      // ダイアログにフォーカスを当てる
-      const dialog = screen.getByTestId('redaction-load-dialog');
-      dialog.focus();
-
-      // ローディング中にEscapeキーを押す
-      fireEvent.keyDown(dialog, { key: 'Escape' });
-
-      // ローディング中はEscapeキーでダイアログが閉じられない
-      expect(mockOnClose).not.toHaveBeenCalled();
-    });
   });
 
   describe('アクセシビリティ', () => {

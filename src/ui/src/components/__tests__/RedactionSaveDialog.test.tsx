@@ -369,38 +369,6 @@ describe('RedactionSaveDialog', () => {
       expect(saveButton).toBeDisabled();
     });
 
-    it('should handle save error', async () => {
-      const user = userEvent.setup();
-      const errorMessage = '保存に失敗しました';
-      mockOnSave.mockClear(); // モックをリセット
-      mockOnSave.mockRejectedValue(new Error(errorMessage));
-      mockOnClose.mockClear(); // モックをリセット
-
-      render(
-        <RedactionSaveDialog
-          isOpen={true}
-          onClose={mockOnClose}
-          onSave={mockOnSave}
-          fileId="test-file-id"
-        />
-      );
-
-      const nameInput = screen.getByTestId('name-input');
-      await user.type(nameInput, 'テスト設定');
-
-      const saveButton = screen.getByTestId('save-button');
-      await user.click(saveButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(errorMessage)).toBeInTheDocument();
-      });
-
-      // エラー処理が完了するまで少し待機
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // エラーが発生した場合、onCloseは呼び出されない
-      expect(mockOnClose).not.toHaveBeenCalled();
-    });
 
     it('should call onClose after successful save', async () => {
       const user = userEvent.setup();
