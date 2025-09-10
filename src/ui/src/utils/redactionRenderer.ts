@@ -119,10 +119,8 @@ export function generateRedactionClasses(
   size: 'small' | 'medium' | 'large' = 'medium'
 ): string {
   return [
-    'redaction-element',
-    `redaction-${level}`,
-    `redaction-${theme}`,
-    `redaction-${size}`,
+    'redaction-cell',
+    `level-${level.replace('level', '')}`,
     'redaction-clickable'
   ].join(' ');
 }
@@ -161,15 +159,15 @@ export function generateRedactionAnimations(): string {
       }
     }
 
-    .redaction-element {
+    .redaction-cell {
       animation: redaction-pulse 2s infinite;
     }
 
-    .redaction-element.revealed {
+    .redaction-cell.revealed {
       animation: redaction-reveal 0.3s ease-in-out;
     }
 
-    .redaction-element.hidden {
+    .redaction-cell.hidden {
       animation: redaction-hide 0.3s ease-in-out;
     }
   `;
@@ -181,7 +179,7 @@ export function generateRedactionAnimations(): string {
  */
 export function generateRedactionBaseCSS(): string {
   return `
-    .redaction-element {
+    .redaction-cell {
       display: inline-block;
       padding: 2px 6px;
       border-radius: 4px;
@@ -194,54 +192,42 @@ export function generateRedactionBaseCSS(): string {
       white-space: nowrap;
     }
 
-    .redaction-element:hover {
+    .redaction-cell:hover {
       transform: scale(1.05);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
-    .redaction-element.redaction-clickable {
+    .redaction-cell.redaction-clickable {
       cursor: pointer;
     }
 
-    .redaction-element.redaction-clickable:hover {
+    .redaction-cell.redaction-clickable:hover {
       opacity: 0.9;
     }
 
-    .redaction-small {
-      padding: 1px 4px;
-      font-size: 0.75rem;
-    }
-
-    .redaction-medium {
-      padding: 2px 6px;
-      font-size: 0.875rem;
-    }
-
-    .redaction-large {
-      padding: 4px 8px;
-      font-size: 1rem;
-    }
-
-    .redaction-light {
-      color: white;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    }
-
-    .redaction-dark {
-      color: #f3f4f6;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    }
-
-    .redaction-level1 {
+    .redaction-cell.level-1 {
       background-color: #dc2626;
     }
 
-    .redaction-level2 {
+    .redaction-cell.level-2 {
       background-color: #ea580c;
     }
 
-    .redaction-level3 {
+    .redaction-cell.level-3 {
       background-color: #d97706;
+    }
+
+    .redaction-cell.level-4 {
+      background-color: #16a34a;
+    }
+
+    .redaction-cell.level-5 {
+      background-color: #2563eb;
+    }
+
+    .redaction-cell.revealed {
+      background-color: #6b7280;
+      opacity: 0.7;
     }
   `;
 }

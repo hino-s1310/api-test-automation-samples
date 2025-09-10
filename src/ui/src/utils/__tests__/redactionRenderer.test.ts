@@ -29,8 +29,8 @@ describe('RedactionRenderer', () => {
     it('should render element with default options', () => {
       const result = renderRedactionElement(mockElement);
 
-      expect(result).toContain('redaction-element');
-      expect(result).toContain('redaction-level1');
+      expect(result).toContain('redaction-cell');
+      expect(result).toContain('level-1');
       expect(result).toContain('data-element-id="test-element"');
       expect(result).toContain('data-level="level1"');
       expect(result).toContain('data-content="機密情報"');
@@ -46,8 +46,8 @@ describe('RedactionRenderer', () => {
 
       const result = renderRedactionElement(mockElement, options);
 
-      expect(result).toContain('redaction-dark');
-      expect(result).toContain('redaction-large');
+      expect(result).toContain('redaction-cell');
+      expect(result).toContain('level-1');
       expect(result).not.toContain('title=');
       expect(result).not.toContain('onclick=');
     });
@@ -81,7 +81,7 @@ describe('RedactionRenderer', () => {
       const options = { theme: 'dark' as const };
       const result = renderRedactionElements(elements, options);
 
-      expect(result).toContain('redaction-dark');
+      expect(result).toContain('redaction-cell');
     });
   });
 
@@ -118,10 +118,8 @@ describe('RedactionRenderer', () => {
     it('should generate correct classes', () => {
       const classes = generateRedactionClasses('level1', 'light', 'medium');
 
-      expect(classes).toContain('redaction-element');
-      expect(classes).toContain('redaction-level1');
-      expect(classes).toContain('redaction-light');
-      expect(classes).toContain('redaction-medium');
+      expect(classes).toContain('redaction-cell');
+      expect(classes).toContain('level-1');
       expect(classes).toContain('redaction-clickable');
     });
   });
@@ -133,7 +131,7 @@ describe('RedactionRenderer', () => {
       expect(css).toContain('@keyframes redaction-pulse');
       expect(css).toContain('@keyframes redaction-reveal');
       expect(css).toContain('@keyframes redaction-hide');
-      expect(css).toContain('.redaction-element');
+      expect(css).toContain('.redaction-cell');
     });
   });
 
@@ -141,13 +139,13 @@ describe('RedactionRenderer', () => {
     it('should generate base CSS', () => {
       const css = generateRedactionBaseCSS();
 
-      expect(css).toContain('.redaction-element');
-      expect(css).toContain('.redaction-level1');
-      expect(css).toContain('.redaction-level2');
-      expect(css).toContain('.redaction-level3');
-      expect(css).toContain('.redaction-small');
-      expect(css).toContain('.redaction-medium');
-      expect(css).toContain('.redaction-large');
+      expect(css).toContain('.redaction-cell');
+      expect(css).toContain('.redaction-cell.level-1');
+      expect(css).toContain('.redaction-cell.level-2');
+      expect(css).toContain('.redaction-cell.level-3');
+      expect(css).toContain('.redaction-cell.level-4');
+      expect(css).toContain('.redaction-cell.level-5');
+      expect(css).toContain('.redaction-cell.revealed');
     });
   });
 
