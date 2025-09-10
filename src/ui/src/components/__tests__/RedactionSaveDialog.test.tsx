@@ -372,7 +372,9 @@ describe('RedactionSaveDialog', () => {
     it('should handle save error', async () => {
       const user = userEvent.setup();
       const errorMessage = '保存に失敗しました';
+      mockOnSave.mockClear(); // モックをリセット
       mockOnSave.mockRejectedValue(new Error(errorMessage));
+      mockOnClose.mockClear(); // モックをリセット
 
       render(
         <RedactionSaveDialog
@@ -393,6 +395,10 @@ describe('RedactionSaveDialog', () => {
         expect(screen.getByText(errorMessage)).toBeInTheDocument();
       });
 
+      // エラー処理が完了するまで少し待機
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // エラーが発生した場合、onCloseは呼び出されない
       expect(mockOnClose).not.toHaveBeenCalled();
     });
 

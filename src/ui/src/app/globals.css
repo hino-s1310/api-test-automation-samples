@@ -46,6 +46,7 @@ body {
   /* 赤セルシートスタイル */
   .redaction-cell {
     @apply bg-red-100 border-2 border-red-300 rounded-md px-2 py-1 mx-1 inline-block cursor-pointer transition-all duration-200;
+
     position: relative;
     display: inline-block;
     min-width: 2rem;
@@ -58,6 +59,7 @@ body {
 
   .redaction-cell:hover {
     @apply bg-red-200 border-red-400 shadow-md;
+
     transform: translateY(-1px);
   }
 
@@ -96,6 +98,7 @@ body {
   /* 赤セルシートツールチップ */
   .redaction-tooltip {
     @apply absolute z-50 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg;
+
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
@@ -268,9 +271,10 @@ body {
   }
 
   /* レスポンシブデザイン */
-  @media (max-width: 768px) {
+  @media (width <= 768px) {
     .redaction-cell {
       @apply text-sm px-1 py-0.5 mx-0.5;
+
       min-width: 1.5rem;
       min-height: 1.25rem;
     }
@@ -288,9 +292,10 @@ body {
     }
   }
 
-  @media (max-width: 480px) {
+  @media (width <= 480px) {
     .redaction-cell {
-      @apply text-xs px-0.5 py-0.25 mx-0.25;
+      @apply text-xs px-0.5 py-0.5 mx-0.5;
+
       min-width: 1.25rem;
       min-height: 1rem;
     }
