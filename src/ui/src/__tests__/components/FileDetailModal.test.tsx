@@ -121,4 +121,68 @@ describe('FileDetailModal', () => {
     // クリップボードにMarkdownがコピーされたことを確認
     expect(mockClipboard.writeText).toHaveBeenCalledWith(mockFile.markdown)
   })
+
+  it('赤セルシートタブが表示される', () => {
+    render(<ModalWrapper />);
+
+    // 赤セルシートタブが表示されることを確認
+    expect(screen.getByTestId('redacted-tab')).toBeInTheDocument();
+    expect(screen.getByText('赤セルシート')).toBeInTheDocument();
+  });
+
+  it('赤セルシートタブをクリックすると赤セルシート表示に切り替わる', async () => {
+    render(<ModalWrapper />);
+
+    // 赤セルシートタブをクリック
+    const redactedTab = screen.getByTestId('redacted-tab');
+    await userEvent.click(redactedTab);
+
+    // 赤セルシート表示が表示されることを確認
+    expect(screen.getByText('赤セルシート表示')).toBeInTheDocument();
+    expect(screen.getByText('表示制御')).toBeInTheDocument();
+  });
+
+  it('赤セルシートタブで設定ボタンが表示される', async () => {
+    render(<ModalWrapper />);
+
+    // 赤セルシートタブをクリック
+    const redactedTab = screen.getByTestId('redacted-tab');
+    await userEvent.click(redactedTab);
+
+    // 設定ボタンが表示されることを確認
+    expect(screen.getByTestId('redaction-settings-button')).toBeInTheDocument();
+    expect(screen.getByTestId('redaction-controls-button')).toBeInTheDocument();
+  });
+
+  it('赤セルシート設定ボタンをクリックすると設定パネルが表示される', async () => {
+    render(<ModalWrapper />);
+
+    // 赤セルシートタブをクリック
+    const redactedTab = screen.getByTestId('redacted-tab');
+    await userEvent.click(redactedTab);
+
+    // 設定ボタンをクリック
+    const settingsButton = screen.getByTestId('redaction-settings-button');
+    await userEvent.click(settingsButton);
+
+    // 設定パネルが表示されることを確認
+    expect(screen.getByText('詳細設定')).toBeInTheDocument();
+    expect(screen.getByText('設定を閉じる')).toBeInTheDocument();
+  });
+
+  it('赤セルシートコントロールボタンをクリックするとコントロールパネルが表示される', async () => {
+    render(<ModalWrapper />);
+
+    // 赤セルシートタブをクリック
+    const redactedTab = screen.getByTestId('redacted-tab');
+    await userEvent.click(redactedTab);
+
+    // コントロールボタンをクリック
+    const controlsButton = screen.getByTestId('redaction-controls-button');
+    await userEvent.click(controlsButton);
+
+    // コントロールパネルが表示されることを確認
+    expect(screen.getByText('設定管理')).toBeInTheDocument();
+    expect(screen.getByText('コントロールを閉じる')).toBeInTheDocument();
+  });
 })

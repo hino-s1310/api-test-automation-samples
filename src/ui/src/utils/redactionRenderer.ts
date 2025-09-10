@@ -47,10 +47,9 @@ export function renderRedactionElement(
     .join('; ');
 
   const classes = [
-    'redaction-element',
-    `redaction-${element.level}`,
-    `redaction-${theme}`,
-    `redaction-${size}`,
+    'redaction-cell',
+    `level-${element.level.replace('level', '')}`,
+    element.isVisible ? 'revealed' : '',
     enableClick ? 'redaction-clickable' : ''
   ].filter(Boolean).join(' ');
 

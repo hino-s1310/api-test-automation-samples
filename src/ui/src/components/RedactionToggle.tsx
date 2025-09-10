@@ -106,9 +106,10 @@ export default function RedactionToggle({
       data-testid="redaction-toggle"
     >
       {/* 統計情報 */}
-      <div className="mb-3 p-2 bg-gray-50 border rounded text-sm">
+      <div className="redaction-controls">
+        <h5>赤セルシート統計</h5>
         <div className="flex items-center justify-between">
-          <span className="font-medium">赤セルシート統計</span>
+          <span className="font-medium">統計情報</span>
           <span className="text-gray-600">
             {stats.visible}/{stats.total} 表示中
           </span>
@@ -121,77 +122,74 @@ export default function RedactionToggle({
       </div>
 
       {/* 全表示切り替え */}
-      <div className="mb-3">
-        <button
-          onClick={handleToggleShowAll}
-          className={`w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-            state.showAll
-              ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200'
-              : 'bg-red-100 text-red-800 border border-red-200 hover:bg-red-200'
-          }`}
-          aria-pressed={state.showAll}
-          data-testid="toggle-show-all"
-        >
-          {state.showAll ? '🔓 全表示中' : '🔒 全非表示中'}
-        </button>
+      <div className="redaction-toggle-group">
+        <div className="redaction-toggle-item">
+          <label htmlFor="toggle-show-all" className="flex items-center space-x-2">
+            <span>{state.showAll ? '🔓' : '🔒'}</span>
+            <span>{state.showAll ? '全表示中' : '全非表示中'}</span>
+          </label>
+          <input
+            type="checkbox"
+            id="toggle-show-all"
+            checked={state.showAll}
+            onChange={handleToggleShowAll}
+            data-testid="toggle-show-all"
+            aria-label={state.showAll ? '全表示を無効にする' : '全表示を有効にする'}
+          />
+        </div>
       </div>
 
       {/* レベル別制御 */}
       {showLevelControls && !compact && (
-        <div className="mb-3">
+        <div className="redaction-level-selector">
           <h4 className="text-sm font-medium text-gray-700 mb-2">レベル別表示制御</h4>
-          <div className="space-y-2">
-            {Object.keys(REDACTION_LEVELS).map(level => {
-              const levelInfo = REDACTION_LEVELS[level as RedactionLevel];
-              const levelStat = stats.levels[level as RedactionLevel];
-              const isEnabled = state.levelSettings[level as RedactionLevel];
+          {Object.keys(REDACTION_LEVELS).map(level => {
+            const levelInfo = REDACTION_LEVELS[level as RedactionLevel];
+            const levelStat = stats.levels[level as RedactionLevel];
+            const isEnabled = state.levelSettings[level as RedactionLevel];
 
-              return (
-                <div key={level} className="flex items-center justify-between p-2 bg-white border rounded">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm">
-                      {levelInfo.icon}
-                    </span>
-                    <span className="text-sm font-medium">
-                      {levelInfo.label}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      ({levelStat.visible}/{levelStat.total})
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <button
-                      onClick={() => handleLevelBulkToggle(level as RedactionLevel, false)}
-                      className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
-                      disabled={!isEnabled}
-                      data-testid={`hide-level-${level}`}
-                    >
-                      非表示
-                    </button>
-                    <button
-                      onClick={() => handleLevelToggle(level as RedactionLevel)}
-                      className={`px-2 py-1 text-xs rounded transition-colors ${
-                        isEnabled
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                      data-testid={`toggle-level-${level}`}
-                    >
-                      {isEnabled ? 'ON' : 'OFF'}
-                    </button>
-                    <button
-                      onClick={() => handleLevelBulkToggle(level as RedactionLevel, true)}
-                      className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
-                      disabled={isEnabled}
-                      data-testid={`show-level-${level}`}
-                    >
-                      表示
-                    </button>
-                  </div>
+            return (
+              <div key={level} className="redaction-level-item">
+                <label htmlFor={`level-${level}`} className="flex items-center space-x-2">
+                  <span className="text-sm">
+                    {levelInfo.icon}
+                  </span>
+                  <span className="text-sm font-medium">
+                    {levelInfo.label}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    ({levelStat.visible}/{levelStat.total})
+                  </span>
+                </label>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => handleLevelBulkToggle(level as RedactionLevel, false)}
+                    className="redaction-btn redaction-btn-sm redaction-btn-outline"
+                    disabled={!isEnabled}
+                    data-testid={`hide-level-${level}`}
+                  >
+                    非表示
+                  </button>
+                  <input
+                    type="checkbox"
+                    id={`level-${level}`}
+                    checked={isEnabled}
+                    onChange={() => handleLevelToggle(level as RedactionLevel)}
+                    data-testid={`toggle-level-${level}`}
+                    aria-label={`${levelInfo.label}の表示を${isEnabled ? '無効' : '有効'}にする`}
+                  />
+                  <button
+                    onClick={() => handleLevelBulkToggle(level as RedactionLevel, true)}
+                    className="redaction-btn redaction-btn-sm redaction-btn-primary"
+                    disabled={isEnabled}
+                    data-testid={`show-level-${level}`}
+                  >
+                    表示
+                  </button>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

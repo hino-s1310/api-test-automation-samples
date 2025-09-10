@@ -157,17 +157,15 @@ export default function RedactionSettings({
   }, [previewText, localSettings]);
 
   return (
-    <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
+    <div className={`redaction-settings ${className}`}>
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">
-          赤セルシート設定
-        </h2>
+        <h5>赤セルシート設定</h5>
         <div className="flex space-x-2">
           <button
             onClick={handleLoad}
             disabled={isLoading}
-            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="redaction-btn redaction-btn-secondary"
             data-testid="load-button"
           >
             {isLoading ? '読み込み中...' : '読み込み'}
@@ -175,14 +173,14 @@ export default function RedactionSettings({
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="redaction-btn redaction-btn-primary"
             data-testid="save-button"
           >
             {isSaving ? '保存中...' : '保存'}
           </button>
           <button
             onClick={handleReset}
-            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="redaction-btn redaction-btn-outline"
             data-testid="reset-button"
           >
             リセット
@@ -193,32 +191,29 @@ export default function RedactionSettings({
       {/* 設定パネル */}
       <div className="space-y-6">
         {/* 全表示設定 */}
-        <div className="border-b border-gray-200 pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900">全表示設定</h3>
-              <p className="text-sm text-gray-500">
-                すべての赤セルシートを表示/非表示にします
-              </p>
-            </div>
-            <button
-              onClick={handleShowAllToggle}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                localSettings.show_all ? 'bg-blue-600' : 'bg-gray-200'
-              }`}
-              data-testid="show-all-toggle"
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  localSettings.show_all ? 'translate-x-6' : 'translate-x-1'
-                }`}
+        <div className="redaction-settings-group">
+          <div className="redaction-settings-item">
+            <label htmlFor="show-all-toggle" className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">全表示設定</h3>
+                <p className="text-sm text-gray-500">
+                  すべての赤セルシートを表示/非表示にします
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                id="show-all-toggle"
+                checked={localSettings.show_all}
+                onChange={handleShowAllToggle}
+                className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                data-testid="show-all-toggle"
               />
-            </button>
+            </label>
           </div>
         </div>
 
         {/* レベル設定 */}
-        <div className="space-y-4">
+        <div className="redaction-settings-group">
           <h3 className="text-lg font-medium text-gray-900">レベル設定</h3>
           <p className="text-sm text-gray-500">
             各レベルの機密情報の表示/非表示を設定します
@@ -228,9 +223,9 @@ export default function RedactionSettings({
             {levelSettings.map((levelSetting) => (
               <div
                 key={levelSetting.level}
-                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                className="redaction-level-item"
               >
-                <div className="flex-1">
+                <label htmlFor={`level-${levelSetting.level}`} className="flex-1">
                   <div className="flex items-center">
                     <h4 className="text-sm font-medium text-gray-900">
                       {levelSetting.label}
@@ -246,20 +241,15 @@ export default function RedactionSettings({
                   <p className="text-sm text-gray-500 mt-1">
                     {levelSetting.description}
                   </p>
-                </div>
-                <button
-                  onClick={() => handleLevelSettingChange(levelSetting.level, !levelSetting.enabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    levelSetting.enabled ? 'bg-blue-600' : 'bg-gray-200'
-                  }`}
+                </label>
+                <input
+                  type="checkbox"
+                  id={`level-${levelSetting.level}`}
+                  checked={levelSetting.enabled}
+                  onChange={() => handleLevelSettingChange(levelSetting.level, !levelSetting.enabled)}
+                  className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
                   data-testid={`level-${levelSetting.level}-toggle`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      levelSetting.enabled ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
+                />
               </div>
             ))}
           </div>

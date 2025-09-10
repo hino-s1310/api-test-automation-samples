@@ -184,7 +184,7 @@ describe('RedactionSettings', () => {
       );
 
       // 設定が更新されていることを確認
-      expect(screen.getByTestId('show-all-toggle')).toHaveClass('bg-blue-600');
+      expect(screen.getByTestId('show-all-toggle')).toBeChecked();
     });
   });
 

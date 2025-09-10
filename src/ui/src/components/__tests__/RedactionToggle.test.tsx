@@ -78,7 +78,7 @@ describe('RedactionToggle', () => {
       );
 
       expect(screen.getByTestId('redaction-toggle')).toBeInTheDocument();
-      expect(screen.getByText('赤セルシート統計')).toBeInTheDocument();
+      expect(screen.getByText('統計情報')).toBeInTheDocument();
     });
 
     it('should render with custom className', () => {
@@ -151,9 +151,11 @@ describe('RedactionToggle', () => {
         />
       );
 
-      const toggleButton = screen.getByTestId('toggle-show-all');
-      expect(toggleButton).toHaveTextContent('🔒 全非表示中');
-      expect(toggleButton).toHaveAttribute('aria-pressed', 'false');
+      const toggleCheckbox = screen.getByTestId('toggle-show-all');
+      expect(toggleCheckbox).toBeInTheDocument();
+      expect(toggleCheckbox).not.toBeChecked();
+      expect(screen.getByText('🔒')).toBeInTheDocument();
+      expect(screen.getByText('全非表示中')).toBeInTheDocument();
     });
 
     it('should show correct state when show all is enabled', () => {
@@ -167,9 +169,11 @@ describe('RedactionToggle', () => {
         />
       );
 
-      const toggleButton = screen.getByTestId('toggle-show-all');
-      expect(toggleButton).toHaveTextContent('🔓 全表示中');
-      expect(toggleButton).toHaveAttribute('aria-pressed', 'true');
+      const toggleCheckbox = screen.getByTestId('toggle-show-all');
+      expect(toggleCheckbox).toBeInTheDocument();
+      expect(toggleCheckbox).toBeChecked();
+      expect(screen.getByText('🔓')).toBeInTheDocument();
+      expect(screen.getByText('全表示中')).toBeInTheDocument();
     });
 
     it('should call toggleShowAll when clicked', async () => {
@@ -483,8 +487,8 @@ describe('RedactionToggle', () => {
         />
       );
 
-      const toggleButton = screen.getByTestId('toggle-show-all');
-      expect(toggleButton).toHaveAttribute('aria-pressed', 'false');
+      const toggleCheckbox = screen.getByTestId('toggle-show-all');
+      expect(toggleCheckbox).toHaveAttribute('aria-label', '全表示を有効にする');
     });
   });
 

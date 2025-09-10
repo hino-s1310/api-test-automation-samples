@@ -78,7 +78,7 @@ const ControlButton: React.FC<ControlButtonProps> = ({
     <button
       onClick={onClick}
       disabled={disabled || loading}
-      className={`inline-flex items-center px-4 py-2 text-sm font-medium border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${getVariantClasses()}`}
+      className={`redaction-btn inline-flex items-center px-4 py-2 text-sm font-medium border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${getVariantClasses()}`}
       data-testid={testId}
     >
       {loading ? (
@@ -216,12 +216,10 @@ export default function RedactionControls({
   const isDisabled = disabled || isAnyLoading;
 
   return (
-    <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
+    <div className={`redaction-controls ${className}`}>
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">
-          赤セルシートコントロール
-        </h2>
+        <h5>赤セルシートコントロール</h5>
         <div className="text-sm text-gray-500">
           {settings ? `設定: ${settings.name}` : '設定なし'}
         </div>
