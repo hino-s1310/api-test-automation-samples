@@ -8,6 +8,7 @@ pytest 設定とテストフィクスチャ
 import logging
 import os
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock
@@ -25,6 +26,151 @@ from tests.unit.helpers import upload_test_pdf
 # ===========================
 # セッション スコープフィクスチャ
 # ===========================
+
+
+@pytest.fixture(scope="session")
+def test_database_setup():
+    """テスト用データベースの包括的セットアップ（セッションスコープ）"""
+    print("テストセッション開始")
+
+    # テスト環境の設定
+    os.environ["ENVIRONMENT"] = "test"
+
+    # プロジェクトルートディレクトリを取得
+    current_dir = os.getcwd()
+    if current_dir.endswith("tests/unit"):
+        project_root = os.path.dirname(os.path.dirname(current_dir))
+    elif current_dir.endswith("tests"):
+        project_root = os.path.dirname(current_dir)
+    else:
+        # プロジェクトルートを動的に検索
+        project_root = current_dir
+        while project_root != "/" and not os.path.exists(
+            os.path.join(project_root, "alembic.ini")
+        ):
+            project_root = os.path.dirname(project_root)
+
+        if not os.path.exists(os.path.join(project_root, "alembic.ini")):
+            raise RuntimeError("プロジェクトルートディレクトリが見つかりません")
+
+    # データベースファイルのパスを絶対パスで指定
+    test_db_path = os.path.join(project_root, "data", "test_database.db")
+    data_dir = os.path.join(project_root, "data")
+
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, exist_ok=True)
+
+    # 既存のデータベースファイルを削除してクリーンな状態から開始
+    if os.path.exists(test_db_path):
+        try:
+            os.remove(test_db_path)
+            print(f"既存のデータベースファイルを削除: {test_db_path}")
+        except Exception as remove_error:
+            print(f"データベースファイル削除エラー: {remove_error}")
+
+    # マイグレーション実行の環境変数を設定
+    migration_env = os.environ.copy()
+    migration_env["ENVIRONMENT"] = "test"
+
+    print(f"プロジェクトルートディレクトリ: {project_root}")
+
+    try:
+        # マイグレーションを実行（プロジェクトルートから実行）
+        result = subprocess.run(
+            ["uv", "run", "alembic", "upgrade", "head"],
+            env=migration_env,
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=project_root,
+        )
+        print(f"マイグレーション実行成功: {result.stdout}")
+
+        # マイグレーション後のテーブル確認
+        if os.path.exists(test_db_path):
+            import sqlite3
+
+            conn = sqlite3.connect(test_db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = cursor.fetchall()
+            print(f"作成されたテーブル: {[table[0] for table in tables]}")
+            conn.close()
+
+    except subprocess.CalledProcessError as e:
+        print(f"マイグレーション実行エラー: {e.stderr}")
+        # エラーが発生した場合、データベースファイルを削除して再試行
+        if os.path.exists(test_db_path):
+            try:
+                os.remove(test_db_path)
+            except Exception as remove_error:
+                print(f"データベースファイル削除エラー: {remove_error}")
+
+        # 再試行
+        try:
+            result = subprocess.run(
+                ["uv", "run", "alembic", "upgrade", "head"],
+                env=migration_env,
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=project_root,
+            )
+            print(f"マイグレーション再実行成功: {result.stdout}")
+        except subprocess.CalledProcessError as retry_error:
+            print(f"マイグレーション再実行エラー: {retry_error.stderr}")
+            raise
+
+    print("テストセッション完了")
+
+    yield {
+        "project_root": project_root,
+        "test_db_path": test_db_path,
+        "migration_env": migration_env,
+    }
+
+    print("テストセッション終了時のクリーンアップを実行中...")
+    print("テストセッション終了時のクリーンアップ完了")
+
+
+# ===========================
+# 共通リポジトリフィクスチャ
+# ===========================
+
+
+@pytest.fixture
+def file_repository(test_database_setup):
+    """FileRepositoryのインスタンス（テスト用データベースを使用）"""
+    from src.api.database import SQLModelSessionManager
+    from src.api.repositories.file_repository import FileRepository
+
+    test_db_path = test_database_setup["test_db_path"]
+    custom_manager = SQLModelSessionManager(test_db_path)
+
+    return FileRepository(use_sqlmodel=True, sqlmodel_manager=custom_manager)
+
+
+@pytest.fixture
+def redaction_repository(test_database_setup):
+    """RedactionRepositoryのインスタンス（テスト用データベースを使用）"""
+    from src.api.database import SQLModelSessionManager
+    from src.api.repositories.redaction_repository import RedactionRepository
+
+    test_db_path = test_database_setup["test_db_path"]
+    custom_manager = SQLModelSessionManager(test_db_path)
+
+    return RedactionRepository(
+        use_sqlmodel=True, enable_cache=False, sqlmodel_manager=custom_manager
+    )
+
+
+@pytest.fixture
+def test_session_manager(test_database_setup):
+    """テスト用SQLModelSessionManager（テスト用データベースを使用）"""
+    from src.api.database import SQLModelSessionManager
+
+    test_db_path = test_database_setup["test_db_path"]
+    return SQLModelSessionManager(test_db_path)
 
 
 @pytest.fixture(scope="session")
@@ -548,14 +694,16 @@ def test_session_setup():
             except Exception as e:
                 print(f"ディレクトリ削除エラー {dir_name}: {e}")
 
-    # テスト用データベースファイルをクリーンアップ
-    test_db_files = ["test_database.db"]
-    for db_file in test_db_files:
-        if os.path.exists(db_file):
-            try:
-                os.remove(db_file)
-                print(f"削除されたファイル: {db_file}")
-            except Exception as e:
-                print(f"ファイル削除エラー {db_file}: {e}")
+    # テスト用データベースファイルをクリーンアップ（無効化）
+    # 注意: データベースファイルを削除すると、次回のテスト実行時に
+    # マイグレーションが適用されていない状態になるため、削除を無効化
+    # test_db_files = ["test_database.db"]
+    # for db_file in test_db_files:
+    #     if os.path.exists(db_file):
+    #         try:
+    #             os.remove(db_file)
+    #             print(f"削除されたファイル: {db_file}")
+    #         except Exception as e:
+    #             print(f"ファイル削除エラー {db_file}: {e}")
 
     print("テストセッション終了時のクリーンアップ完了")

@@ -7,5 +7,6 @@
 
 from .file_repository import FileRepository
 from .pdf_repository import PDFRepository
+from .redaction_repository import RedactionRepository
 
-__all__ = ["FileRepository", "PDFRepository"]
+__all__ = ["FileRepository", "PDFRepository", "RedactionRepository"]

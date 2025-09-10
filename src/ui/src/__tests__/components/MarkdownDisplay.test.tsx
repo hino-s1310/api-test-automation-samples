@@ -121,5 +121,63 @@ describe('MarkdownDisplay', () => {
     expect(screen.getByRole('button', { name: '新しいファイル' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'プレビュー' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Markdown' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '編集可能プレビュー' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '赤セルシート' })).toBeInTheDocument()
+  })
+
+  it('赤セルシートタブをクリックすると赤セルシート表示に切り替わる', async () => {
+    render(<MarkdownDisplay result={mockResult} onNewUpload={mockOnNewUpload} />)
+
+    // 赤セルシートタブをクリック
+    const redactedTab = screen.getByRole('button', { name: '赤セルシート' })
+    await userEvent.click(redactedTab)
+
+    // 赤セルシート表示が表示される
+    expect(screen.getByText('赤セルシート表示')).toBeInTheDocument()
+    expect(screen.getByText('表示制御')).toBeInTheDocument()
+  })
+
+  it('赤セルシートタブで設定ボタンが表示される', async () => {
+    render(<MarkdownDisplay result={mockResult} onNewUpload={mockOnNewUpload} />)
+
+    // 赤セルシートタブをクリック
+    const redactedTab = screen.getByRole('button', { name: '赤セルシート' })
+    await userEvent.click(redactedTab)
+
+    // 設定ボタンが表示される
+    expect(screen.getByRole('button', { name: '赤セルシート設定' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '赤セルシートコントロール' })).toBeInTheDocument()
+  })
+
+  it('赤セルシート設定ボタンをクリックすると設定パネルが表示される', async () => {
+    render(<MarkdownDisplay result={mockResult} onNewUpload={mockOnNewUpload} />)
+
+    // 赤セルシートタブをクリック
+    const redactedTab = screen.getByRole('button', { name: '赤セルシート' })
+    await userEvent.click(redactedTab)
+
+    // 設定ボタンをクリック
+    const settingsButton = screen.getByRole('button', { name: '赤セルシート設定' })
+    await userEvent.click(settingsButton)
+
+    // 設定パネルが表示される
+    expect(screen.getByText('詳細設定')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '設定を閉じる' })).toBeInTheDocument()
+  })
+
+  it('赤セルシートコントロールボタンをクリックするとコントロールパネルが表示される', async () => {
+    render(<MarkdownDisplay result={mockResult} onNewUpload={mockOnNewUpload} />)
+
+    // 赤セルシートタブをクリック
+    const redactedTab = screen.getByRole('button', { name: '赤セルシート' })
+    await userEvent.click(redactedTab)
+
+    // コントロールボタンをクリック
+    const controlsButton = screen.getByRole('button', { name: '赤セルシートコントロール' })
+    await userEvent.click(controlsButton)
+
+    // コントロールパネルが表示される
+    expect(screen.getByText('設定管理')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'コントロールを閉じる' })).toBeInTheDocument()
   })
 })

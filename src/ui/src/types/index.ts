@@ -86,3 +86,6 @@ export interface BatchOperationResponse {
     error?: string;
   }[];
 }
+
+// 赤セルシート機能の型定義をエクスポート
+export * from './redaction';

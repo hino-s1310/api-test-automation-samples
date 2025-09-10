@@ -161,6 +161,10 @@ class CacheKeys:
     # 変換ログ
     CONVERSION_LOGS = "conversion_logs"
 
+    # 機密情報設定
+    REDACTION_SETTINGS_DETAIL = "redaction_settings_detail"
+    REDACTION_SETTINGS_LIST = "redaction_settings_list"
+
     @staticmethod
     def file_list(page: int, per_page: int, status: str | None = None) -> str:
         """ファイル一覧のキャッシュキー"""
@@ -179,3 +183,30 @@ class CacheKeys:
     def conversion_logs(file_id: str) -> str:
         """変換ログのキャッシュキー"""
         return f"{CacheKeys.CONVERSION_LOGS}:{file_id}"
+
+    @staticmethod
+    def redaction_settings_detail(settings_id: int) -> str:
+        """機密情報設定詳細のキャッシュキー"""
+        return f"{CacheKeys.REDACTION_SETTINGS_DETAIL}:{settings_id}"
+
+    @staticmethod
+    def redaction_settings_list(
+        user_id: str | None = None,
+        file_id: str | None = None,
+        is_shared: bool | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> str:
+        """機密情報設定一覧のキャッシュキー"""
+        key_parts = [CacheKeys.REDACTION_SETTINGS_LIST]
+
+        if user_id:
+            key_parts.append(f"user:{user_id}")
+        if file_id:
+            key_parts.append(f"file:{file_id}")
+        if is_shared is not None:
+            key_parts.append(f"shared:{is_shared}")
+
+        key_parts.extend([f"limit:{limit}", f"offset:{offset}"])
+
+        return ":".join(key_parts)

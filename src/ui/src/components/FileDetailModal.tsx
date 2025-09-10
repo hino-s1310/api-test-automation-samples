@@ -4,6 +4,11 @@ import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { FileInfo } from '@/types';
 import { api } from '@/lib/api';
+import RedactedMarkdown from './RedactedMarkdown';
+import RedactionToggle from './RedactionToggle';
+import RedactionControls from './RedactionControls';
+import RedactionSettings from './RedactionSettings';
+import { RedactionSettings as RedactionSettingsType } from '../types/redaction';
 
 interface FileDetailModalProps {
   file: FileInfo;
@@ -13,12 +18,17 @@ interface FileDetailModalProps {
 }
 
 export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }: FileDetailModalProps) {
-  const [activeTab, setActiveTab] = useState<'preview' | 'raw'>('preview');
+  const [activeTab, setActiveTab] = useState<'preview' | 'raw' | 'redacted'>('preview');
   const [copied, setCopied] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [currentFile, setCurrentFile] = useState<FileInfo>(file);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 赤セルシート関連の状態
+  const [redactionSettings, setRedactionSettings] = useState<RedactionSettingsType | null>(null);
+  const [showRedactionSettings, setShowRedactionSettings] = useState(false);
+  const [showRedactionControls, setShowRedactionControls] = useState(false);
 
   useEffect(() => {
     setCurrentFile(file);
@@ -114,6 +124,31 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
     });
   };
 
+  // 赤セルシート関連のハンドラー
+  const handleRedactionSettingsChange = (settings: Partial<RedactionSettingsType>) => {
+    setRedactionSettings(prev => prev ? { ...prev, ...settings } : null);
+  };
+
+  const handleRedactionSave = async (settings: Partial<RedactionSettingsType>) => {
+    // TODO: 実際の保存処理を実装
+    console.log('Saving redaction settings:', settings);
+  };
+
+  const handleRedactionLoad = async (fileId: string) => {
+    // TODO: 実際の読み込み処理を実装
+    console.log('Loading redaction settings for file:', fileId);
+  };
+
+  const handleRedactionExport = async (fileId: string, settingsId: string) => {
+    // TODO: 実際のエクスポート処理を実装
+    console.log('Exporting redaction settings:', { fileId, settingsId });
+  };
+
+  const handleRedactionImport = async (fileId: string, settingsData: string) => {
+    // TODO: 実際のインポート処理を実装
+    console.log('Importing redaction settings:', { fileId, settingsData });
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="file-detail-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -181,6 +216,24 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
                 >
                   ダウンロード
                 </button>
+                {activeTab === 'redacted' && (
+                  <>
+                    <button
+                      onClick={() => setShowRedactionSettings(!showRedactionSettings)}
+                      className="btn-secondary text-sm"
+                      data-testid="redaction-settings-button"
+                    >
+                      {showRedactionSettings ? '設定を閉じる' : '赤セルシート設定'}
+                    </button>
+                    <button
+                      onClick={() => setShowRedactionControls(!showRedactionControls)}
+                      className="btn-secondary text-sm"
+                      data-testid="redaction-controls-button"
+                    >
+                      {showRedactionControls ? 'コントロールを閉じる' : '赤セルシートコントロール'}
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={onClose}
                   className="text-gray-400 hover:text-gray-600"
@@ -269,6 +322,17 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
               >
                 Markdown
               </button>
+              <button
+                onClick={() => setActiveTab('redacted')}
+                className={`py-3 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'redacted'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+                data-testid="redacted-tab"
+              >
+                赤セルシート
+              </button>
             </nav>
           </div>
 
@@ -279,10 +343,105 @@ export default function FileDetailModal({ file, isOpen, onClose, onFileUpdated }
                 <div className="prose max-w-none" role="article" aria-label="markdown-content" data-testid="preview-content">
                   <ReactMarkdown>{currentFile.markdown}</ReactMarkdown>
                 </div>
-              ) : (
+              ) : activeTab === 'raw' ? (
                 <pre className="bg-gray-50 p-4 rounded-md text-sm overflow-x-auto whitespace-pre-wrap font-mono border" data-testid="raw-content">
                   {currentFile.markdown}
                 </pre>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" data-testid="redacted-content-container">
+                  {/* 左側: 赤セルシート表示 */}
+                  <div className="lg:col-span-2">
+                    <div className="bg-red-50 px-3 py-2 border-b border-red-200 mb-3">
+                      <h4 className="text-sm font-medium text-red-700">赤セルシート表示</h4>
+                    </div>
+                    <div className="h-80 overflow-y-auto">
+                      <RedactedMarkdown
+                        content={currentFile.markdown}
+                        redactionSettings={redactionSettings || undefined}
+                        onSettingsChange={handleRedactionSettingsChange}
+                        onSaveRequest={async (settings: RedactionSettingsType) => { setShowRedactionControls(true); }}
+                        onLoadRequest={async () => { setShowRedactionControls(true); return null; }}
+                        className="h-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 右側: コントロールパネル */}
+                  <div className="space-y-4">
+                    {/* 赤セルシートトグル */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h5 className="text-sm font-medium text-gray-900 mb-3">表示制御</h5>
+                      <RedactionToggle
+                        elements={[]} // TODO: 実際の要素を渡す
+                        state={{
+                          showAll: redactionSettings?.show_all || false,
+                          revealedItems: new Set(redactionSettings?.revealed_items || []),
+                          levelSettings: redactionSettings?.level_settings || {
+                            level1: true,
+                            level2: true,
+                            level3: true
+                          },
+                          isDirty: false,
+                          settings: redactionSettings,
+                          isLoading: false,
+                          error: null,
+                          isEditing: false,
+                          isSaving: false,
+                          isSettingsModalOpen: false,
+                          isExportModalOpen: false,
+                          isImportModalOpen: false
+                        }}
+                        actions={{
+                          toggleShowAll: () => handleRedactionSettingsChange({ show_all: !redactionSettings?.show_all }),
+                          toggleRevealedItem: (id: string) => {
+                            const currentItems = redactionSettings?.revealed_items || [];
+                            const newItems = currentItems.includes(id)
+                              ? currentItems.filter(item => item !== id)
+                              : [...currentItems, id];
+                            handleRedactionSettingsChange({ revealed_items: newItems });
+                          },
+                          updateLevelSettings: (levelSettings: Record<string, boolean>) => {
+                            handleRedactionSettingsChange({
+                              level_settings: levelSettings
+                            });
+                          }
+                        }}
+                        compact={true}
+                      />
+                    </div>
+
+                    {/* 赤セルシートコントロール */}
+                    {showRedactionControls && (
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <h5 className="text-sm font-medium text-gray-900 mb-3">設定管理</h5>
+                        <RedactionControls
+                          fileId={currentFile.id}
+                          settings={redactionSettings}
+                          onSave={handleRedactionSave}
+                          onLoad={handleRedactionLoad}
+                          onExport={handleRedactionExport}
+                          onImport={handleRedactionImport}
+                          className="text-sm"
+                        />
+                      </div>
+                    )}
+
+                    {/* 赤セルシート設定 */}
+                    {showRedactionSettings && (
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <h5 className="text-sm font-medium text-gray-900 mb-3">詳細設定</h5>
+                        <RedactionSettings
+                          settings={redactionSettings}
+                          onSettingsChange={handleRedactionSettingsChange}
+                          onSave={async () => { await handleRedactionSave(redactionSettings || {}); }}
+                          onLoad={async () => { await handleRedactionLoad(currentFile.id); }}
+                          onReset={() => setRedactionSettings(null)}
+                          className="text-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>

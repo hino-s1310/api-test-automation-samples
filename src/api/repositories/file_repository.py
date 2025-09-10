@@ -19,12 +19,17 @@ from ..models import ConversionLog, File, FileEditHistory, FileStatus
 class FileRepository:
     """ファイルリポジトリクラス"""
 
-    def __init__(self, use_sqlmodel: bool = False, enable_cache: bool = True):
+    def __init__(
+        self,
+        use_sqlmodel: bool = False,
+        enable_cache: bool = True,
+        sqlmodel_manager: SQLModelSessionManager = None,
+    ):
         self.db_manager = db_manager
         self.use_sqlmodel = use_sqlmodel
         self.enable_cache = enable_cache
         if use_sqlmodel:
-            self.sqlmodel_manager = SQLModelSessionManager()
+            self.sqlmodel_manager = sqlmodel_manager or SQLModelSessionManager()
         else:
             self.sqlmodel_manager = None
 
