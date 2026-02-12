@@ -7,6 +7,7 @@ import RedactedMarkdown from './RedactedMarkdown';
 import RedactionToggle from './RedactionToggle';
 import RedactionControls from './RedactionControls';
 import RedactionSettings from './RedactionSettings';
+import TestGenerationPanel from './TestGenerationPanel';
 import { RedactionSettings as RedactionSettingsType } from '../types/redaction';
 
 interface MarkdownDisplayProps {
@@ -15,7 +16,7 @@ interface MarkdownDisplayProps {
 }
 
 export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplayProps) {
-  const [activeTab, setActiveTab] = useState<'preview' | 'raw' | 'editable' | 'redacted'>('preview');
+  const [activeTab, setActiveTab] = useState<'preview' | 'raw' | 'editable' | 'redacted' | 'test-generation'>('preview');
   const [copied, setCopied] = useState(false);
   const [editableContent, setEditableContent] = useState(result.markdown);
 
@@ -169,6 +170,13 @@ export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplay
               >
                 赤セルシート
               </button>
+              <button
+                onClick={() => setActiveTab('test-generation')}
+                className={getTabButtonClass('test-generation')}
+                data-testid="test-generation-tab"
+              >
+                テスト生成
+              </button>
             </nav>
           </div>
         </div>
@@ -216,6 +224,13 @@ export default function MarkdownDisplay({ result, onNewUpload }: MarkdownDisplay
                   </div>
                 </div>
               </div>
+            </div>
+          ) : activeTab === 'test-generation' ? (
+            <div className="h-full overflow-hidden" data-testid="test-generation-content-container">
+              <TestGenerationPanel
+                fileId={result.id}
+                markdownContent={result.markdown}
+              />
             </div>
           ) : (
             <div className="h-full overflow-hidden" data-testid="redacted-content-container">

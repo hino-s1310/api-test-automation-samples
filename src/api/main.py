@@ -8,7 +8,12 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import files_router, redaction_router, system_router
+from .routers import (
+    files_router,
+    redaction_router,
+    system_router,
+    test_generation_router,
+)
 
 # アプリケーションの作成
 app = FastAPI(
@@ -32,6 +37,7 @@ app.add_middleware(
 app.include_router(files_router)
 app.include_router(redaction_router)
 app.include_router(system_router)
+app.include_router(test_generation_router)
 
 
 if __name__ == "__main__":

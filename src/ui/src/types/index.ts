@@ -87,5 +87,47 @@ export interface BatchOperationResponse {
   }[];
 }
 
+// AI テスト生成関連の型定義
+export interface TestGenerationOptions {
+  test_framework: 'pytest' | 'jest' | 'playwright';
+  language: 'python' | 'typescript';
+  test_type: 'unit' | 'integration' | 'e2e';
+  max_tests: number;
+  include_edge_cases: boolean;
+}
+
+export interface GeneratedTestMetadata {
+  model: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  generation_time: number;
+}
+
+export interface GeneratedTestResponse {
+  id: number;
+  file_id: string;
+  generated_tests: string;
+  test_count: number;
+  test_framework: string;
+  language: string;
+  test_type: string;
+  metadata: GeneratedTestMetadata;
+  created_at: string;
+}
+
+export interface GeneratedTestSummary {
+  id: number;
+  test_framework: string;
+  language: string;
+  test_type: string;
+  test_count: number;
+  created_at: string;
+}
+
+export interface GeneratedTestListResponse {
+  tests: GeneratedTestSummary[];
+  total_count: number;
+}
+
 // 赤セルシート機能の型定義をエクスポート
 export * from './redaction';

@@ -38,6 +38,8 @@ dependencies = [
     "sqlmodel>=0.0.14",
     "alembic>=1.13.0",
     "sqlalchemy>=2.0.0",
+    # AI API連携
+    "httpx>=0.25.2",
     # その他
     "python-dateutil>=2.8.2",
     "pydantic>=2.5.0",

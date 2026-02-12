@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { FileInfo, FileListResponse, UploadResponse } from '@/types';
+import { FileInfo, FileListResponse, UploadResponse, TestGenerationOptions, GeneratedTestResponse, GeneratedTestListResponse } from '@/types';
 
 // APIクライアントの作成
 const apiClient = axios.create({
@@ -158,6 +158,52 @@ export const api = {
   }> {
     try {
       const response = await apiClient.get(`/files/${fileId}/history`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  },
+
+  // AIテスト生成
+  async generateTests(fileId: string, options: TestGenerationOptions): Promise<GeneratedTestResponse> {
+    try {
+      const response = await apiClient.post<GeneratedTestResponse>(
+        `/files/${fileId}/generate-tests`,
+        options
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  },
+
+  // テスト生成履歴一覧取得
+  async getGeneratedTests(fileId: string): Promise<GeneratedTestListResponse> {
+    try {
+      const response = await apiClient.get<GeneratedTestListResponse>(
+        `/files/${fileId}/generated-tests`
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  },
+
+  // テスト生成詳細取得
+  async getGeneratedTest(fileId: string, testId: number): Promise<GeneratedTestResponse> {
+    try {
+      const response = await apiClient.get<GeneratedTestResponse>(
+        `/files/${fileId}/generated-tests/${testId}`
+      );
       return response.data;
     } catch (error: any) {
       if (error.response?.data?.detail) {

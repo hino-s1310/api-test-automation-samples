@@ -1,13 +1,11 @@
 import type { Config } from 'jest'
-import { pathsToModuleNameMapper } from 'ts-jest'
-import { compilerOptions } from './tsconfig.json'
 
 const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
-    ...pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>/' }),
+    '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|sass|scss)$': 'identity-obj-proxy',
     '\\.(gif|ttf|eot|svg|png|jpg|jpeg)$': '<rootDir>/test/__mocks__/fileMock.js',
     'react-markdown': '<rootDir>/test/__mocks__/react-markdown.js',

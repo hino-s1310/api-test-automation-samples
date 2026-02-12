@@ -570,3 +570,116 @@ class RedactionSettingsImportRequest(BaseModel):
 
     settings_data: str = Field(..., description="設定データ（JSON文字列）")
     format: str = Field("json", description="インポート形式")
+
+
+# ===========================
+# AI テスト生成関連モデル
+# ===========================
+
+
+class GeneratedTest(SQLModel, table=True):
+    """AI生成テストデータベースモデル"""
+
+    __tablename__ = "generated_tests"
+
+    id: int | None = SQLField(default=None, primary_key=True, description="生成ID")
+    file_id: str = SQLField(foreign_key="files.id", description="ファイルID")
+    test_code: str = SQLField(description="生成されたテストコード")
+    test_framework: str = SQLField(default="pytest", description="テストフレームワーク")
+    language: str = SQLField(default="python", description="生成言語")
+    test_type: str = SQLField(default="unit", description="テスト種類")
+    test_count: int = SQLField(default=0, description="テスト数")
+    model_name: str | None = SQLField(default=None, description="使用AIモデル名")
+    prompt_tokens: int = SQLField(default=0, description="プロンプトトークン数")
+    completion_tokens: int = SQLField(default=0, description="完了トークン数")
+    generation_time: float = SQLField(default=0.0, description="生成時間（秒）")
+    created_at: datetime = SQLField(
+        default_factory=datetime.now, description="作成日時"
+    )
+
+    def to_response(self) -> "GeneratedTestResponse":
+        """GeneratedTestResponseに変換"""
+        return GeneratedTestResponse(
+            id=self.id or 0,
+            file_id=self.file_id,
+            generated_tests=self.test_code,
+            test_count=self.test_count,
+            test_framework=self.test_framework,
+            language=self.language,
+            test_type=self.test_type,
+            metadata=GeneratedTestMetadata(
+                model=self.model_name or "",
+                prompt_tokens=self.prompt_tokens,
+                completion_tokens=self.completion_tokens,
+                generation_time=self.generation_time,
+            ),
+            created_at=self.created_at,
+        )
+
+    def to_summary(self) -> "GeneratedTestSummary":
+        """GeneratedTestSummaryに変換"""
+        return GeneratedTestSummary(
+            id=self.id or 0,
+            test_framework=self.test_framework,
+            language=self.language,
+            test_type=self.test_type,
+            test_count=self.test_count,
+            created_at=self.created_at,
+        )
+
+
+class TestGenerationRequest(BaseModel):
+    """テスト生成リクエスト"""
+
+    test_framework: str = Field(
+        "pytest", description="テストフレームワーク（pytest / jest / playwright）"
+    )
+    language: str = Field(
+        "python", description="生成言語（python / typescript）"
+    )
+    test_type: str = Field(
+        "unit", description="テスト種類（unit / integration / e2e）"
+    )
+    max_tests: int = Field(10, ge=1, le=50, description="最大生成テスト数")
+    include_edge_cases: bool = Field(True, description="エッジケースを含めるか")
+
+
+class GeneratedTestMetadata(BaseModel):
+    """テスト生成メタデータ"""
+
+    model: str = Field(..., description="使用AIモデル名")
+    prompt_tokens: int = Field(0, description="プロンプトトークン数")
+    completion_tokens: int = Field(0, description="完了トークン数")
+    generation_time: float = Field(0.0, description="生成時間（秒）")
+
+
+class GeneratedTestResponse(BaseModel):
+    """テスト生成レスポンス"""
+
+    id: int = Field(..., description="生成ID")
+    file_id: str = Field(..., description="ファイルID")
+    generated_tests: str = Field(..., description="生成されたテストコード")
+    test_count: int = Field(..., description="テスト数")
+    test_framework: str = Field(..., description="テストフレームワーク")
+    language: str = Field(..., description="生成言語")
+    test_type: str = Field(..., description="テスト種類")
+    metadata: GeneratedTestMetadata = Field(..., description="生成メタデータ")
+    created_at: datetime = Field(..., description="作成日時")
+
+
+class GeneratedTestSummary(BaseModel):
+    """テスト生成サマリー"""
+
+    id: int = Field(..., description="生成ID")
+    test_framework: str = Field(..., description="テストフレームワーク")
+    language: str = Field(..., description="生成言語")
+    test_type: str = Field(..., description="テスト種類")
+    test_count: int = Field(..., description="テスト数")
+    created_at: datetime = Field(..., description="作成日時")
+
+
+class GeneratedTestListResponse(BaseModel):
+    """テスト生成一覧レスポンス"""
+
+    tests: list[GeneratedTestSummary] = Field(..., description="テスト生成一覧")
+    total_count: int = Field(..., description="総テスト生成数")
